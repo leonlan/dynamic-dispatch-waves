@@ -5,7 +5,7 @@ import sys
 from datetime import datetime
 
 import tools
-from environment import ControllerEnvironment, VRPEnvironment
+from environment import VRPEnvironment
 from strategies import solve_dynamic, solve_hindsight
 from strategies.config import Config
 
@@ -28,23 +28,12 @@ def parse_args():
 
 
 def run(args):
-    if args.instance is not None:
-        env = VRPEnvironment(
-            seed=args.instance_seed,
-            instance=tools.read_vrplib(args.instance),
-            epoch_tlim=args.epoch_tlim,
-            is_static=args.static,
-        )
-    else:
-        # Run within external controller
-        assert not args.hindsight, "Cannot solve hindsight using controller"
-        env = ControllerEnvironment(sys.stdin, sys.stdout)
-
-    # Make sure these parameters are not used by your solver
-    args.instance = None
-    args.instance_seed = None
-    args.static = None
-    args.epoch_tlim = None
+    env = VRPEnvironment(
+        seed=args.instance_seed,
+        instance=tools.read_vrplib(args.instance),
+        epoch_tlim=args.epoch_tlim,
+        is_static=args.static,
+    )
 
     config = Config.from_file(args.config_loc)
 

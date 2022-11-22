@@ -26,7 +26,6 @@ def parse_args():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--max_runtime", type=float)
     group.add_argument("--max_iterations", type=int)
-    group.add_argument("--phase", choices=["quali", "final"])
 
     return parser.parse_args()
 
@@ -37,7 +36,6 @@ def solve(
     config_loc: str,
     max_runtime,
     max_iterations,
-    phase,
     **kwargs,
 ):
     path = Path(loc)
@@ -45,10 +43,7 @@ def solve(
     instance = tools.read_vrplib(path)
     start = perf_counter()
 
-    if phase is not None:
-        t_lim = tools.static_time_limit(tools.name2size(loc), phase)
-        stop = hgspy.stop.MaxRuntime(t_lim)
-    elif max_runtime is not None:
+    if max_runtime is not None:
         stop = hgspy.stop.MaxRuntime(max_runtime)
     else:
         stop = hgspy.stop.MaxIterations(max_iterations)
@@ -89,7 +84,7 @@ def main():
     args = parse_args()
 
     func = partial(solve, **vars(args))
-    func_args = sorted(glob(args.instance_pattern), key=tools.name2size)
+    func_args = glob(args.instance_pattern)
 
     tqdm_kwargs = dict(max_workers=args.num_procs, unit="instance")
     data = process_map(func, func_args, **tqdm_kwargs)

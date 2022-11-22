@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument("--instance_seed", type=int, default=1)
     parser.add_argument("--solver_seed", type=int, default=1)
     parser.add_argument("--num_procs", type=int, default=4)
+    parser.add_argument("--epoch_tlim", type=int, default=60)
     parser.add_argument(
         "--config_loc", default="configs/benchmark_dynamic.toml"
     )
@@ -26,10 +27,6 @@ def parse_args():
         "--instance_pattern", default="instances/ORTEC-VRPTW-ASYM-*.txt"
     )
     parser.add_argument("--hindsight", action="store_true")
-
-    stop = parser.add_mutually_exclusive_group(required=True)
-    stop.add_argument("--epoch_tlim", type=int)
-    stop.add_argument("--phase", choices=["quali", "final"])
 
     return parser.parse_args()
 
@@ -40,19 +37,15 @@ def solve(
     solver_seed: int,
     config_loc: str,
     hindsight: bool,
-    epoch_tlim,
-    phase,
+    epoch_tlim: int,
     **kwargs,
 ):
     path = Path(loc)
 
-    if phase is not None:
-        tlim = tools.dynamic_time_limit(phase)
-    else:
-        tlim = epoch_tlim
-
     env = VRPEnvironment(
-        seed=instance_seed, instance=tools.read_vrplib(path), epoch_tlim=tlim
+        seed=instance_seed,
+        instance=tools.read_vrplib(path),
+        epoch_tlim=epoch_tlim,
     )
 
     start = perf_counter()
@@ -108,6 +101,7 @@ def main():
     data = np.asarray(data, dtype=dtypes)
 
     table = tools.tabulate(headers, data)
+
     print(
         Path(__file__).name,
         " ".join(f"--{key} {value}" for key, value in vars(args).items()),

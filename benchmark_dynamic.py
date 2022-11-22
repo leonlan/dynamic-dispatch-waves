@@ -19,14 +19,14 @@ def parse_args():
     parser.add_argument("--instance_seed", type=int, default=1)
     parser.add_argument("--solver_seed", type=int, default=1)
     parser.add_argument("--num_procs", type=int, default=4)
-    parser.add_argument("--epoch_tlim", type=int, default=60)
+    parser.add_argument("--hindsight", action="store_true")
     parser.add_argument(
         "--config_loc", default="configs/benchmark_dynamic.toml"
     )
     parser.add_argument(
         "--instance_pattern", default="instances/ORTEC-VRPTW-ASYM-*.txt"
     )
-    parser.add_argument("--hindsight", action="store_true")
+    parser.add_argument("--epoch_tlim", type=int, default=60)
 
     return parser.parse_args()
 

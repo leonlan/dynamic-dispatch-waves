@@ -40,15 +40,10 @@ class VRPEnvironment:
         instance: State = None,
         epoch_tlim: int = 120,
     ):
-        super().__init__()
         # DO NOT CHANGE THESE PARAMETERS
-        self.MAX_REQUESTS_PER_EPOCH = (
-            100  # Every epoch, we will sample at most 100 new requests
-        )
-        self.MARGIN_DISPATCH = (
-            3600  # Assume it takes one hour to dispatch the vehicle
-        )
-        self.EPOCH_DURATION = 3600  # We will dispatch vehicles once an hour
+        self.MAX_REQUESTS_PER_EPOCH = 100  # New requests per epoch
+        self.MARGIN_DISPATCH = 3600  # One hour to dispatch the vehicle
+        self.EPOCH_DURATION = 3600  # Dispatch once per hour
         self.TLIM_GRACE_PERIOD = 2  # 2 seconds wall clock grace time
 
         # Fill environment with defaults
@@ -60,43 +55,29 @@ class VRPEnvironment:
         self.is_done = True
         self.reset_counter = 0
 
-    def reset(
-        self,
-        seed: int = None,
-        instance: State = None,
-        epoch_tlim: int = None,
-    ) -> State:
+    def reset(self) -> State:
         """
-        Resets the environment. Defaults provided during construction can be
-        overridden to reuse the environment.
+        Resets the environment.
         """
-        if self.reset_counter > 0 and seed is None:
-            warnings.warn(
-                "Repeatedly resetting the environment without providing a seed will use the same default seed again"
-            )
         self.reset_counter += 1
-        self.instance = (
-            instance if instance is not None else self.default_instance
-        )
-        self.seed = seed if seed is not None else self.default_seed
-        self.epoch_tlim = (
-            epoch_tlim if epoch_tlim is not None else self.default_epoch_tlim
-        )
+        self.instance = self.default_instance
+        self.seed = self.default_seed
+        self.epoch_tlim = self.default_epoch_tlim
 
         assert self.instance is not None
 
         self.rng = np.random.default_rng(self.seed)
-        timewi = self.instance["time_windows"]
+        tws = self.instance["time_windows"]
         self.start_epoch = int(
             max(
-                (timewi[1:, 0].min() - self.MARGIN_DISPATCH)
+                (tws[1:, 0].min() - self.MARGIN_DISPATCH)
                 // self.EPOCH_DURATION,
                 0,
             )
         )
         self.end_epoch = int(
             max(
-                (timewi[1:, 0].max() - self.MARGIN_DISPATCH)
+                (tws[1:, 0].max() - self.MARGIN_DISPATCH)
                 // self.EPOCH_DURATION,
                 0,
             )

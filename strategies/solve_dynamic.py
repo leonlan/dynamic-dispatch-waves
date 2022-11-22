@@ -36,13 +36,10 @@ def solve_dynamic(env, config, solver_seed):
     while not done:
         start = time.perf_counter()
 
-        if static_info["is_static"]:
-            dispatch_inst = observation["epoch_instance"]
-        else:
-            strategy = STRATEGIES[config.strategy()]
-            dispatch_inst = strategy(
-                static_info, observation, rng, **config.strategy_params()
-            )
+        strategy = STRATEGIES[config.strategy()]
+        dispatch_inst = strategy(
+            static_info, observation, rng, **config.strategy_params()
+        )
 
         solve_tlim = ep_tlim - (time.perf_counter() - start) + 1
 

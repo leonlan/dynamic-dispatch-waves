@@ -31,10 +31,7 @@ def solve_dynamic(env, config, solver_seed):
     costs = {}
     done = False
 
-    if static_info["is_static"]:
-        config = config.static()
-    else:
-        config = config.dynamic()
+    config = config.dynamic()
 
     while not done:
         start = time.perf_counter()

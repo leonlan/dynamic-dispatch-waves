@@ -1,16 +1,13 @@
 import time
 import tools
-import warnings
-from typing import Dict, List, Tuple
+from typing import Any, Dict, Optional, List, Tuple
 
 import numpy as np
 
 
-_BIG_NUMBER = int(1e9)
-
-State = Dict[str, np.ndarray]
+State = Dict[str, Any]
 Action = List[List[int]]
-Info = Dict[str, str]
+Info = Dict[str, Any]
 
 
 class VRPEnvironment:
@@ -36,56 +33,51 @@ class VRPEnvironment:
 
     def __init__(
         self,
-        seed: int = 1,
-        instance: State = None,
-        epoch_tlim: int = 120,
+        seed: int,
+        instance: Dict,
+        epoch_tlim: int,
+        max_requests_per_epoch: int = 100,
+        margin_dispatch: int = 3600,
+        epoch_duration: int = 3600,
     ):
-        # DO NOT CHANGE THESE PARAMETERS
-        self.MAX_REQUESTS_PER_EPOCH = 100  # New requests per epoch
-        self.MARGIN_DISPATCH = 3600  # One hour to dispatch the vehicle
-        self.EPOCH_DURATION = 3600  # Dispatch once per hour
-        self.TLIM_GRACE_PERIOD = 2  # 2 seconds wall clock grace time
+        self.rng = np.random.default_rng(seed)
+        self.instance = instance
+        self.epoch_tlim = epoch_tlim
 
-        # Fill environment with defaults
-        self.default_instance = instance
-        self.default_seed = seed
-        self.default_epoch_tlim = epoch_tlim
+        self.max_requests_per_epoch = max_requests_per_epoch
+        self.margin_dispatch = margin_dispatch
+        self.epoch_duration = epoch_duration
 
         # Require reset to be called first by marking environment as done
         self.is_done = True
-        self.reset_counter = 0
 
-    def reset(self) -> State:
+    def reset(self) -> Tuple[State, Info]:
         """
         Resets the environment.
         """
-        self.reset_counter += 1
-        self.instance = self.default_instance
-        self.seed = self.default_seed
-        self.epoch_tlim = self.default_epoch_tlim
-
-        assert self.instance is not None
-
-        self.rng = np.random.default_rng(self.seed)
         tws = self.instance["time_windows"]
+
+        # Start epoch depends on minimum earliest customer time window
         self.start_epoch = int(
             max(
-                (tws[1:, 0].min() - self.MARGIN_DISPATCH)
-                // self.EPOCH_DURATION,
+                (tws[1:, 0].min() - self.margin_dispatch)
+                // self.epoch_duration,
                 0,
             )
         )
+
+        # End epoch depends on maximum earliest customer time window
         self.end_epoch = int(
             max(
-                (tws[1:, 0].max() - self.MARGIN_DISPATCH)
-                // self.EPOCH_DURATION,
+                (tws[1:, 0].max() - self.margin_dispatch)
+                // self.epoch_duration,
                 0,
             )
         )
 
         self.current_epoch = self.start_epoch
 
-        # Initialize request array with dummy/padding/sentinel request for depot
+        # Initialize request array with dummy request for depot
         self.request_id = np.array([0])
         self.request_customer_index = np.array([0])
         self.request_timewi = self.instance["time_windows"][0:1]
@@ -98,8 +90,8 @@ class VRPEnvironment:
         self.is_done = False
         obs = self._next_observation()
 
-        self.final_solutions = {}
-        self.final_costs = {}
+        self.final_solutions: Dict[int, Optional[List]] = {}
+        self.final_costs: Dict[int, Optional[float]] = {}
         self.start_time_epoch = time.time()
 
         info = {
@@ -113,15 +105,13 @@ class VRPEnvironment:
 
         return obs, info
 
-    def step(self, solution: Action) -> Tuple[State, int, bool, Info]:
-
+    def step(
+        self, solution: Action
+    ) -> Tuple[Optional[State], float, bool, Info]:
         assert not self.is_done, "Environment is finished"
 
-        # Check time limit
-        if (
-            self.get_elapsed_time_epoch()
-            > self.epoch_tlim + self.TLIM_GRACE_PERIOD
-        ):
+        # Check time limit (2 seconds grace period)
+        if self._get_elapsed_time_epoch() > self.epoch_tlim + 2:
             return self._fail_episode("Time exceeded")
 
         # Check if solution is valid
@@ -154,33 +144,31 @@ class VRPEnvironment:
         self.start_time_epoch = time.time()
         return (observation, reward, self.is_done, {"error": None})
 
-    def get_elapsed_time_epoch(self):
+    def _get_elapsed_time_epoch(self):
         assert self.start_time_epoch is not None
         return time.time() - self.start_time_epoch
 
     def _fail_episode(self, error):
         self.final_solutions[self.current_epoch] = None
-        self.final_costs[self.current_epoch] = (
-            max(self.end_epoch - self.current_epoch, 1) * _BIG_NUMBER
-        )
+        self.final_costs[self.current_epoch] = float("inf")
         self.is_done = True
-        return (None, -_BIG_NUMBER, self.is_done, {"error": str(error)})
+        return (None, float("inf"), self.is_done, {"error": str(error)})
 
-    def _next_observation(self):
+    def _next_observation(self) -> State:
         assert not self.is_done
         assert self.start_epoch <= self.current_epoch <= self.end_epoch
 
         duration_matrix = self.instance["duration_matrix"]
 
         # Sample new data
-        current_time = self.EPOCH_DURATION * self.current_epoch
-        planning_starttime = current_time + self.MARGIN_DISPATCH
+        current_time = self.epoch_duration * self.current_epoch
+        planning_starttime = current_time + self.margin_dispatch
 
         # Sample uniformly
         num_customers = len(self.instance["coords"]) - 1  # Exclude depot
 
         # Sample data uniformly from customers (1 to num_customers)
-        def sample_from_customers(k=self.MAX_REQUESTS_PER_EPOCH):
+        def sample_from_customers(k=self.max_requests_per_epoch):
             return self.rng.integers(num_customers, size=k) + 1
 
         cust_idx = sample_from_customers()
@@ -247,7 +235,7 @@ class VRPEnvironment:
         if self.current_epoch < self.end_epoch:
             earliest_arrival = np.maximum(
                 planning_starttime
-                + self.EPOCH_DURATION
+                + self.epoch_duration
                 + duration_matrix[0, self.request_customer_index],
                 self.request_timewi[:, 0],
             )
@@ -267,7 +255,9 @@ class VRPEnvironment:
         # Return instance based on customers not yet dispatched
         idx_undispatched = self.request_id[~self.request_is_dispatched]
         customer_idx = self.request_customer_index[idx_undispatched]
-        # Return a VRPTW instance with undispatched requests with two additional properties: customer_idx and request_idx
+
+        # Return a VRPTW instance with undispatched requests with two
+        # additional properties: customer_idx and request_idx
         time_windows = self.request_timewi[idx_undispatched]
 
         # Renormalize time to start at planning_starttime, and clip time windows in the past (so depot will start at 0)
@@ -296,7 +286,7 @@ class VRPEnvironment:
             "epoch_instance": self.epoch_instance,
         }
 
-    def get_hindsight_problem(self):
+    def get_hindsight_problem(self) -> State:
         """
         After the episode is completed, this function can be used to obtain the
         'hindsight problem', i.e., as if we had future information about all the
@@ -307,7 +297,7 @@ class VRPEnvironment:
         # Release times indicate that a route containing this request cannot
         # dispatch before this time. This includes the margin time for dispatch
         release_times = (
-            self.EPOCH_DURATION * self.request_epoch + self.MARGIN_DISPATCH
+            self.epoch_duration * self.request_epoch + self.margin_dispatch
         )
         release_times[self.instance["is_depot"][customer_idx]] = 0
 

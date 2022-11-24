@@ -40,6 +40,5 @@ build-backend = "poetry.core.masonry.api"
 line-length = 79
 exclude = '''
 hgs_vrptw
-| environment\.py
 | tools\.py
 '''

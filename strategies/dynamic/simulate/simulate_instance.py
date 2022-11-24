@@ -16,7 +16,7 @@ def simulate_instance(
     # Parameters
     static_inst = info["dynamic_context"]
     ep_inst = obs["epoch_instance"]
-    start_time = obs["planning_starttime"]
+    dispatch_time = obs["dispatch_time"]
     dist = static_inst["duration_matrix"]
     tws = static_inst["time_windows"]
 
@@ -34,7 +34,7 @@ def simulate_instance(
     # determine request feasibility. Will be clipped later to fit the epoch.
     sim_tw = tws[tw_idx]
     sim_epochs = np.repeat(np.arange(1, max_lookahead + 1), n_requests)
-    sim_release = start_time + sim_epochs * _EPOCH_DURATION
+    sim_release = dispatch_time + sim_epochs * _EPOCH_DURATION
     sim_service = static_inst["service_times"][service_idx]
 
     # Earliest arrival is release time + drive time or earliest time window.
@@ -64,7 +64,7 @@ def simulate_instance(
     req_idx = np.concatenate((ep_inst["request_idx"], sim_req_idx))
 
     # Normalize TW and release to start_time, and clip the past
-    sim_tw = np.maximum(sim_tw - start_time, 0)
+    sim_tw = np.maximum(sim_tw - dispatch_time, 0)
     req_tw = np.concatenate((ep_inst["time_windows"], sim_tw))
 
     ep_release = (
@@ -72,7 +72,7 @@ def simulate_instance(
         if ep_release is not None
         else np.zeros_like(ep_inst["is_depot"])
     )
-    sim_release = np.maximum(sim_release - start_time, 0)
+    sim_release = np.maximum(sim_release - dispatch_time, 0)
     req_release = np.concatenate((ep_release, sim_release))
 
     demand_idx = rng.integers(n_customers, size=n_new_customers) + 1

@@ -25,7 +25,7 @@ class VRPEnvironment:
     margin_dispatch
         The preparation time needed to dispatch a set of requests. That is, when
         a choice of requests are selected to be dispatched at epoch t, then the
-        start time of the routes is ``t * epoch_duration + margin_dispatch``.
+        dispatch time of the routes is ``t * epoch_duration + margin_dispatch``.
     epoch_duration
         The time between two consecutive epochs.
     """
@@ -36,6 +36,7 @@ class VRPEnvironment:
         instance: Dict,
         epoch_tlim: int,
         max_requests_per_epoch: int = 100,
+        # TODO What is the relationship between epoch duration and margin dispatch?
         margin_dispatch: int = 3600,
         epoch_duration: int = 3600,
     ):
@@ -47,8 +48,7 @@ class VRPEnvironment:
         self.margin_dispatch = margin_dispatch
         self.epoch_duration = epoch_duration
 
-        # Require reset to be called first by marking environment as done
-        self.is_done = True
+        self.is_done = True  # Requires reset to be called first
 
     def reset(self) -> Tuple[State, Info]:
         """
@@ -56,6 +56,7 @@ class VRPEnvironment:
         """
         tws = self.instance["time_windows"]
 
+        # TODO refactor this
         # Start epoch depends on minimum earliest customer time window
         self.start_epoch = int(
             max(
@@ -164,128 +165,107 @@ class VRPEnvironment:
         Returns the next observation. This consists of all requests that were
         not dispatched during the previous epoch, and newly sampled requests.
         """
-        duration_matrix = self.instance["duration_matrix"]
+        dist = self.instance["duration_matrix"]
 
         current_time = self.epoch_duration * self.current_epoch
-        planning_starttime = current_time + self.margin_dispatch
+        dispatch_time = current_time + self.margin_dispatch
 
-        # Sample uniformly
         n_customers = self.instance["is_depot"].size - 1  # Exclude depot
+        n_samples = self.max_requests_per_epoch
 
         # Sample data uniformly from customers (1 to num_customers)
-        def sample_from_customers(k=self.max_requests_per_epoch):
-            return self.rng.integers(n_customers, size=k) + 1
+        cust_idx = self.rng.integers(n_customers, size=n_samples) + 1
+        tw_idx = self.rng.integers(n_customers, size=n_samples) + 1
+        demand_idx = self.rng.integers(n_customers, size=n_samples) + 1
+        service_idx = self.rng.integers(n_customers, size=n_samples) + 1
 
-        cust_idx = sample_from_customers()
-        tw_idx = sample_from_customers()
-        demand_idx = sample_from_customers()
-        service_t_idx = sample_from_customers()
+        new_tw = self.instance["time_windows"][tw_idx]
+        new_demand = self.instance["demand"][demand_idx]
+        new_service = self.instance["service_times"][service_idx]
 
-        new_request_timewi = self.instance["time_windows"][tw_idx]
-        # Filter data that can no longer be delivered
-        # Time + margin for dispatch + drive time from depot should not exceed latest arrival
+        # Filter sampled requests that cannot be served in a round trip
         earliest_arrival = np.maximum(
-            planning_starttime + duration_matrix[0, cust_idx],
-            new_request_timewi[:, 0],
+            dispatch_time + dist[0, cust_idx], new_tw[:, 0]
         )
-        # Also, return at depot in time must be feasible
-        earliest_return_at_depot = (
-            earliest_arrival
-            + self.instance["service_times"][service_t_idx]
-            + duration_matrix[cust_idx, 0]
-        )
-        is_feasible = (earliest_arrival <= new_request_timewi[:, 1]) & (
-            earliest_return_at_depot <= self.instance["time_windows"][0, 1]
+        earliest_return = earliest_arrival + new_service + dist[cust_idx, 0]
+        depot_closed = self.instance["time_windows"][0, 1]
+
+        feas = (earliest_arrival <= new_tw[:, 1]) & (
+            earliest_return <= depot_closed
         )
 
-        if is_feasible.any():
-            num_new_requests = is_feasible.sum()
+        if feas.any():  # Store all new feasible requests
+            n_new_requests = feas.sum()
+
             self.req_idx = np.concatenate(
                 (
                     self.req_idx,
-                    np.arange(num_new_requests) + len(self.req_idx),
+                    np.arange(n_new_requests) + len(self.req_idx),
                 )
             )
             self.req_customer_idx = np.concatenate(
-                (self.req_customer_idx, cust_idx[is_feasible])
+                (self.req_customer_idx, cust_idx[feas])
             )
-            self.req_tw = np.concatenate(
-                (self.req_tw, new_request_timewi[is_feasible])
-            )
+            self.req_tw = np.concatenate((self.req_tw, new_tw[feas]))
             self.req_service = np.concatenate(
-                (
-                    self.req_service,
-                    self.instance["service_times"][service_t_idx[is_feasible]],
-                )
+                (self.req_service, new_service[feas])
             )
             self.req_demand = np.concatenate(
-                (
-                    self.req_demand,
-                    self.instance["demands"][demand_idx[is_feasible]],
-                )
+                (self.req_demand, new_demand[feas])
             )
             self.req_is_dispatched = np.pad(
-                self.req_is_dispatched,
-                (0, num_new_requests),
-                mode="constant",
+                self.req_is_dispatched, (0, n_new_requests), mode="constant"
             )
             self.req_epoch = np.concatenate(
-                (
-                    self.req_epoch,
-                    np.full(num_new_requests, self.current_epoch),
-                )
+                (self.req_epoch, np.full(n_new_requests, self.current_epoch))
             )
 
-        # Customers must dispatch this epoch if next epoch they will be too late
+        # Determine which requests are must-dispatch in the next epoch
         if self.current_epoch < self.end_epoch:
+            next_epoch_time = dispatch_time + self.epoch_duration
+
             earliest_arrival = np.maximum(
-                planning_starttime
-                + self.epoch_duration
-                + duration_matrix[0, self.req_customer_idx],
+                next_epoch_time + dist[0, self.req_customer_idx],
                 self.req_tw[:, 0],
             )
             earliest_return_at_depot = (
                 earliest_arrival
                 + self.req_service
-                + duration_matrix[self.req_customer_idx, 0]
+                + dist[self.req_customer_idx, 0]
             )
+
             self.req_must_dispatch = (earliest_arrival > self.req_tw[:, 1]) | (
-                earliest_return_at_depot > self.instance["time_windows"][0, 1]
+                earliest_return_at_depot > depot_closed
             )
         else:
             self.req_must_dispatch = self.req_idx > 0
 
         # Return instance based on customers not yet dispatched
-        idx_undispatched = self.req_idx[~self.req_is_dispatched]
-        customer_idx = self.req_customer_idx[idx_undispatched]
+        undispatched = self.req_idx[~self.req_is_dispatched]
+        customer_idx = self.req_customer_idx[undispatched]
 
-        # Return a VRPTW instance with undispatched requests with two
-        # additional properties: customer_idx and request_idx
-        time_windows = self.req_tw[idx_undispatched]
-
-        # Renormalize time to start at planning_starttime, and clip time windows in the past (so depot will start at 0)
-        time_windows = np.clip(
-            time_windows - planning_starttime, a_min=0, a_max=None
-        )
+        # Normalize TW to dispatch_time, and clip the past
+        time_windows = np.maximum(self.req_tw[undispatched] - dispatch_time, 0)
 
         self.ep_inst = {
             "is_depot": self.instance["is_depot"][customer_idx],
             "customer_idx": customer_idx,
-            "request_idx": idx_undispatched,
+            "request_idx": undispatched,
             "coords": self.instance["coords"][customer_idx],
-            "demands": self.req_demand[idx_undispatched],
+            "demands": self.req_demand[undispatched],
             "capacity": self.instance["capacity"],
             "time_windows": time_windows,
-            "service_times": self.req_service[idx_undispatched],
+            "service_times": self.req_service[undispatched],
             "duration_matrix": self.instance["duration_matrix"][
                 np.ix_(customer_idx, customer_idx)
             ],
-            "must_dispatch": self.req_must_dispatch[idx_undispatched],
+            "must_dispatch": self.req_must_dispatch[undispatched],
         }
+
         return {
             "current_epoch": self.current_epoch,
             "current_time": current_time,
-            "planning_starttime": planning_starttime,
+            "dispatch_time": dispatch_time,
             "epoch_instance": self.ep_inst,
         }
 

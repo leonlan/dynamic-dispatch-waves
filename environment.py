@@ -107,50 +107,56 @@ class VRPEnvironment:
     def step(
         self, solution: Action
     ) -> Tuple[Optional[State], float, bool, Info]:
-        assert not self.is_done, "Environment is finished"
+        """
+        Steps to the next epoch. If the submitted solution is valid, then this
+        method returns the observation of the next epoch. Otherwise, the epoch
+        is failed and the environment is done.
+        """
+        self._validate_step(solution)
 
-        # Check time limit (2 seconds grace period)
-        if self._get_elapsed_time_epoch() > self.epoch_tlim + 2:
-            return self._fail_episode("Time exceeded")
-
-        # Check if solution is valid
-        try:
-            driving_duration = tools.validate_dynamic_epoch_solution(
-                self.ep_inst, solution
-            )
-        except AssertionError as e:
-            return self._fail_episode(e)
-
-        # Mark orders of current solution as dispatched
         for route in solution:
-            # Route consists of 1 indexed requests
-            assert not self.req_is_dispatched[route].any()
             self.req_is_dispatched[route] = True
 
-        # We must not have any undispatched orders that must be dispatched
-        assert not (self.req_must_dispatch & ~self.req_is_dispatched).any()
+        cost = tools.validate_dynamic_epoch_solution(self.ep_inst, solution)
 
         self.final_solutions[self.current_epoch] = solution
-        self.final_costs[self.current_epoch] = driving_duration
+        self.final_costs[self.current_epoch] = cost
 
         self.current_epoch += 1
         self.is_done = self.current_epoch > self.end_epoch
 
         observation = self._next_observation() if not self.is_done else None
-        reward = -driving_duration
+        reward = -cost
 
         self.start_time_epoch = time.time()
         return (observation, reward, self.is_done, {"error": None})
 
-    def _get_elapsed_time_epoch(self):
-        assert self.start_time_epoch is not None
-        return time.time() - self.start_time_epoch
+    def _validate_step(self, solution):
+        """
+        Validates if the solution was submitted on time, and whether it
+        satisfies the dynamic and static constraints.
+        """
+        assert not self.is_done, "Environment is finished"
+
+        # Check time limit (2 seconds grace period)
+        if time.time() - self.start_time_epoch > self.epoch_tlim + 2:
+            return self._fail_episode("Time exceeded")
+
+        # Check if solution is valid
+        try:
+            tools.validate_dynamic_epoch_solution(self.ep_inst, solution)
+        except AssertionError as e:
+            return self._fail_episode(e)
+
+        # Mark orders of submitted solution as dispatched
+        for route in solution:
+            assert not self.req_is_dispatched[route].any()
+
+        # We must not have any undispatched orders that must be dispatched
+        assert not (self.req_must_dispatch & ~self.req_is_dispatched).any()
 
     def _fail_episode(self, error):
-        self.final_solutions[self.current_epoch] = None
-        self.final_costs[self.current_epoch] = float("inf")
         self.is_done = True
-
         return (None, float("inf"), self.is_done, {"error": str(error)})
 
     def _next_observation(self) -> State:

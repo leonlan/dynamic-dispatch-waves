@@ -42,10 +42,14 @@ def solve(
 ):
     path = Path(loc)
 
+    instance = tools.read_vrplib(path)
+    instance["capacity"] = 80  # Smaller capacity to make shorter routes
+
     env = VRPEnvironment(
         seed=instance_seed,
-        instance=tools.read_vrplib(path),
+        instance=instance,
         epoch_tlim=epoch_tlim,
+        max_requests_per_epoch=10,
     )
 
     start = perf_counter()

@@ -110,8 +110,8 @@ class VRPEnvironment:
     ) -> Tuple[Optional[State], float, bool, Info]:
         assert not self.is_done, "Environment is finished"
 
-        # Check time limit (2 seconds grace period)
-        if self._get_elapsed_time_epoch() > self.epoch_tlim + 2:
+        # Check time limit (10 seconds grace period)
+        if self._get_elapsed_time_epoch() > self.epoch_tlim + 100:
             return self._fail_episode("Time exceeded")
 
         # Check if solution is valid

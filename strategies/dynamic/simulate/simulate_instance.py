@@ -92,4 +92,7 @@ def simulate_instance(
         "service_times": req_service,
         "duration_matrix": dist[req_customer_idx][:, req_customer_idx],
         "release_times": req_release,
+        "must_dispatch": np.concatenate(
+            (ep_inst["must_dispatch"], np.zeros(n_new_customers).astype(bool))
+        ),
     }

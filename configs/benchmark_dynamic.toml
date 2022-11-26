@@ -66,10 +66,10 @@ nbIter = 6318
 
 [dynamic.strategy_params]
 simulate_tlim_factor = 0.7703517587939699
-n_cycles = 3
+n_cycles = 2
 n_simulations = 40
 n_lookahead = 5
-n_requests = 69
+n_requests = 10
 postpone_thresholds = [
     0.6289158289264459,
     0.8485448714466843,

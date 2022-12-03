@@ -36,7 +36,6 @@ class VRPEnvironment:
         instance: Dict,
         epoch_tlim: int,
         max_requests_per_epoch: int = 100,
-        # TODO What is the relationship between epoch duration and margin dispatch?
         margin_dispatch: int = 3600,
         epoch_duration: int = 3600,
     ):
@@ -76,6 +75,7 @@ class VRPEnvironment:
         )
 
         self.current_epoch = self.start_epoch
+        self.current_time = self.current_epoch * self.epoch_duration
 
         # Initialize request array with dummy request for depot
         self.req_idx = np.array([0])
@@ -167,8 +167,7 @@ class VRPEnvironment:
         """
         dist = self.instance["duration_matrix"]
 
-        current_time = self.epoch_duration * self.current_epoch
-        dispatch_time = current_time + self.margin_dispatch
+        dispatch_time = self.current_time + self.margin_dispatch
 
         n_customers = self.instance["is_depot"].size - 1  # Exclude depot
         n_samples = self.max_requests_per_epoch
@@ -222,10 +221,10 @@ class VRPEnvironment:
 
         # Determine which requests are must-dispatch in the next epoch
         if self.current_epoch < self.end_epoch:
-            next_epoch_time = dispatch_time + self.epoch_duration
+            next_time = self.current_time + self.epoch_duration
 
             earliest_arrival = np.maximum(
-                next_epoch_time + dist[0, self.req_customer_idx],
+                next_time + dist[0, self.req_customer_idx],
                 self.req_tw[:, 0],
             )
             earliest_return_at_depot = (
@@ -264,7 +263,7 @@ class VRPEnvironment:
 
         return {
             "current_epoch": self.current_epoch,
-            "current_time": current_time,
+            "current_time": self.current_time,
             "dispatch_time": dispatch_time,
             "epoch_instance": self.ep_inst,
         }

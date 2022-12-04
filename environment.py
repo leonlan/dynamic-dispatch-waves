@@ -101,7 +101,11 @@ class VRPEnvironment:
         method returns the observation of the next epoch. Otherwise, the epoch
         is failed and the environment is done.
         """
-        self._validate_step(solution)
+        try:
+            self._validate_step(solution)
+        except AssertionError as error:
+            self.is_done = True
+            return (None, float("inf"), self.is_done, {"error": str(error)})
 
         cost = tools.validate_dynamic_epoch_solution(self.ep_inst, solution)
 
@@ -126,8 +130,8 @@ class VRPEnvironment:
         assert not self.is_done, "Environment is finished"
 
         # Check time limit (2 seconds grace period)
-        if time.time() - self.start_time_epoch > self.epoch_tlim + 2:
-            return self._fail_episode("Time exceeded")
+        on_time = time.time() - self.start_time_epoch < self.epoch_tlim + 2
+        assert on_time, "Time limit exceeded"
 
         # Check if solution is valid
         tools.validate_dynamic_epoch_solution(self.ep_inst, solution)
@@ -138,11 +142,8 @@ class VRPEnvironment:
             self.req_is_dispatched[route] = True
 
         # We must not have any undispatched orders that must be dispatched
-        assert not (self.req_must_dispatch & ~self.req_is_dispatched).any()
-
-    def _fail_episode(self, error):
-        self.is_done = True
-        return (None, float("inf"), self.is_done, {"error": str(error)})
+        undispatched = (self.req_must_dispatch & ~self.req_is_dispatched).any()
+        assert not undispatched, "Must dispatch requests not dispatched."
 
     def _next_observation(self) -> State:
         """

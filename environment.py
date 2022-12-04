@@ -34,7 +34,7 @@ class VRPEnvironment:
         self,
         seed: int,
         instance: Dict,
-        epoch_tlim: int,
+        epoch_tlim: float,
         max_requests_per_epoch: int = 100,
         dispatch_margin: int = 3600,
         epoch_duration: int = 3600,

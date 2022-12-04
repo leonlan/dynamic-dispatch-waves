@@ -103,15 +103,13 @@ class VRPEnvironment:
         """
         self._validate_step(solution)
 
-        for route in solution:
-            self.req_is_dispatched[route] = True
-
         cost = tools.validate_dynamic_epoch_solution(self.ep_inst, solution)
 
         self.final_solutions[self.current_epoch] = solution
         self.final_costs[self.current_epoch] = cost
 
         self.current_epoch += 1
+        self.current_time = self.current_epoch * self.epoch_duration
         self.is_done = self.current_epoch > self.end_epoch
 
         observation = self._next_observation() if not self.is_done else None
@@ -132,14 +130,12 @@ class VRPEnvironment:
             return self._fail_episode("Time exceeded")
 
         # Check if solution is valid
-        try:
-            tools.validate_dynamic_epoch_solution(self.ep_inst, solution)
-        except AssertionError as e:
-            return self._fail_episode(e)
+        tools.validate_dynamic_epoch_solution(self.ep_inst, solution)
 
         # Mark orders of submitted solution as dispatched
         for route in solution:
             assert not self.req_is_dispatched[route].any()
+            self.req_is_dispatched[route] = True
 
         # We must not have any undispatched orders that must be dispatched
         assert not (self.req_must_dispatch & ~self.req_is_dispatched).any()
@@ -170,7 +166,7 @@ class VRPEnvironment:
         service_idx = self.rng.integers(n_customers, size=n_samples) + 1
 
         new_tw = self.instance["time_windows"][tw_idx]
-        new_demand = self.instance["demand"][demand_idx]
+        new_demand = self.instance["demands"][demand_idx]
         new_service = self.instance["service_times"][service_idx]
 
         # Filter sampled requests that cannot be served in a round trip
@@ -212,10 +208,10 @@ class VRPEnvironment:
 
         # Determine which requests are must-dispatch in the next epoch
         if self.current_epoch < self.end_epoch:
-            next_time = self.current_time + self.epoch_duration
+            next_dispatch_time = dispatch_time + self.epoch_duration
 
             earliest_arrival = np.maximum(
-                next_time + dist[0, self.req_customer_idx],
+                next_dispatch_time + dist[0, self.req_customer_idx],
                 self.req_tw[:, 0],
             )
             earliest_return_at_depot = (

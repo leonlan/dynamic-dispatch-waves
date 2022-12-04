@@ -22,10 +22,10 @@ class VRPEnvironment:
         The epoch time limit.
     max_requests_per_epoch
         The maximum number of revealed requests per epoch.
-    margin_dispatch
-        The preparation time needed to dispatch a set of requests. That is, when
-        a choice of requests are selected to be dispatched at epoch t, then the
-        dispatch time of the routes is ``t * epoch_duration + margin_dispatch``.
+    dispatch_margin
+        The preparation time needed to dispatch a set of routes. That is, when
+        a set of routes are to be dispatched at epoch t, then the start time of
+        the routes is `t * epoch_duration + dispatch_margin`.
     epoch_duration
         The time between two consecutive epochs.
     """
@@ -36,15 +36,14 @@ class VRPEnvironment:
         instance: Dict,
         epoch_tlim: int,
         max_requests_per_epoch: int = 100,
-        margin_dispatch: int = 3600,
+        dispatch_margin: int = 3600,
         epoch_duration: int = 3600,
     ):
         self.rng = np.random.default_rng(seed)
         self.instance = instance
         self.epoch_tlim = epoch_tlim
-
         self.max_requests_per_epoch = max_requests_per_epoch
-        self.margin_dispatch = margin_dispatch
+        self.dispatch_margin = dispatch_margin
         self.epoch_duration = epoch_duration
 
         self.is_done = True  # Requires reset to be called first
@@ -53,26 +52,15 @@ class VRPEnvironment:
         """
         Resets the environment.
         """
-        tws = self.instance["time_windows"]
+        tw = self.instance["time_windows"]
 
-        # TODO refactor this
-        # Start epoch depends on minimum earliest customer time window
-        self.start_epoch = int(
-            max(
-                (tws[1:, 0].min() - self.margin_dispatch)
-                // self.epoch_duration,
-                0,
-            )
-        )
+        # The start and end epochs are determined by the earliest and latest
+        # opening moments of time windows, corrected by the dispatch margin.
+        earliest_open = tw[1:, 0].min() - self.dispatch_margin
+        latest_open = tw[1:, 0].max() - self.dispatch_margin
 
-        # End epoch depends on maximum earliest customer time window
-        self.end_epoch = int(
-            max(
-                (tws[1:, 0].max() - self.margin_dispatch)
-                // self.epoch_duration,
-                0,
-            )
-        )
+        self.start_epoch = int(max(earliest_open // self.epoch_duration, 0))
+        self.end_epoch = int(max(latest_open // self.epoch_duration, 0))
 
         self.current_epoch = self.start_epoch
         self.current_time = self.current_epoch * self.epoch_duration
@@ -164,10 +152,13 @@ class VRPEnvironment:
         """
         Returns the next observation. This consists of all requests that were
         not dispatched during the previous epoch, and newly sampled requests.
+
+        # TODO We could sample all requests at the initialization, because the
+        new observations do not depend on any state-specific information.
         """
         dist = self.instance["duration_matrix"]
 
-        dispatch_time = self.current_time + self.margin_dispatch
+        dispatch_time = self.current_time + self.dispatch_margin
 
         n_customers = self.instance["is_depot"].size - 1  # Exclude depot
         n_samples = self.max_requests_per_epoch
@@ -279,7 +270,7 @@ class VRPEnvironment:
         # Release times indicate that a route containing this request cannot
         # dispatch before this time. This includes the margin time for dispatch
         release_times = (
-            self.epoch_duration * self.req_epoch + self.margin_dispatch
+            self.epoch_duration * self.req_epoch + self.dispatch_margin
         )
         release_times[self.instance["is_depot"][customer_idx]] = 0
 

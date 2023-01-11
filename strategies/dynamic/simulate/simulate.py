@@ -1,3 +1,6 @@
+from collections import Counter, defaultdict
+from typing import List, Dict, Tuple
+
 import numpy as np
 
 import hgspy
@@ -47,6 +50,9 @@ def simulate(
     postpone_threshold = postpone_thresholds[min(epoch, num_thresholds - 1)]
 
     for _ in range(n_cycles):
+        # Extract all subsequences
+        subseqs = Counter()
+
         for _ in range(n_simulations):
             sim_inst = simulate_instance(
                 info,
@@ -75,6 +81,18 @@ def simulate(
 
             dispatch_count[0] += 1  # depot
 
+            # HACK Find all subsequences of the simulation routes.
+            for sim_route in best.get_routes():
+                subseqs.update(extract_subsequences(sim_route, 10))
+
+        # Remove all routes that contain simulated requests, because
+        # that means the pattern is "broken".
+        subseqs = {
+            sub: count
+            for sub, count in subseqs.items()
+            if all(cust < n_ep_reqs for cust in sub)
+        }
+
         # Select requests to postpone based on thresholds
         postpone_count = n_simulations - dispatch_count
         to_postpone = postpone_count >= postpone_threshold * n_simulations
@@ -84,3 +102,20 @@ def simulate(
     to_dispatch = ep_inst["is_depot"] | ep_inst["must_dispatch"] | ~to_postpone
 
     return filter_instance(ep_inst, to_dispatch)
+
+
+def extract_subsequences(
+    sequence: List[int], Lmax: int, Lmin: int = 2
+) -> List[Tuple]:
+    """
+    Extracts all subsequences of length [Lmin, Lmax] from the passed-in sequence.
+    """
+    subseqs = []
+    n = len(sequence)
+
+    for i in range(n):
+        for j in range(Lmin, min(n, Lmax) + 1):
+            if i + j <= n:
+                subseqs.append(tuple(sequence[i : i + j]))
+
+    return subseqs

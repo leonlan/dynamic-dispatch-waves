@@ -20,7 +20,7 @@ def parse_args():
     parser.add_argument("--num_procs", type=int, default=4)
     parser.add_argument("--config_loc", default="configs/benchmark.toml")
     parser.add_argument(
-        "--instance_pattern", default="instances/ORTEC-VRPTW-ASYM-*.txt"
+        "--instance_pattern", default="instances/ortec/ORTEC-VRPTW-ASYM-*.txt"
     )
 
     group = parser.add_mutually_exclusive_group(required=True)

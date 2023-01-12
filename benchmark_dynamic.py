@@ -24,7 +24,7 @@ def parse_args():
         "--config_loc", default="configs/benchmark_dynamic.toml"
     )
     parser.add_argument(
-        "--instance_pattern", default="instances/ORTEC-VRPTW-ASYM-*.txt"
+        "--instance_pattern", default="instances/ortec/ORTEC-VRPTW-ASYM-*.txt"
     )
     parser.add_argument("--epoch_tlim", type=float, default=60)
 

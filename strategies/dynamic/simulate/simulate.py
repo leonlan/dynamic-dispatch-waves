@@ -1,5 +1,4 @@
-from collections import Counter, defaultdict
-from typing import List, Dict, Tuple
+from collections import Counter
 
 import numpy as np
 
@@ -51,7 +50,7 @@ def simulate(
 
     for _ in range(n_cycles):
         # Extract all subsequences
-        subseqs = Counter()
+        subsequences = Counter()
 
         for _ in range(n_simulations):
             sim_inst = simulate_instance(
@@ -79,19 +78,12 @@ def simulate(
                 if any(idx in must_dispatch for idx in sim_route):
                     dispatch_count[sim_route] += 1
 
+                # Find all subsequences of the simulation routes.
+                sim_subsequences = extract_subsequences(sim_route, 2, 10)
+                epoch_subsequences = filter(lambda sub: max(sub) < n_ep_reqs, sim_subsequences)
+                subsequences.update(epoch_subsequences)
+
             dispatch_count[0] += 1  # depot
-
-            # HACK Find all subsequences of the simulation routes.
-            for sim_route in best.get_routes():
-                subseqs.update(extract_subsequences(sim_route, 10))
-
-        # Remove all routes that contain simulated requests, because
-        # that means the pattern is "broken".
-        subseqs = {
-            sub: count
-            for sub, count in subseqs.items()
-            if all(cust < n_ep_reqs for cust in sub)
-        }
 
         # Select requests to postpone based on thresholds
         postpone_count = n_simulations - dispatch_count
@@ -104,18 +96,12 @@ def simulate(
     return filter_instance(ep_inst, to_dispatch)
 
 
-def extract_subsequences(
-    sequence: List[int], Lmax: int, Lmin: int = 2
-) -> List[Tuple]:
+def extract_subsequences(sequence, lmin, lmax):
     """
-    Extracts all subsequences of length [Lmin, Lmax] from the passed-in sequence.
+    Extracts all subsequences of lengths [lmin, lmax] from the passed-in sequence.
     """
-    subseqs = []
     n = len(sequence)
 
-    for i in range(n):
-        for j in range(Lmin, min(n, Lmax) + 1):
-            if i + j <= n:
-                subseqs.append(tuple(sequence[i : i + j]))
-
-    return subseqs
+    for l in range(lmin, min(lmax, n) + 1):
+        for subsequence in zip(*(sequence[i:] for i in range(l))):
+            yield subsequence

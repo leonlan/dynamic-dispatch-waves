@@ -153,14 +153,6 @@ void Individual::makeNeighbours()
                    idx == route.size() - 1 ? 0 : route[idx + 1]};  // succ
 }
 
-[[nodiscard]] bool Individual::isFeasible() const
-{
-    // TODO Do we ned to include dispatch feasibility here?
-    // We assume that an individual can never become dispatch
-    // infeasible in throughout the search.
-    return !hasExcessCapacity() && !hasTimeWarp();
-}
-
 Individual::Individual(Params const *params, XorShift128 *rng)
     : params(params),
       routes_(params->nbVehicles),

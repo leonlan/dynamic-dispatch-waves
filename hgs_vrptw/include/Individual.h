@@ -77,7 +77,13 @@ public:
     /**
      * Returns true when this solution is feasible; false otherwise.
      */
-    [[nodiscard]] bool isFeasible() const;
+    [[nodiscard]] bool Individual::isFeasible() const
+    {
+        // TODO Do we need to include dispatch feasibility here?
+        // We assume that an individual can never become dispatch
+        // infeasible in throughout the search.
+        return !hasExcessCapacity() && !hasTimeWarp();
+    }
 
     /**
      * If true, then the route exceeds vehicle capacity.

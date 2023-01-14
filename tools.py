@@ -175,6 +175,7 @@ def read_vrplib(filename, rounded=True):
     service_t = []
     timewi = []
     release_times = []
+    latest_dispatch = []
     with open(filename, "r") as f:
 
         for line in f:
@@ -203,6 +204,8 @@ def read_vrplib(filename, rounded=True):
                 mode = "service_t"
             elif line == "RELEASE_TIME_SECTION":
                 mode = "release_time"
+            elif line == "LATEST_DISPATCH_SECTION":
+                mode = "latest_dispatch"
             elif line == "EOF":
                 break
             elif mode == "coord":
@@ -250,7 +253,12 @@ def read_vrplib(filename, rounded=True):
                 node, release_time = line.split()
                 release_time = int(release_time)
                 release_times.append(release_time)
+            elif mode == "latest_dispatch":
+                node, dispatch_time = line.split()
+                dispatch_time = int(dispatch_time)
+                latest_dispatch.append(dispatch_time)
 
+    horizon = timewi[0][1]  # time horizon, i.e., depot latest tw
     return {
         "is_depot": np.array([1] + [0] * len(loc), dtype=bool),
         "coords": np.array([depot] + loc),
@@ -264,6 +272,9 @@ def read_vrplib(filename, rounded=True):
         "release_times": np.array(release_times)
         if release_times
         else np.zeros(len(loc) + 1, dtype=int),
+        "latest_dispatch": np.array(latest_dispatch)
+        if latest_dispatch
+        else np.ones(len(loc) + 1, dtype=int) * horizon,
     }
 
 

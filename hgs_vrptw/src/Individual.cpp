@@ -155,7 +155,9 @@ void Individual::makeNeighbours()
 
 [[nodiscard]] bool Individual::isFeasible() const
 {
-    // TODO Add dispatch window
+    // TODO Do we ned to include dispatch feasibility here?
+    // We assume that an individual can never become dispatch
+    // infeasible in throughout the search.
     return !hasExcessCapacity() && !hasTimeWarp();
 }
 

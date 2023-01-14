@@ -248,7 +248,7 @@ Params::Params(Config const &config, std::string const &instPath)
                                                  " client order");
                     }
                 }
-                // Check if the service duration of the depot is 0
+                // Check if the release time of the depot is 0
                 if (clients[0].releaseTime != 0)
                 {
                     throw std::runtime_error(
@@ -268,12 +268,6 @@ Params::Params(Config const &config, std::string const &instPath)
                         throw std::runtime_error("Release times are not in"
                                                  " client order");
                     }
-                }
-                // Check if the service duration of the depot is 0
-                if (clients[0].latestDispatch != 0)
-                {
-                    throw std::runtime_error(
-                        "Release time for depot should be 0");
                 }
             }
             // Read the time windows of all the clients (the depot should

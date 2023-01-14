@@ -77,7 +77,7 @@ public:
     /**
      * Returns true when this solution is feasible; false otherwise.
      */
-    [[nodiscard]] bool Individual::isFeasible() const
+    [[nodiscard]] bool isFeasible() const
     {
         // TODO Do we need to include dispatch feasibility here?
         // We assume that an individual can never become dispatch

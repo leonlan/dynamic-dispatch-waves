@@ -28,6 +28,10 @@ int MoveTwoClientsReversed::evaluate(Node *U, Node *V)
 
         auto uTWS = TWS::merge(p(U)->twBefore, nn(U)->twAfter);
 
+        // Shortcut if new route is not dispatch feasible
+        if (!uTWS.isDispatchFeasible())
+            return INT_MAX;
+
         deltaCost += d_params.twPenalty(uTWS.totalTimeWarp());
         deltaCost -= d_params.twPenalty(U->route->timeWarp());
 
@@ -43,6 +47,10 @@ int MoveTwoClientsReversed::evaluate(Node *U, Node *V)
         deltaCost -= d_params.loadPenalty(V->route->load());
 
         auto vTWS = TWS::merge(V->twBefore, n(U)->tw, U->tw, n(V)->twAfter);
+
+        // Shortcut if new route is not dispatch feasible
+        if (!vTWS.isDispatchFeasible())
+            return INT_MAX;
 
         deltaCost += d_params.twPenalty(vTWS.totalTimeWarp());
         deltaCost -= d_params.twPenalty(V->route->timeWarp());

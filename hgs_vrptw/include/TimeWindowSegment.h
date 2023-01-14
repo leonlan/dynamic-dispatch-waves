@@ -9,14 +9,15 @@ class TimeWindowSegment
 
     Params const *params = nullptr;
 
-    int idxFirst = 0;        // Index of the first client in the segment
-    int idxLast = 0;         // Index of the last client in the segment
-    int duration = 0;        // Total duration, incl. waiting and servicing
-    int timeWarp = 0;        // Cumulative time warp
-    int twEarly = 0;         // Earliest visit moment of first client in segment
-    int twLate = 0;          // Latest visit moment of last client in segment
-    int lastRelease = 0;     // Latest release time; cannot leave depot before
-    int latestDispatch = 0;  // Latest dispatch time; cannot leave depot after
+    int idxFirst = 0;     // Index of the first client in the segment
+    int idxLast = 0;      // Index of the last client in the segment
+    int duration = 0;     // Total duration, incl. waiting and servicing
+    int timeWarp = 0;     // Cumulative time warp
+    int twEarly = 0;      // Earliest visit moment of first client in segment
+    int twLate = 0;       // Latest visit moment of last client in segment
+    int lastRelease = 0;  // Latest release time; cannot leave depot before
+    int latestDispatch
+        = INT_MAX;  // Latest dispatch time; cannot leave depot after
 
     [[nodiscard]] TWS merge(TWS const &other) const
     {

@@ -22,8 +22,8 @@ class Params
         int twLate;       // Latest arrival (when using time windows)
         int releaseTime;  // Routes with this client cannot leave depot before
                           // this time
-        int latestDispatch;  // Routes with this client must leave depot before
-                             // this time
+        int latestDispatch = INT_MAX;  // Routes with this client must leave
+                                       // depot before this time
     };
 
     // Penalty booster that increases the penalty on capacity and time window

@@ -91,7 +91,7 @@ def simulate_instance(
     # Default latest dispatch is the time horizon. For requests that are
     # forcibly dispatched, the latest dispatch time becomes zero.
     horizon = req_tw[0][1]  # time horizon
-    req_latest_dispatch = np.ones(feas.size, dtype=int) * horizon
+    req_latest_dispatch = np.ones(req_customer_idx.size, dtype=int) * horizon
 
     if to_dispatch is not None:
         req_latest_dispatch[to_dispatch.nonzero()] = 0

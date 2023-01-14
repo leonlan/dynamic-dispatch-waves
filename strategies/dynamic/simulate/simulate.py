@@ -39,6 +39,7 @@ def simulate(
 
     dispatch_count = np.zeros(n_ep_reqs, dtype=int)
     to_postpone = np.zeros(n_ep_reqs, dtype=bool)
+    to_dispatch = np.zeros(n_ep_reqs, dtype=bool)
 
     # Get the threshold belonging to the current epoch, or the last one
     # available if there are more epochs than thresholds.
@@ -54,7 +55,8 @@ def simulate(
                 rng,
                 n_lookahead,
                 n_requests,
-                ep_release=to_postpone * 3600,
+                to_postpone=to_postpone,
+                to_dispatch=to_dispatch,
             )
 
             res = hgs(
@@ -78,6 +80,11 @@ def simulate(
         # Select requests to postpone based on thresholds
         postpone_count = n_simulations - dispatch_count
         to_postpone = postpone_count >= postpone_threshold * n_simulations
+
+        # # Select requests to dispatch based on thresholds
+        # to_dispatch = dispatch_count >= n_simulations * 0.9
+        # to_dispatch[0] = False  # Do not force dispatch the depot
+        # breakpoint()
 
         dispatch_count *= 0  # reset dispatch count
 

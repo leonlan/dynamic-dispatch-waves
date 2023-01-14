@@ -5,13 +5,26 @@ _EPOCH_DURATION = 3600
 
 
 def simulate_instance(
-    info, obs, rng, n_lookahead: int, n_requests: int, ep_release=None
+    info,
+    obs,
+    rng,
+    n_lookahead: int,
+    n_requests: int,
+    to_postpone=None,
+    to_dispatch=None,
 ):
     """
     Simulate a VRPTW instance with n_lookahead epochs.
     - Sample ``EPOCH_N_REQUESTS`` requests per future epoch
     - Filter the customers that cannot be served in a round trip
     - Concatenate the epoch instance and the simulated requests
+
+    Params
+    ------
+    - `to_postpone` is a boolean array where True mean that the corresponding
+    request is postponed.
+    - `to_dispatch` is a boolean array where True means that the corresponding
+    request is (forcibly) dispatched.
     """
     # Parameters
     static_inst = info["dynamic_context"]
@@ -49,7 +62,7 @@ def simulate_instance(
 
     if n_new_customers == 0:  # this should not happen a lot
         return simulate_instance(
-            info, obs, rng, n_lookahead, n_requests, ep_release
+            info, obs, rng, n_lookahead, n_requests, to_postpone, to_dispatch
         )
 
     sim_tw = sim_tw[feas]
@@ -68,12 +81,20 @@ def simulate_instance(
     req_tw = np.concatenate((ep_inst["time_windows"], sim_tw))
 
     ep_release = (
-        ep_release
-        if ep_release is not None
+        to_postpone * _EPOCH_DURATION
+        if to_postpone is not None
         else np.zeros_like(ep_inst["is_depot"])
     )
     sim_release = np.maximum(sim_release - dispatch_time, 0)
     req_release = np.concatenate((ep_release, sim_release))
+
+    # Default latest dispatch is the time horizon. For requests that are
+    # forcibly dispatched, the latest dispatch time becomes zero.
+    horizon = req_tw[0][1]  # time horizon
+    req_latest_dispatch = np.ones(feas.size, dtype=int) * horizon
+
+    if to_dispatch is not None:
+        req_latest_dispatch[to_dispatch.nonzero()] = 0
 
     demand_idx = rng.integers(n_customers, size=n_new_customers) + 1
     sim_demand = static_inst["demands"][demand_idx]
@@ -92,4 +113,5 @@ def simulate_instance(
         "service_times": req_service,
         "duration_matrix": dist[req_customer_idx][:, req_customer_idx],
         "release_times": req_release,
+        "latest_dispatch": req_latest_dispatch,
     }

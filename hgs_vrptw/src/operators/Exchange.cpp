@@ -82,6 +82,10 @@ int Exchange<N, M>::evalRelocateMove(Node *U, Node *V) const
                                U->route->twBetween(posU, posU + N - 1),
                                n(V)->twAfter);
 
+        // Shortcut if new route is not dispatch feasible
+        if (!vTWS.isDispatchFeasible())
+            return INT_MAX;
+
         deltaCost += d_params.twPenalty(vTWS.totalTimeWarp());
         deltaCost -= d_params.twPenalty(V->route->timeWarp());
     }

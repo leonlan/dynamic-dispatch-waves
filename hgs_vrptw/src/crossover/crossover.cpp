@@ -17,7 +17,18 @@ struct InsertPos  // best insert position, used to plan unplanned clients
 int deltaCost(Client client, Client prev, Client next, Params const &params)
 {
 
-    // TODO add latest dispatch calculation here
+    // We cannot insert a client between [prev, next] if the dispatch
+    // windows are non-intersecting. We assume here that [prev, next]
+    // are a feasible combination w.r.t. dispatch windows.
+    if (params.clients[client].releaseTime
+        > std::min(params.clients[prev].latestDispatch,
+                   params.clients[next].latestDispatch))
+        return INT_MAX;
+
+    if (params.clients[client].latestDispatch < std::max(
+            params.clients[prev].releaseTime, params.clients[next].releaseTime))
+        return INT_MAX;
+
     int prevClientRelease = std::max(params.clients[prev].releaseTime,
                                      params.clients[client].releaseTime);
     int prevEarliestArrival = std::max(prevClientRelease + params.dist(0, prev),

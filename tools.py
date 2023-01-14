@@ -418,7 +418,9 @@ def inst_to_vars(inst):
     if "latest_dispatch" in inst:
         latest_dispatch = inst["latest_dispatch"]
     else:
-        latest_dispatch = np.zeros_like(inst["service_times"])
+        # Default latest dispatch is equal to the latest depot time window
+        horizon = inst["time_windows"][0][1]
+        latest_dispatch = np.ones_like(inst["service_times"]) * horizon
 
     return dict(
         coords=inst["coords"],

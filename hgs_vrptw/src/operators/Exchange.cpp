@@ -60,6 +60,10 @@ int Exchange<N, M>::evalRelocateMove(Node *U, Node *V) const
 
         auto uTWS = TWS::merge(p(U)->twBefore, n(endU)->twAfter);
 
+        // Shortcut if new route is not dispatch feasible
+        if (!uTWS.isDispatchFeasible())
+            return INT_MAX;
+
         deltaCost += d_params.twPenalty(uTWS.totalTimeWarp());
         deltaCost -= d_params.twPenalty(U->route->timeWarp());
 
@@ -146,12 +150,20 @@ int Exchange<N, M>::evalSwapMove(Node *U, Node *V) const
                                V->route->twBetween(posV, posV + M - 1),
                                n(endU)->twAfter);
 
+        // Shortcut if new route is not dispatch feasible
+        if (!uTWS.isDispatchFeasible())
+            return INT_MAX;
+
         deltaCost += d_params.twPenalty(uTWS.totalTimeWarp());
         deltaCost -= d_params.twPenalty(U->route->timeWarp());
 
         auto vTWS = TWS::merge(p(V)->twBefore,
                                U->route->twBetween(posU, posU + N - 1),
                                n(endV)->twAfter);
+
+        // Shortcut if new route is not dispatch feasible
+        if (!vTWS.isDispatchFeasible())
+            return INT_MAX;
 
         deltaCost += d_params.twPenalty(vTWS.totalTimeWarp());
         deltaCost -= d_params.twPenalty(V->route->timeWarp());

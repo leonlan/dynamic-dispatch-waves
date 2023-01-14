@@ -255,7 +255,8 @@ void LocalSearch::loadIndividual(Individual const &indiv)
                               0,
                               params.clients[client].twEarly,
                               params.clients[client].twLate,
-                              params.clients[client].releaseTime};
+                              params.clients[client].releaseTime,
+                              params.clients[client].latestDispatch};
 
     auto const &routesIndiv = indiv.getRoutes();
 

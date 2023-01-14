@@ -153,6 +153,12 @@ void Individual::makeNeighbours()
                    idx == route.size() - 1 ? 0 : route[idx + 1]};  // succ
 }
 
+[[nodiscard]] bool Individual::isFeasible() const
+{
+    // TODO Add dispatch window
+    return !hasExcessCapacity() && !hasTimeWarp();
+}
+
 Individual::Individual(Params const *params, XorShift128 *rng)
     : params(params),
       routes_(params->nbVehicles),

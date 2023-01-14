@@ -16,6 +16,8 @@ struct InsertPos  // best insert position, used to plan unplanned clients
 // Evaluates the cost change of inserting client between prev and next.
 int deltaCost(Client client, Client prev, Client next, Params const &params)
 {
+
+    // TODO add latest dispatch calculation here
     int prevClientRelease = std::max(params.clients[prev].releaseTime,
                                      params.clients[client].releaseTime);
     int prevEarliestArrival = std::max(prevClientRelease + params.dist(0, prev),

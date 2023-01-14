@@ -255,6 +255,27 @@ Params::Params(Config const &config, std::string const &instPath)
                         "Release time for depot should be 0");
                 }
             }
+            else if (content == "LATEST_DISPATCH_SECTION")
+            {
+                for (int i = 0; i <= nbClients; i++)
+                {
+                    int clientNr = 0;
+                    inputFile >> clientNr >> clients[i].latestDispatch;
+
+                    // Check if the clients are in order
+                    if (clientNr != i + 1)
+                    {
+                        throw std::runtime_error("Release times are not in"
+                                                 " client order");
+                    }
+                }
+                // Check if the service duration of the depot is 0
+                if (clients[0].latestDispatch != 0)
+                {
+                    throw std::runtime_error(
+                        "Release time for depot should be 0");
+                }
+            }
             // Read the time windows of all the clients (the depot should
             // have a time window from 0 to max)
             else if (content == "TIME_WINDOW_SECTION")
@@ -345,7 +366,8 @@ Params::Params(Config const &config,
                std::vector<std::pair<int, int>> const &timeWindows,
                std::vector<int> const &servDurs,
                std::vector<std::vector<int>> const &distMat,
-               std::vector<int> const &releases)
+               std::vector<int> const &releases,
+               std::vector<int> const &latestDispatch)
     : config(config),
       nbClients(static_cast<int>(coords.size()) - 1),
       nbVehicles(std::max(std::min(config.nbVeh, nbClients), 1)),
@@ -376,7 +398,8 @@ Params::Params(Config const &config,
                         demands[idx],
                         timeWindows[idx].first,
                         timeWindows[idx].second,
-                        releases[idx]};
+                        releases[idx],
+                        latestDispatch[idx]};
 
     calculateNeighbours();
 }

@@ -9,13 +9,14 @@ class TimeWindowSegment
 
     Params const *params = nullptr;
 
-    int idxFirst = 0;     // Index of the first client in the segment
-    int idxLast = 0;      // Index of the last client in the segment
-    int duration = 0;     // Total duration, incl. waiting and servicing
-    int timeWarp = 0;     // Cumulative time warp
-    int twEarly = 0;      // Earliest visit moment of first client in segment
-    int twLate = 0;       // Latest visit moment of last client in segment
-    int lastRelease = 0;  // Latest release time; cannot leave depot before
+    int idxFirst = 0;        // Index of the first client in the segment
+    int idxLast = 0;         // Index of the last client in the segment
+    int duration = 0;        // Total duration, incl. waiting and servicing
+    int timeWarp = 0;        // Cumulative time warp
+    int twEarly = 0;         // Earliest visit moment of first client in segment
+    int twLate = 0;          // Latest visit moment of last client in segment
+    int lastRelease = 0;     // Latest release time; cannot leave depot before
+    int latestDispatch = 0;  // Latest dispatch time; cannot leave depot after
 
     [[nodiscard]] TWS merge(TWS const &other) const
     {
@@ -31,7 +32,8 @@ class TimeWindowSegment
                 timeWarp + other.timeWarp + deltaTimeWarp,
                 std::max(other.twEarly - delta, twEarly) - deltaWaitTime,
                 std::min(other.twLate - delta, twLate) + deltaTimeWarp,
-                std::max(lastRelease, other.lastRelease)};
+                std::max(lastRelease, other.lastRelease),
+                std::min(latestDispatch, other.latestDispatch)};
     }
 
 public:
@@ -70,7 +72,8 @@ public:
                       int timeWarp,
                       int twEarly,
                       int twLate,
-                      int latestReleaseTime)
+                      int latestReleaseTime,
+                      int latestDispatch)
         : params(params),
           idxFirst(idxFirst),
           idxLast(idxLast),
@@ -78,7 +81,8 @@ public:
           timeWarp(timeWarp),
           twEarly(twEarly),
           twLate(twLate),
-          lastRelease(latestReleaseTime)
+          lastRelease(latestReleaseTime),
+          latestDispatch(latestDispatch)
     {
     }
 };

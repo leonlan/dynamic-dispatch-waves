@@ -77,10 +77,7 @@ public:
     /**
      * Returns true when this solution is feasible; false otherwise.
      */
-    [[nodiscard]] bool isFeasible() const
-    {
-        return !hasExcessCapacity() && !hasTimeWarp();
-    }
+    [[nodiscard]] bool isFeasible() const;
 
     /**
      * If true, then the route exceeds vehicle capacity.

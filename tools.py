@@ -381,6 +381,18 @@ def write_vrplib(
                 )
                 f.write("\n")
 
+            if "latest_dispatch" in instance:
+                f.write("LATEST_DISPATCH_SECTION\n")
+                f.write(
+                    "\n".join(
+                        [
+                            "{}\t{}".format(i + 1, s)
+                            for i, s in enumerate(instance["latest_dispatch"])
+                        ]
+                    )
+                )
+                f.write("\n")
+
         f.write("EOF\n")
 
 
@@ -394,6 +406,7 @@ def inst_to_vars(inst):
     # - 'service_times': np.array of service times at each client (incl. depot)
     # - 'duration_matrix': distance matrix between clients (incl. depot)
     # - optional 'release_times': earliest possible time to leave depot
+    # - optional 'latest_dispatch': latest possible time to leave depot
 
     # Notice that the dictionary key names are not entirely free-form: these
     # should match the argument names defined in the C++/Python bindings.
@@ -401,6 +414,11 @@ def inst_to_vars(inst):
         release_times = inst["release_times"]
     else:
         release_times = np.zeros_like(inst["service_times"])
+
+    if "latest_dispatch" in inst:
+        latest_dispatch = inst["latest_dispatch"]
+    else:
+        latest_dispatch = np.zeros_like(inst["service_times"])
 
     return dict(
         coords=inst["coords"],
@@ -410,6 +428,7 @@ def inst_to_vars(inst):
         service_durations=inst["service_times"],
         duration_matrix=inst["duration_matrix"],
         release_times=release_times,
+        latest_dispatch=latest_dispatch,
     )
 
 

@@ -63,6 +63,11 @@ public:
         return segmentTimeWarp() + std::max(lastRelease - twLate, 0);
     }
 
+    /**
+     * Checks if the dispatch windows are feasible.
+     */
+    bool isDispatchFeasible() const { return lastRelease <= latestDispatch; }
+
     TimeWindowSegment() = default;  // TODO get rid of this constructor
 
     TimeWindowSegment(Params const *params,
@@ -72,7 +77,7 @@ public:
                       int timeWarp,
                       int twEarly,
                       int twLate,
-                      int latestReleaseTime,
+                      int lastRelease,
                       int latestDispatch)
         : params(params),
           idxFirst(idxFirst),
@@ -81,7 +86,7 @@ public:
           timeWarp(timeWarp),
           twEarly(twEarly),
           twLate(twLate),
-          lastRelease(latestReleaseTime),
+          lastRelease(lastRelease),
           latestDispatch(latestDispatch)
     {
     }

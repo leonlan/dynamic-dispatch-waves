@@ -1,4 +1,5 @@
 #include "crossover.h"
+#include <iostream>
 
 using Client = int;
 using Route = std::vector<Client>;
@@ -16,23 +17,8 @@ struct InsertPos  // best insert position, used to plan unplanned clients
 // Evaluates the cost change of inserting client between prev and next.
 int deltaCost(Client client, Client prev, Client next, Params const &params)
 {
-
-    // We cannot insert a client between [prev, next] if the dispatch
-    // windows are non-intersecting. We assume here that [prev, next]
-    // are a feasible combination w.r.t. dispatch windows.
-    if (params.clients[client].releaseTime
-        > std::min(params.clients[prev].latestDispatch,
-                   params.clients[next].latestDispatch))
-        return INT_MAX;
-
-    if (params.clients[client].latestDispatch < std::max(
-            params.clients[prev].releaseTime, params.clients[next].releaseTime))
-        return INT_MAX;
-
-    int prevClientRelease = std::max(params.clients[prev].releaseTime,
-                                     params.clients[client].releaseTime);
-    int prevEarliestArrival = std::max(prevClientRelease + params.dist(0, prev),
-                                       params.clients[prev].twEarly);
+    int prevEarliestArrival
+        = std::max(params.dist(0, prev), params.clients[prev].twEarly);
     int prevEarliestFinish = prevEarliestArrival + params.clients[prev].servDur;
     int distPrevClient = params.dist(prev, client);
     int clientLate = params.clients[client].twLate;
@@ -40,11 +26,8 @@ int deltaCost(Client client, Client prev, Client next, Params const &params)
     if (prevEarliestFinish + distPrevClient >= clientLate)
         return INT_MAX;
 
-    int clientNextRelease = std::max(params.clients[client].releaseTime,
-                                     params.clients[next].releaseTime);
     int clientEarliestArrival
-        = std::max(clientNextRelease + params.dist(0, client),
-                   params.clients[client].twEarly);
+        = std::max(params.dist(0, client), params.clients[client].twEarly);
     int clientEarliestFinish
         = clientEarliestArrival + params.clients[client].servDur;
     int distClientNext = params.dist(client, next);
@@ -61,10 +44,7 @@ void crossover::greedyRepair(Routes &routes,
                              std::vector<Client> const &unplanned,
                              Params const &params)
 {
-    size_t numRoutes = 0;  // points just after the last non-empty route
-    for (size_t rIdx = 0; rIdx != routes.size(); ++rIdx)
-        if (!routes[rIdx].empty())
-            numRoutes = rIdx + 1;
+    size_t numRoutes = routes.size();
 
     for (Client client : unplanned)
     {
@@ -74,11 +54,32 @@ void crossover::greedyRepair(Routes &routes,
         {
             auto &route = routes[rIdx];
 
-            for (size_t idx = 0; idx <= route.size() && !route.empty(); ++idx)
+            // Compute dispatch window of route. Skip this route if its
+            // not compatible with the to be inserted client.
+            int lastRelease = 0;
+            int latestDispatch = INT_MAX;
+            for (auto const cust : route)
+            {
+                lastRelease
+                    = std::max(lastRelease, params.clients[cust].releaseTime);
+                latestDispatch = std::min(latestDispatch,
+                                          params.clients[cust].latestDispatch);
+            }
+
+            if (params.clients[client].releaseTime > latestDispatch
+                || params.clients[client].latestDispatch < lastRelease)
+                continue;
+
+            for (size_t idx = 0; idx <= route.size(); ++idx)
             {
                 Client prev, next;
 
-                if (idx == 0)  // try after depot
+                if (route.empty())  // try empty route
+                {
+                    prev = 0;
+                    next = 0;
+                }
+                else if (idx == 0)  // try after depot
                 {
                     prev = 0;
                     next = route[0];
@@ -100,7 +101,15 @@ void crossover::greedyRepair(Routes &routes,
             }
         }
 
-        auto const [_, route, offset] = best;
+        auto const [cost, route, offset] = best;
+        if (cost == INT_MAX)
+        {
+            std::cout << "Problem! " << offset << '\n';
+
+            // routes[std::min(numRoutes, routes.size() - 1)].insert(
+            //     route->begin(), client);
+        }
+        // else
         route->insert(route->begin() + static_cast<long>(offset), client);
     }
 }

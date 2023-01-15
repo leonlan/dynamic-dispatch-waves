@@ -28,6 +28,11 @@ def validate_static_solution(
             instance["service_times"],
         )
 
+        if "latest_dispatch" in instance:
+            validate_route_dispatch_windows(
+                route, instance["release_times"], instance["latest_dispatch"]
+            )
+
     return compute_solution_driving_time(instance, solution)
 
 
@@ -115,6 +120,11 @@ def validate_route_time_windows(route, dist, timew, service_t, release_t=None):
     assert (
         current_time <= latest_arrival_depot
     ), f"Time window violated for depot: {current_time} not in ({earliest_start_depot}, {latest_arrival_depot})"
+
+
+def validate_route_dispatch_windows(route, release_times, latest_dispatch):
+    if route:
+        assert max(release_times[route]) <= min(latest_dispatch[route])
 
 
 def readlines(filename):
@@ -432,6 +442,8 @@ def inst_to_vars(inst):
         # Default latest dispatch is equal to the latest depot time window
         horizon = inst["time_windows"][0][1]
         latest_dispatch = np.ones_like(inst["service_times"]) * horizon
+
+    assert len(release_times) == len(latest_dispatch)
 
     return dict(
         coords=inst["coords"],

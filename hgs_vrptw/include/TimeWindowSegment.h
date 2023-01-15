@@ -67,13 +67,7 @@ public:
     /**
      * Checks if the dispatch windows are feasible.
      */
-    bool isDispatchFeasible() const
-    {
-        if (lastRelease > latestDispatch)
-            std::cout << "Dispatch infeasible: " << lastRelease << " "
-                      << latestDispatch << '\n';
-        return lastRelease <= latestDispatch;
-    }
+    bool isDispatchFeasible() const { return lastRelease <= latestDispatch; }
 
     TimeWindowSegment() = default;  // TODO get rid of this constructor
 

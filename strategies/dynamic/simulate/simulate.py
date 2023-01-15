@@ -4,6 +4,7 @@ import hgspy
 from strategies.static import hgs
 from strategies.utils import filter_instance
 from .simulate_instance import simulate_instance
+import tools
 
 
 def simulate(
@@ -33,13 +34,12 @@ def simulate(
     # Parameters
     ep_inst = obs["epoch_instance"]
     n_ep_reqs = ep_inst["is_depot"].size
-    must_dispatch = set(np.flatnonzero(ep_inst["must_dispatch"]))
     total_sim_tlim = simulate_tlim_factor * info["epoch_tlim"]
     single_sim_tlim = total_sim_tlim / (n_cycles * n_simulations)
 
     dispatch_count = np.zeros(n_ep_reqs, dtype=int)
     to_postpone = np.zeros(n_ep_reqs, dtype=bool)
-    to_dispatch = np.zeros(n_ep_reqs, dtype=bool)
+    to_dispatch = ep_inst["must_dispatch"]
 
     # Get the threshold belonging to the current epoch, or the last one
     # available if there are more epochs than thresholds.
@@ -48,7 +48,7 @@ def simulate(
     postpone_threshold = postpone_thresholds[min(epoch, num_thresholds - 1)]
 
     for _ in range(n_cycles):
-        for _ in range(n_simulations):
+        for x in range(n_simulations):
             sim_inst = simulate_instance(
                 info,
                 obs,
@@ -70,9 +70,15 @@ def simulate(
 
             best = res.get_best_found()
 
+            tools.validate_static_solution(
+                sim_inst, [x for x in best.get_routes() if x]
+            )
+
             for sim_route in best.get_routes():
-                # Only dispatch routes that contain must dispatch requests
-                if any(idx in must_dispatch for idx in sim_route):
+                # Count requests that are matched with to dispatch requests
+                if any(
+                    to_dispatch[idx] for idx in sim_route if idx < n_ep_reqs
+                ):
                     dispatch_count[sim_route] += 1
 
             dispatch_count[0] += 1  # depot
@@ -81,10 +87,17 @@ def simulate(
         postpone_count = n_simulations - dispatch_count
         to_postpone = postpone_count >= postpone_threshold * n_simulations
 
-        # # Select requests to dispatch based on thresholds
-        # to_dispatch = dispatch_count >= n_simulations * 0.9
-        # to_dispatch[0] = False  # Do not force dispatch the depot
-        # breakpoint()
+        # Select requests to dispatch based on thresholds
+        to_dispatch = dispatch_count >= n_simulations * 0.70
+        to_dispatch[0] = False  # Do not force dispatch the depot
+
+        print(dispatch_count)
+
+        print(
+            n_ep_reqs,
+            to_postpone.sum(),
+            to_dispatch.sum(),
+        )
 
         dispatch_count *= 0  # reset dispatch count
 

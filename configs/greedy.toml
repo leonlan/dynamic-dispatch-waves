@@ -40,6 +40,7 @@ crossover_ops = [
 ]
 
 strategy = "greedy"
+postpone_dispatch_routes = false
 
 
 [dynamic.params]

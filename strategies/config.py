@@ -33,6 +33,10 @@ class _SubConfig(dict):
         # accessed but not set, that should raise an error.
         return self["strategy"]
 
+    def postpone_dispatch_routes(self):
+        # TODO Think about another way to put this in the config
+        return self["postpone_dispatch_routes"]
+
 
 class Config:
     def __init__(self, **kwargs):

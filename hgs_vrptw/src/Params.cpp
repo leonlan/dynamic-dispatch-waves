@@ -412,9 +412,10 @@ void Params::calculateNeighbours()
             if (i == j)  // exclude the current client
                 continue;
 
-            // Compute proximity using Eq. 4 in Vidal 2012. The proximity is
-            // computed by the distance, min. wait time and min. time warp
-            // going from either i -> j or j -> i, whichever is the least.
+            // Compute proximity using Eq. 4 in Vidal 2012. The
+            // proximity is computed by the distance, min. wait time and
+            // min. time warp going from either i -> j or j -> i,
+            // whichever is the least.
             int const maxRelease
                 = std::max(clients[i].releaseTime, clients[j].releaseTime);
 
@@ -440,7 +441,12 @@ void Params::calculateNeighbours()
                               + config.weightWaitTime * std::max(0, waitTime2)
                               + config.weightTimeWarp * std::max(0, timeWarp2);
 
-            proximity.emplace_back(std::min(prox1, prox2), j);
+            // Take into account dispatch window infeasibilities
+            if (clients[i].releaseTime > clients[j].latestDispatch
+                || clients[j].releaseTime > clients[i].latestDispatch)
+                proximity.emplace_back(INT_MAX, j);
+            else
+                proximity.emplace_back(std::min(prox1, prox2), j);
         }
 
         std::sort(proximity.begin(), proximity.end());

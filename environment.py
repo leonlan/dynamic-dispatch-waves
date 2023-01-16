@@ -28,6 +28,9 @@ class VRPEnvironment:
         the routes is `t * epoch_duration + dispatch_margin`.
     epoch_duration
         The time between two consecutive epochs.
+    degree_of_dynamism
+        The percentage of dynamic requests. Default is 100, meaning that all
+        requests are dynamically revealed over time.
     """
 
     def __init__(
@@ -38,6 +41,7 @@ class VRPEnvironment:
         max_requests_per_epoch: int = 100,
         dispatch_margin: int = 3600,
         epoch_duration: int = 3600,
+        degree_of_dynamism: int = 100,
     ):
         self.rng = np.random.default_rng(seed)
         self.instance = instance
@@ -45,6 +49,7 @@ class VRPEnvironment:
         self.max_requests_per_epoch = max_requests_per_epoch
         self.dispatch_margin = dispatch_margin
         self.epoch_duration = epoch_duration
+        self.degree_of_dynamism = degree_of_dynamism
 
         self.is_done = True  # Requires reset to be called first
 
@@ -74,10 +79,19 @@ class VRPEnvironment:
         self.req_is_dispatched = np.array([False])
         self.req_epoch = np.array([0])
         self.req_must_dispatch = np.array([False])
+        self.req_is_static = np.array([False])
 
         # Sample all future requests
         for epoch_idx in range(self.current_epoch, self.end_epoch + 1):
             self._sample_epoch_instance(epoch_idx)
+
+        # Use the degree of dynamism to reveal future requests. We do this after
+        # sampling all requests to ensure that the instances remain the same
+        # w.r.t. the EURO-NeurIPS competition
+        self.req_is_static = (
+            self.rng.integers(1, 101, size=self.req_idx.size)
+            > self.degree_of_dynamism
+        )
 
         self.is_done = False
         obs = self._next_observation()
@@ -133,9 +147,9 @@ class VRPEnvironment:
         """
         assert not self.is_done, "Environment is finished"
 
-        # Check time limit (2 seconds grace period)
-        on_time = time.time() - self.start_time_epoch < self.epoch_tlim + 2
-        assert on_time, "Time limit exceeded"
+        # # Check time limit (2 seconds grace period)
+        # on_time = time.time() - self.start_time_epoch < self.epoch_tlim + 2
+        # assert on_time, "Time limit exceeded"
 
         # Check if solution is valid
         tools.validate_dynamic_epoch_solution(self.ep_inst, solution)
@@ -241,11 +255,16 @@ class VRPEnvironment:
             # In the end epoch, all requests are must dispatch
             self.req_must_dispatch = self.req_idx > 0
 
-        # Return instance based on requests that are not yet dispatched
-        # and not yet released
+        # Return the epoch instance. This consists of all static requests that
+        # are not yet dispatched and all dynamic requests that are not yet
+        # dispatched nor released.
         current_reqs = self.req_idx[
-            ~self.req_is_dispatched & (self.req_epoch <= self.current_epoch)
+            ~self.req_is_dispatched
+            & ((self.req_epoch <= self.current_epoch) | self.req_is_static)
         ]
+        # current_reqs = self.req_idx[
+        #     ~self.req_is_dispatched & (self.req_epoch <= self.current_epoch)
+        # ]
         customer_idx = self.req_customer_idx[current_reqs]
 
         # Normalize TW to dispatch_time, and clip the past

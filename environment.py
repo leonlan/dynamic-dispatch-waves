@@ -75,6 +75,10 @@ class VRPEnvironment:
         self.req_epoch = np.array([0])
         self.req_must_dispatch = np.array([False])
 
+        # Sample all future requests
+        for epoch_idx in range(self.current_epoch, self.end_epoch + 1):
+            self._sample_epoch_instance(epoch_idx)
+
         self.is_done = False
         obs = self._next_observation()
 
@@ -145,17 +149,14 @@ class VRPEnvironment:
         undispatched = (self.req_must_dispatch & ~self.req_is_dispatched).any()
         assert not undispatched, "Must dispatch requests not dispatched."
 
-    def _next_observation(self) -> State:
+    def _sample_epoch_instance(self, epoch_idx):
         """
-        Returns the next observation. This consists of all requests that were
-        not dispatched during the previous epoch, and newly sampled requests.
-
-        # TODO We could sample all requests at the initialization, because the
-        new observations do not depend on any state-specific information.
+        Samples an epoch instance.
         """
         dist = self.instance["duration_matrix"]
 
-        dispatch_time = self.current_time + self.dispatch_margin
+        current_time = epoch_idx * self.epoch_duration
+        dispatch_time = current_time + self.dispatch_margin
 
         n_customers = self.instance["is_depot"].size - 1  # Exclude depot
         n_samples = self.max_requests_per_epoch
@@ -204,8 +205,20 @@ class VRPEnvironment:
                 self.req_is_dispatched, (0, n_new_requests), mode="constant"
             )
             self.req_epoch = np.concatenate(
-                (self.req_epoch, np.full(n_new_requests, self.current_epoch))
+                (self.req_epoch, np.full(n_new_requests, epoch_idx))
             )
+
+            # TODO Add request release time?
+
+    def _next_observation(self) -> State:
+        """
+        Returns the next observation. This consists of all requests that were
+        not dispatched during the previous epoch, and newly arrived requests.
+        """
+
+        dist = self.instance["duration_matrix"]
+        dispatch_time = self.current_time + self.dispatch_margin
+        depot_closed = self.instance["time_windows"][0, 1]
 
         # Determine which requests are must-dispatch in the next epoch
         if self.current_epoch < self.end_epoch:
@@ -225,28 +238,32 @@ class VRPEnvironment:
                 earliest_return_at_depot > depot_closed
             )
         else:
+            # In the end epoch, all requests are must dispatch
             self.req_must_dispatch = self.req_idx > 0
 
-        # Return instance based on customers not yet dispatched
-        undispatched = self.req_idx[~self.req_is_dispatched]
-        customer_idx = self.req_customer_idx[undispatched]
+        # Return instance based on requests that are not yet dispatched
+        # and not yet released
+        current_reqs = self.req_idx[
+            ~self.req_is_dispatched & (self.req_epoch <= self.current_epoch)
+        ]
+        customer_idx = self.req_customer_idx[current_reqs]
 
         # Normalize TW to dispatch_time, and clip the past
-        time_windows = np.maximum(self.req_tw[undispatched] - dispatch_time, 0)
+        time_windows = np.maximum(self.req_tw[current_reqs] - dispatch_time, 0)
 
         self.ep_inst = {
             "is_depot": self.instance["is_depot"][customer_idx],
             "customer_idx": customer_idx,
-            "request_idx": undispatched,
+            "request_idx": current_reqs,
             "coords": self.instance["coords"][customer_idx],
-            "demands": self.req_demand[undispatched],
+            "demands": self.req_demand[current_reqs],
             "capacity": self.instance["capacity"],
             "time_windows": time_windows,
-            "service_times": self.req_service[undispatched],
+            "service_times": self.req_service[current_reqs],
             "duration_matrix": self.instance["duration_matrix"][
                 np.ix_(customer_idx, customer_idx)
             ],
-            "must_dispatch": self.req_must_dispatch[undispatched],
+            "must_dispatch": self.req_must_dispatch[current_reqs],
         }
 
         return {
@@ -283,6 +300,5 @@ class VRPEnvironment:
             "duration_matrix": self.instance["duration_matrix"][
                 np.ix_(customer_idx, customer_idx)
             ],
-            # 'must_dispatch': self.request_must_dispatch,
             "release_times": release_times,
         }

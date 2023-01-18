@@ -17,6 +17,7 @@ def simulate(
     n_lookahead: int,
     n_requests: int,
     postpone_thresholds: list,
+    dispatch_threshold: float,
     sim_config: dict,
     node_ops: list,
     route_ops: list,
@@ -48,7 +49,7 @@ def simulate(
     postpone_threshold = postpone_thresholds[min(epoch, num_thresholds - 1)]
 
     for _ in range(n_cycles):
-        for x in range(n_simulations):
+        for _ in range(n_simulations):
             sim_inst = simulate_instance(
                 info,
                 obs,
@@ -88,16 +89,8 @@ def simulate(
         to_postpone = postpone_count >= postpone_threshold * n_simulations
 
         # Select requests to dispatch based on thresholds
-        to_dispatch = dispatch_count >= n_simulations * 0.70
+        to_dispatch = dispatch_count >= dispatch_threshold * n_simulations
         to_dispatch[0] = False  # Do not force dispatch the depot
-
-        print(dispatch_count)
-
-        print(
-            n_ep_reqs,
-            to_postpone.sum(),
-            to_dispatch.sum(),
-        )
 
         dispatch_count *= 0  # reset dispatch count
 

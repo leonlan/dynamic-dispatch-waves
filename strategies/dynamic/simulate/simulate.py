@@ -92,6 +92,10 @@ def simulate(
         to_dispatch = dispatch_count >= dispatch_threshold * n_simulations
         to_dispatch[0] = False  # Do not force dispatch the depot
 
+        # Stop when everything is assigned postpone or dispatch.
+        if n_ep_reqs - 1 == to_postpone.sum() + to_dispatch.sum():
+            break
+
         dispatch_count *= 0  # reset dispatch count
 
     to_dispatch = ep_inst["is_depot"] | ep_inst["must_dispatch"] | ~to_postpone

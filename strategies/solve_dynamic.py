@@ -5,7 +5,7 @@ import numpy as np
 import hgspy
 from strategies.dynamic import STRATEGIES
 from strategies.static import hgs
-from .utils import sol2ep
+from .utils import filter_instance, sol2ep
 
 
 def solve_dynamic(env, config, solver_seed):
@@ -24,7 +24,7 @@ def solve_dynamic(env, config, solver_seed):
     """
     rng = np.random.default_rng(solver_seed)
 
-    observation, static_info = env.reset()
+    obs, static_info = env.reset()
     ep_tlim = static_info["epoch_tlim"]
 
     solutions = {}
@@ -36,10 +36,15 @@ def solve_dynamic(env, config, solver_seed):
     while not done:
         start = time.perf_counter()
 
+        # Filter the epoch instance using the selected strategy
         strategy = STRATEGIES[config.strategy()]
         dispatch_inst = strategy(
-            static_info, observation, rng, **config.strategy_params()
+            static_info, obs, rng, **config.strategy_params()
         )
+
+        # Remove static requests that cannot be dispatched in the current epoch
+        is_current_epoch = dispatch_inst["epoch"] <= obs["current_epoch"]
+        dispatch_inst = filter_instance(dispatch_inst, is_current_epoch)
 
         solve_tlim = ep_tlim - (time.perf_counter() - start)
 
@@ -62,10 +67,10 @@ def solve_dynamic(env, config, solver_seed):
             postpone_routes=config.postpone_dispatch_routes(),
         )
 
-        current_epoch = observation["current_epoch"]
+        current_epoch = obs["current_epoch"]
         solutions[current_epoch] = ep_sol
 
-        observation, reward, done, info = env.step(ep_sol)
+        obs, reward, done, info = env.step(ep_sol)
         costs[current_epoch] = abs(reward)
 
         assert info["error"] is None, info["error"]

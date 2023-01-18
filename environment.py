@@ -78,6 +78,7 @@ class VRPEnvironment:
         self.req_demand = self.instance["demands"][0:1]
         self.req_is_dispatched = np.array([False])
         self.req_epoch = np.array([0])
+        self.req_release_time = np.array([0])
         self.req_must_dispatch = np.array([False])
         self.req_is_static = np.array([False])
 
@@ -221,8 +222,9 @@ class VRPEnvironment:
             self.req_epoch = np.concatenate(
                 (self.req_epoch, np.full(n_new_requests, epoch_idx))
             )
-
-            # TODO Add request release time?
+            self.req_release_time = np.concatenate(
+                (self.req_release_time, np.full(n_new_requests, dispatch_time))
+            )
 
     def _next_observation(self) -> State:
         """
@@ -262,13 +264,15 @@ class VRPEnvironment:
             ~self.req_is_dispatched
             & ((self.req_epoch <= self.current_epoch) | self.req_is_static)
         ]
-        # current_reqs = self.req_idx[
-        #     ~self.req_is_dispatched & (self.req_epoch <= self.current_epoch)
-        # ]
         customer_idx = self.req_customer_idx[current_reqs]
 
         # Normalize TW to dispatch_time, and clip the past
         time_windows = np.maximum(self.req_tw[current_reqs] - dispatch_time, 0)
+
+        # Normalize release times to dispatch_time, and clip the past
+        release_times = np.maximum(
+            self.req_release_time[current_reqs] - dispatch_time, 0
+        )
 
         self.ep_inst = {
             "is_depot": self.instance["is_depot"][customer_idx],
@@ -283,6 +287,8 @@ class VRPEnvironment:
                 np.ix_(customer_idx, customer_idx)
             ],
             "must_dispatch": self.req_must_dispatch[current_reqs],
+            "epoch": self.req_epoch[current_reqs],
+            "release_time": release_times,
         }
 
         return {

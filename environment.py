@@ -82,15 +82,12 @@ class VRPEnvironment:
         self.req_must_dispatch = np.array([False])
         self.req_is_static = np.array([False])
 
-        # Sample all future requests
         for epoch_idx in range(self.current_epoch, self.end_epoch + 1):
             self._sample_epoch_instance(epoch_idx)
 
-        # Use the degree of dynamism to reveal future requests. We do this after
-        # sampling all requests to ensure that the instances remain the same
-        # w.r.t. the EURO-NeurIPS competition
+        # Turn a random fraction of the dynamic requests into static requests
         self.req_is_static = (
-            self.rng.integers(1, 101, size=self.req_idx.size)
+            self.rng.integers(100, size=self.req_idx.size) + 1
             > self.degree_of_dynamism
         )
 
@@ -148,9 +145,9 @@ class VRPEnvironment:
         """
         assert not self.is_done, "Environment is finished"
 
-        # # Check time limit (2 seconds grace period)
-        # on_time = time.time() - self.start_time_epoch < self.epoch_tlim + 2
-        # assert on_time, "Time limit exceeded"
+        # Check time limit (2 seconds grace period)
+        on_time = time.time() - self.start_time_epoch < self.epoch_tlim + 2
+        assert on_time, "Time limit exceeded"
 
         # Check if solution is valid
         tools.validate_dynamic_epoch_solution(self.ep_inst, solution)
@@ -231,6 +228,8 @@ class VRPEnvironment:
         Returns the next observation. This consists of all requests that were
         not dispatched during the previous epoch, and newly arrived requests.
         """
+        # TODO Refactor this: we should take the dynamic instance and use the
+        # `filter_instance` function with mask to create a new instance.
 
         dist = self.instance["duration_matrix"]
         dispatch_time = self.current_time + self.dispatch_margin

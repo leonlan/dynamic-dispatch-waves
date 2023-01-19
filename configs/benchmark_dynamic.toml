@@ -73,7 +73,7 @@ n_requests = 100
 postpone_thresholds = [
     0.85,
 ]
-dispatch_threshold = [
+dispatch_thresholds = [
     0.40,
 ]
 

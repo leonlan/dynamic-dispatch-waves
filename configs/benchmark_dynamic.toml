@@ -73,7 +73,9 @@ n_requests = 100
 postpone_thresholds = [
     0.85,
 ]
-dispatch_threshold = 0.40
+dispatch_threshold = [
+    0.40,
+]
 
 node_ops = [
     "Exchange10",

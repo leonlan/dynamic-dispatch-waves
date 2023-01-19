@@ -17,7 +17,7 @@ def simulate(
     n_lookahead: int,
     n_requests: int,
     postpone_thresholds: list,
-    dispatch_threshold: float,
+    dispatch_thresholds: list,
     sim_config: dict,
     node_ops: list,
     route_ops: list,
@@ -34,19 +34,20 @@ def simulate(
 
     # Parameters
     ep_inst = obs["epoch_instance"]
-    n_ep_reqs = ep_inst["is_depot"].size
+    ep_size = ep_inst["is_depot"].size  # includes depot
     total_sim_tlim = simulate_tlim_factor * info["epoch_tlim"]
     single_sim_tlim = total_sim_tlim / (n_cycles * n_simulations)
 
-    dispatch_count = np.zeros(n_ep_reqs, dtype=int)
-    to_postpone = np.zeros(n_ep_reqs, dtype=bool)
+    dispatch_count = np.zeros(ep_size, dtype=int)
     to_dispatch = ep_inst["must_dispatch"]
+    to_postpone = np.zeros(ep_size, dtype=bool)
 
     # Get the threshold belonging to the current epoch, or the last one
     # available if there are more epochs than thresholds.
     epoch = obs["current_epoch"] - info["start_epoch"]
     num_thresholds = len(postpone_thresholds)
     postpone_threshold = postpone_thresholds[min(epoch, num_thresholds - 1)]
+    dispatch_threshold = dispatch_thresholds[min(epoch, num_thresholds - 1)]
 
     for _ in range(n_cycles):
         for _ in range(n_simulations):
@@ -77,23 +78,21 @@ def simulate(
 
             for sim_route in best.get_routes():
                 # Count requests that are matched with to dispatch requests
-                if any(
-                    to_dispatch[idx] for idx in sim_route if idx < n_ep_reqs
-                ):
+                if any(to_dispatch[idx] for idx in sim_route if idx < ep_size):
                     dispatch_count[sim_route] += 1
 
             dispatch_count[0] += 1  # depot
+
+        # Select requests to dispatch based on thresholds
+        to_dispatch = dispatch_count >= dispatch_threshold * n_simulations
+        to_dispatch[0] = False  # Do not dispatch the depot
 
         # Select requests to postpone based on thresholds
         postpone_count = n_simulations - dispatch_count
         to_postpone = postpone_count >= postpone_threshold * n_simulations
 
-        # Select requests to dispatch based on thresholds
-        to_dispatch = dispatch_count >= dispatch_threshold * n_simulations
-        to_dispatch[0] = False  # Do not force dispatch the depot
-
-        # Stop when everything is assigned postpone or dispatch.
-        if n_ep_reqs - 1 == to_postpone.sum() + to_dispatch.sum():
+        # Stop this simulation when all requests are marked
+        if ep_size - 1 == to_dispatch.sum() + to_postpone.sum():
             break
 
         dispatch_count *= 0  # reset dispatch count

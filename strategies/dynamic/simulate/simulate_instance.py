@@ -1,6 +1,7 @@
 import numpy as np
 
 # Fixed value given in the competition rules.
+# TODO Read this from the environment or static info.
 _EPOCH_DURATION = 3600
 
 
@@ -10,8 +11,8 @@ def simulate_instance(
     rng,
     n_lookahead: int,
     n_requests: int,
-    to_postpone=None,
     to_dispatch=None,
+    to_postpone=None,
 ):
     """
     Simulate a VRPTW instance with n_lookahead epochs.
@@ -21,10 +22,10 @@ def simulate_instance(
 
     Params
     ------
-    - `to_postpone` is a boolean array where True mean that the corresponding
-    request is postponed.
     - `to_dispatch` is a boolean array where True means that the corresponding
-    request is (forcibly) dispatched.
+    request must be dispatched.
+    - `to_postpone` is a boolean array where True mean that the corresponding
+    request must be postponed.
     """
     # Parameters
     static_inst = info["dynamic_context"]
@@ -89,8 +90,8 @@ def simulate_instance(
     req_release = np.concatenate((ep_release, sim_release))
 
     # Default latest dispatch is the time horizon. For requests that are
-    # forcibly dispatched, the latest dispatch time becomes zero.
-    horizon = req_tw[0][1]  # time horizon
+    # marked as dispatched, the latest dispatch time becomes zero.
+    horizon = req_tw[0][1]
     req_latest_dispatch = np.ones(req_customer_idx.size, dtype=int) * horizon
 
     if to_dispatch is not None:

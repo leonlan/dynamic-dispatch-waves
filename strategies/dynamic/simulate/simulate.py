@@ -57,8 +57,8 @@ def simulate(
                 rng,
                 n_lookahead,
                 n_requests,
-                to_postpone=to_postpone,
                 to_dispatch=to_dispatch,
+                to_postpone=to_postpone,
             )
 
             res = hgs(
@@ -72,31 +72,33 @@ def simulate(
 
             best = res.get_best_found()
 
+            # TODO This can be removed at some point
             tools.validate_static_solution(
                 sim_inst, [x for x in best.get_routes() if x]
             )
 
             for sim_route in best.get_routes():
-                # Count requests that are matched with to dispatch requests
+                # Count a request as dispatched if routed with `to_dispatch`
                 if any(to_dispatch[idx] for idx in sim_route if idx < ep_size):
                     dispatch_count[sim_route] += 1
 
-            dispatch_count[0] += 1  # depot
-
-        # Select requests to dispatch based on thresholds
+        # Mark requests as dispatched or postponed
         to_dispatch = dispatch_count >= dispatch_threshold * n_simulations
         to_dispatch[0] = False  # Do not dispatch the depot
 
-        # Select requests to postpone based on thresholds
         postpone_count = n_simulations - dispatch_count
         to_postpone = postpone_count >= postpone_threshold * n_simulations
+        to_postpone[0] = False  # Do not postpone the depot
 
-        # Stop this simulation when all requests are marked
+        # Stop the simulation run early when all requests have been marked
         if ep_size - 1 == to_dispatch.sum() + to_postpone.sum():
             break
 
         dispatch_count *= 0  # reset dispatch count
 
+    # TODO This should become a parameter: we can also dispatch only those
+    # requests that have been marked `to_dispatch`.
+    # Dispatch all requests that are not marked `to_postpone`
     to_dispatch = ep_inst["is_depot"] | ep_inst["must_dispatch"] | ~to_postpone
 
     return filter_instance(ep_inst, to_dispatch)

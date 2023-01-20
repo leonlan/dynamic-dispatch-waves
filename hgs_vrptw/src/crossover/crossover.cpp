@@ -54,6 +54,7 @@ void crossover::greedyRepair(Routes &routes,
         {
             auto &route = routes[rIdx];
 
+            // TODO Pre-compute and cache dispatch windows instead.
             // Compute dispatch window of route. Skip this route if its
             // not compatible with the to be inserted client.
             int lastRelease = 0;
@@ -102,14 +103,10 @@ void crossover::greedyRepair(Routes &routes,
         }
 
         auto const [cost, route, offset] = best;
-        if (cost == INT_MAX)
-        {
+
+        if (cost == INT_MAX)  // TODO Figure out why this is a problem
             std::cout << "Problem! " << offset << '\n';
 
-            // routes[std::min(numRoutes, routes.size() - 1)].insert(
-            //     route->begin(), client);
-        }
-        // else
         route->insert(route->begin() + static_cast<long>(offset), client);
     }
 }

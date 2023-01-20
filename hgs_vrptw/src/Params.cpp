@@ -265,8 +265,9 @@ Params::Params(Config const &config, std::string const &instPath)
                     // Check if the clients are in order
                     if (clientNr != i + 1)
                     {
-                        throw std::runtime_error("Release times are not in"
-                                                 " client order");
+                        throw std::runtime_error(
+                            "Latest dispatch times are not in"
+                            " client order");
                     }
                 }
             }

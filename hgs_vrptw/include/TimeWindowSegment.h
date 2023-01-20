@@ -2,7 +2,6 @@
 #define TIMEWINDOWDATA_H
 
 #include "Params.h"
-#include <iostream>
 
 class TimeWindowSegment
 {

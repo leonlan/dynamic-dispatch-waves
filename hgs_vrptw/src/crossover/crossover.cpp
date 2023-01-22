@@ -23,7 +23,7 @@ int deltaCost(Client client, Client prev, Client next, Params const &params)
     int distPrevClient = params.dist(prev, client);
     int clientLate = params.clients[client].twLate;
 
-    if (prevEarliestFinish + distPrevClient >= clientLate)
+    if (prevEarliestFinish + distPrevClient > clientLate)
         return INT_MAX;
 
     int clientEarliestArrival
@@ -33,7 +33,7 @@ int deltaCost(Client client, Client prev, Client next, Params const &params)
     int distClientNext = params.dist(client, next);
     int nextLate = params.clients[next].twLate;
 
-    if (clientEarliestFinish + distClientNext >= nextLate)
+    if (clientEarliestFinish + distClientNext > nextLate)
         return INT_MAX;
 
     return distPrevClient + distClientNext - params.dist(prev, next);
@@ -105,7 +105,17 @@ void crossover::greedyRepair(Routes &routes,
         auto const [cost, route, offset] = best;
 
         if (cost == INT_MAX)  // TODO Figure out why this is a problem
-            std::cout << "Problem! " << offset << '\n';
+        {
+            auto const dist = params.dist(0, client) + params.dist(client, 0);
+            std::cout << "Problem! " << dist << ' '
+                      << deltaCost(client, 0, 0, params) << ' '
+                      << params.clients[client].twEarly << ' '
+                      << params.clients[client].twLate << ' '
+                      << params.clients[0].twEarly << ' '
+                      << params.clients[0].twLate << ' '
+                      << params.dist(0, client) << ' ' << params.dist(client, 0)
+                      << '\n';
+        }
 
         route->insert(route->begin() + static_cast<long>(offset), client);
     }

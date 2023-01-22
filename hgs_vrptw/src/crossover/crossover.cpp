@@ -1,5 +1,4 @@
 #include "crossover.h"
-#include <iostream>
 
 using Client = int;
 using Route = std::vector<Client>;
@@ -57,18 +56,18 @@ void crossover::greedyRepair(Routes &routes,
             // TODO Pre-compute and cache dispatch windows instead.
             // Compute dispatch window of route. Skip this route if its
             // not compatible with the to be inserted client.
-            int lastRelease = 0;
-            int latestDispatch = INT_MAX;
+            int routeLastRelease = 0;
+            int routeLatestDispatch = INT_MAX;
             for (auto const cust : route)
             {
-                lastRelease
-                    = std::max(lastRelease, params.clients[cust].releaseTime);
-                latestDispatch = std::min(latestDispatch,
-                                          params.clients[cust].latestDispatch);
+                routeLastRelease = std::max(routeLastRelease,
+                                            params.clients[cust].releaseTime);
+                routeLatestDispatch = std::min(
+                    routeLatestDispatch, params.clients[cust].latestDispatch);
             }
 
-            if (params.clients[client].releaseTime > latestDispatch
-                || params.clients[client].latestDispatch < lastRelease)
+            if (params.clients[client].releaseTime > routeLatestDispatch
+                || params.clients[client].latestDispatch < routeLastRelease)
                 continue;
 
             for (size_t idx = 0; idx <= route.size(); ++idx)
@@ -103,20 +102,6 @@ void crossover::greedyRepair(Routes &routes,
         }
 
         auto const [cost, route, offset] = best;
-
-        if (cost == INT_MAX)  // TODO Figure out why this is a problem
-        {
-            auto const dist = params.dist(0, client) + params.dist(client, 0);
-            std::cout << "Problem! " << dist << ' '
-                      << deltaCost(client, 0, 0, params) << ' '
-                      << params.clients[client].twEarly << ' '
-                      << params.clients[client].twLate << ' '
-                      << params.clients[0].twEarly << ' '
-                      << params.clients[0].twLate << ' '
-                      << params.dist(0, client) << ' ' << params.dist(client, 0)
-                      << '\n';
-        }
-
         route->insert(route->begin() + static_cast<long>(offset), client);
     }
 }

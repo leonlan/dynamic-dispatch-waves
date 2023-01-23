@@ -71,10 +71,10 @@ n_simulations = 40
 n_lookahead = 3
 n_requests = 100
 postpone_thresholds = [
-    0.85,
+    0.95, 0.85, 0.75
 ]
 dispatch_thresholds = [
-    0.40,
+    0.45, 0.35, 0.25
 ]
 
 node_ops = [
@@ -82,8 +82,8 @@ node_ops = [
     "Exchange11",
     "Exchange20",
     "MoveTwoClientsReversed",
-    "Exchange21",
-    "Exchange22",
+    # "Exchange21",
+    # "Exchange22",
     "TwoOpt",
 ]
 
@@ -104,11 +104,11 @@ feasBooster = 9.045454545454545
 penaltyIncrease = 2.0303030303030303
 penaltyDecrease = 0.33712121212121215
 targetFeasible = 0.18686868686868688
-repairProbability = 53
+repairProbability = 0
 repairBooster = 10
 minPopSize = 3
 generationSize = 8
 shouldIntensify = 0
-nbGranular = 16
+nbGranular = 30
 weightWaitTime = 5
 weightTimeWarp = 18

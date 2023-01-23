@@ -4,6 +4,7 @@ import hgspy
 from strategies.static import hgs
 from strategies.utils import filter_instance
 from .simulate_instance import simulate_instance
+from .threshold import threshold
 import tools
 
 
@@ -38,20 +39,16 @@ def simulate(
     total_sim_tlim = simulate_tlim_factor * info["epoch_tlim"]
     single_sim_tlim = total_sim_tlim / (n_cycles * n_simulations)
 
-    dispatch_count = np.zeros(ep_size, dtype=int)
+    # Actions
     to_dispatch = ep_inst["must_dispatch"]
     to_postpone = np.zeros(ep_size, dtype=bool)
 
     for cycle_idx in range(n_cycles):
-        # Get the threshold belonging to the current cycle_idx, or the last one
-        # available if there are more epochs than thresholds.
-        threshold_idx = min(cycle_idx, len(postpone_thresholds) - 1)
-        postpone_threshold = postpone_thresholds[threshold_idx]
-        dispatch_threshold = dispatch_thresholds[threshold_idx]
-
         disp_init = solve_dispatch_inst(
             ep_inst, to_dispatch, node_ops, route_ops, crossover_ops
         )
+
+        solutions_pool = []
 
         for _ in range(n_simulations):
             sim_inst = simulate_instance(
@@ -74,25 +71,19 @@ def simulate(
                 initial_solutions=(make_sim_init(sim_inst, disp_init),),
             )
 
-            best = res.get_best_found()
+            sim_sol = res.get_best_found().get_routes()
+            tools.validate_static_solution(sim_inst, [x for x in sim_sol if x])
 
-            # TODO This can be removed at some point
-            tools.validate_static_solution(
-                sim_inst, [x for x in best.get_routes() if x]
-            )
+            solutions_pool.append(sim_sol)
 
-            for sim_route in best.get_routes():
-                # Count a request as dispatched if routed with `to_dispatch`
-                if any(to_dispatch[idx] for idx in sim_route if idx < ep_size):
-                    dispatch_count[sim_route] += 1
-
-        # Mark requests as dispatched or postponed
-        to_dispatch = dispatch_count >= dispatch_threshold * n_simulations
-        to_dispatch[0] = False  # Do not dispatch the depot
-
-        postpone_count = n_simulations - dispatch_count
-        to_postpone = postpone_count > postpone_threshold * n_simulations
-        to_postpone[0] = False  # Do not postpone the depot
+        to_dispatch, to_postpone = threshold(
+            solutions_pool,
+            to_dispatch,
+            to_postpone,
+            cycle_idx,
+            dispatch_thresholds,
+            postpone_thresholds,
+        )
 
         print(
             ep_size,
@@ -108,10 +99,7 @@ def simulate(
         if ep_size - 1 == to_dispatch.sum() + to_postpone.sum():
             break
 
-        dispatch_count *= 0  # reset dispatch count
-
-    to_dispatch = ep_inst["is_depot"] | ep_inst["must_dispatch"] | to_dispatch
-    return filter_instance(ep_inst, to_dispatch)
+    return filter_instance(ep_inst, ep_inst["is_depot"] | to_dispatch)
 
 
 def solve_dispatch_inst(
@@ -128,7 +116,7 @@ def solve_dispatch_inst(
         [getattr(hgspy.operators, op) for op in node_ops],
         [getattr(hgspy.operators, op) for op in route_ops],
         [getattr(hgspy.crossover, op) for op in crossover_ops],
-        hgspy.stop.MaxRuntime(5),  # TODO Make param
+        hgspy.stop.MaxRuntime(3),  # TODO Make param
     )
 
     # Map the new indices back to the epoch instance indices.

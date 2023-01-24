@@ -39,8 +39,7 @@ def simulate(
     total_sim_tlim = simulate_tlim_factor * info["epoch_tlim"]
     single_sim_tlim = total_sim_tlim / (n_cycles * n_simulations)
 
-    # Actions
-    to_dispatch = ep_inst["must_dispatch"]
+    to_dispatch = ep_inst["must_dispatch"].copy()
     to_postpone = np.zeros(ep_size, dtype=bool)
 
     for cycle_idx in range(n_cycles):
@@ -68,11 +67,12 @@ def simulate(
                 [getattr(hgspy.operators, op) for op in route_ops],
                 [getattr(hgspy.crossover, op) for op in crossover_ops],
                 hgspy.stop.MaxRuntime(single_sim_tlim),
+                # TODO Do we really need this or can this be removed?
                 initial_solutions=(make_sim_init(sim_inst, disp_init),),
             )
 
-            sim_sol = res.get_best_found().get_routes()
-            tools.validate_static_solution(sim_inst, [x for x in sim_sol if x])
+            sim_sol = [r for r in res.get_best_found().get_routes() if r]
+            tools.validate_static_solution(sim_inst, sim_sol)
 
             solutions_pool.append(sim_sol)
 

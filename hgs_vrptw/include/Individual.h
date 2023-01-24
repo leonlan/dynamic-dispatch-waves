@@ -79,9 +79,6 @@ public:
      */
     [[nodiscard]] bool isFeasible() const
     {
-        // TODO Do we need to include dispatch feasibility here?
-        // We assume that an individual can never become dispatch
-        // infeasible in throughout the search.
         return !hasExcessCapacity() && !hasTimeWarp();
     }
 

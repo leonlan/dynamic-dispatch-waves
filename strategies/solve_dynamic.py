@@ -42,6 +42,7 @@ def solve_dynamic(env, config, solver_seed):
         )
 
         solve_tlim = ep_tlim - (time.perf_counter() - start)
+        solve_tlim = 1
 
         # TODO use a seed different from the dynamic rng for the static solver
         res = hgs(

@@ -39,7 +39,7 @@ def simulate(
     single_sim_tlim = total_sim_tlim / (n_cycles * n_simulations)
 
     dispatch_count = np.zeros(ep_size, dtype=int)
-    to_dispatch = ep_inst["must_dispatch"]
+    to_dispatch = ep_inst["must_dispatch"].copy()
     to_postpone = np.zeros(ep_size, dtype=bool)
 
     # Get the threshold belonging to the current epoch, or the last one
@@ -70,14 +70,10 @@ def simulate(
                 hgspy.stop.MaxRuntime(single_sim_tlim),
             )
 
-            best = res.get_best_found()
+            sim_sol = [r for r in res.get_best_found().get_routes() if r]
+            tools.validate_static_solution(sim_inst, sim_sol)
 
-            # TODO This can be removed at some point
-            tools.validate_static_solution(
-                sim_inst, [x for x in best.get_routes() if x]
-            )
-
-            for sim_route in best.get_routes():
+            for sim_route in sim_sol:
                 # Count a request as dispatched if routed with `to_dispatch`
                 if any(to_dispatch[idx] for idx in sim_route if idx < ep_size):
                     dispatch_count[sim_route] += 1
@@ -87,7 +83,7 @@ def simulate(
         to_dispatch[0] = False  # Do not dispatch the depot
 
         postpone_count = n_simulations - dispatch_count
-        to_postpone = postpone_count >= postpone_threshold * n_simulations
+        to_postpone = postpone_count > postpone_threshold * n_simulations
         to_postpone[0] = False  # Do not postpone the depot
 
         # Stop the simulation run early when all requests have been marked
@@ -96,9 +92,7 @@ def simulate(
 
         dispatch_count *= 0  # reset dispatch count
 
-    # TODO This should become a parameter: we can also dispatch only those
-    # requests that have been marked `to_dispatch`.
     # Dispatch all requests that are not marked `to_postpone`
-    to_dispatch = ep_inst["is_depot"] | ep_inst["must_dispatch"] | ~to_postpone
+    to_dispatch = ep_inst["is_depot"] | ep_inst["must_dispatch"] | to_dispatch
 
     return filter_instance(ep_inst, to_dispatch)

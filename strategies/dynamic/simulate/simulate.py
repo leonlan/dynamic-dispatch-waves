@@ -93,6 +93,6 @@ def simulate(
         dispatch_count *= 0  # reset dispatch count
 
     # Dispatch all requests that are not marked `to_postpone`
-    to_dispatch = ep_inst["is_depot"] | ep_inst["must_dispatch"] | to_dispatch
+    to_dispatch = ep_inst["is_depot"] | ep_inst["must_dispatch"] | ~to_postpone
 
     return filter_instance(ep_inst, to_dispatch)

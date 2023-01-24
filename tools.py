@@ -1,6 +1,17 @@
 import numpy as np
 
 
+def extract_subsequences(sequence, lmin, lmax):
+    """
+    Extracts all subsequences of lengths [lmin, lmax] from the passed-in sequence.
+    """
+    n = len(sequence)
+
+    for l in range(lmin, min(lmax, n) + 1):
+        for subsequence in zip(*(sequence[i:] for i in range(l))):
+            yield subsequence
+
+
 def compute_solution_driving_time(instance, solution):
     return sum(
         [

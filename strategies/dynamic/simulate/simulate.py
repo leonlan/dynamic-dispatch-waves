@@ -3,6 +3,7 @@ from collections import Counter
 import numpy as np
 
 import hgspy
+import tools
 from strategies.static import hgs
 from strategies.utils import filter_instance
 from .simulate_instance import simulate_instance
@@ -79,7 +80,7 @@ def simulate(
                     dispatch_count[sim_route] += 1
 
                 # Find all subsequences of the simulation routes.
-                sim_subsequences = extract_subsequences(sim_route, 2, 10)
+                sim_subsequences = tools.extract_subsequences(sim_route, 2, 10)
                 epoch_subsequences = filter(lambda sub: max(sub) < n_ep_reqs, sim_subsequences)
                 subsequences.update(epoch_subsequences)
 
@@ -94,14 +95,3 @@ def simulate(
     to_dispatch = ep_inst["is_depot"] | ep_inst["must_dispatch"] | ~to_postpone
 
     return filter_instance(ep_inst, to_dispatch)
-
-
-def extract_subsequences(sequence, lmin, lmax):
-    """
-    Extracts all subsequences of lengths [lmin, lmax] from the passed-in sequence.
-    """
-    n = len(sequence)
-
-    for l in range(lmin, min(lmax, n) + 1):
-        for subsequence in zip(*(sequence[i:] for i in range(l))):
-            yield subsequence

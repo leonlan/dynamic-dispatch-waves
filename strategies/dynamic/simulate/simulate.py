@@ -52,9 +52,6 @@ def simulate(
     dispatch_threshold = dispatch_thresholds[min(epoch, num_thresholds - 1)]
 
     for _ in range(n_cycles):
-        # Count all subsequences
-        subsequences = Counter()
-
         for _ in range(n_simulations):
             sim_inst = simulate_instance(
                 info,

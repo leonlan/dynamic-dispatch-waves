@@ -83,11 +83,6 @@ def simulate(
                 if any(to_dispatch[idx] for idx in sim_route if idx < ep_size):
                     dispatch_count[sim_route] += 1
 
-                # Find and count all subsequences of non-simulated nodes in this route.
-                sim_subsequences = tools.extract_subsequences(sim_route, 2, 10) # TODO values from config file
-                epoch_subsequences = filter(lambda sub: max(sub) < ep_size, sim_subsequences)
-                subsequences.update(epoch_subsequences)
-
         # Mark requests as dispatched or postponed
         to_dispatch = dispatch_count >= dispatch_threshold * n_simulations
         to_dispatch[0] = False  # Do not dispatch the depot

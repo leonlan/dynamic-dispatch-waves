@@ -57,7 +57,7 @@ def solve_dynamic(env, config, solver_seed):
         best = res.get_best_found()
         routes = [route for route in best.get_routes() if route]
 
-        ep_sol = sol2ep(routes, dispatch_inst)
+        ep_sol = sol2ep(routes, dispatch_inst, False)
 
         current_epoch = observation["current_epoch"]
         solutions[current_epoch] = ep_sol

@@ -30,7 +30,9 @@ def validate_static_solution(
 
         if "latest_dispatch" in instance:
             validate_route_dispatch_windows(
-                route, instance["release_times"], instance["latest_dispatch"]
+                route,
+                instance["earliest_dispatch"],
+                instance["latest_dispatch"],
             )
 
     return compute_solution_driving_time(instance, solution)
@@ -96,12 +98,14 @@ def validate_route_capacity(route, demands, capacity):
     ), f"Capacity validated for route, {sum(demands[route])} > {capacity}"
 
 
-def validate_route_time_windows(route, dist, timew, service_t, release_t=None):
+def validate_route_time_windows(
+    route, dist, timew, service_t, earliest_dispatch=None
+):
     depot = 0  # For readability, define variable
     earliest_start_depot, latest_arrival_depot = timew[depot]
-    if release_t is not None:
+    if earliest_dispatch is not None:
         earliest_start_depot = max(
-            earliest_start_depot, release_t[route].max()
+            earliest_start_depot, earliest_dispatch[route].max()
         )
     current_time = earliest_start_depot + service_t[depot]
 
@@ -122,9 +126,9 @@ def validate_route_time_windows(route, dist, timew, service_t, release_t=None):
     ), f"Time window violated for depot: {current_time} not in ({earliest_start_depot}, {latest_arrival_depot})"
 
 
-def validate_route_dispatch_windows(route, release_times, latest_dispatch):
+def validate_route_dispatch_windows(route, earliest_dispatch, latest_dispatch):
     if route:
-        assert max(release_times[route]) <= min(latest_dispatch[route])
+        assert max(earliest_dispatch[route]) <= min(latest_dispatch[route])
 
 
 def readlines(filename):
@@ -184,7 +188,7 @@ def read_vrplib(filename, rounded=True):
     duration_matrix = []
     service_t = []
     timewi = []
-    release_times = []
+    earliest_dispatch = []
     latest_dispatch = []
     with open(filename, "r") as f:
 
@@ -212,8 +216,8 @@ def read_vrplib(filename, rounded=True):
                 mode = "time_windows"
             elif line == "SERVICE_TIME_SECTION":
                 mode = "service_t"
-            elif line == "RELEASE_TIME_SECTION":
-                mode = "release_time"
+            elif line == "EARLIEST_DISPATCH_SECTION":
+                mode = "earliest_dispatch"
             elif line == "LATEST_DISPATCH_SECTION":
                 mode = "latest_dispatch"
             elif line == "EOF":
@@ -259,14 +263,14 @@ def read_vrplib(filename, rounded=True):
                 l, u = (int(l), int(u)) if rounded else (float(l), float(u))
                 assert node == len(timewi) + 1
                 timewi.append([l, u])
-            elif mode == "release_time":
-                node, release_time = line.split()
-                release_time = int(release_time)
-                release_times.append(release_time)
+            elif mode == "earliest_dispatch":
+                node, earliest_dispatch_time = line.split()
+                earliest_dispatch_time = int(earliest_dispatch_time)
+                earliest_dispatch.append(earliest_dispatch_time)
             elif mode == "latest_dispatch":
-                node, dispatch_time = line.split()
-                dispatch_time = int(dispatch_time)
-                latest_dispatch.append(dispatch_time)
+                node, latest_dispatch_time = line.split()
+                latest_dispatch_time = int(latest_dispatch_time)
+                latest_dispatch.append(latest_dispatch_time)
 
     horizon = timewi[0][1]  # time horizon, i.e., depot latest tw
     return {
@@ -279,8 +283,8 @@ def read_vrplib(filename, rounded=True):
         "duration_matrix": np.array(duration_matrix)
         if len(duration_matrix) > 0
         else None,
-        "release_times": np.array(release_times)
-        if release_times
+        "earliest_dispatch": np.array(earliest_dispatch)
+        if earliest_dispatch
         else np.zeros(len(loc) + 1, dtype=int),
         "latest_dispatch": np.array(latest_dispatch)
         if latest_dispatch
@@ -388,15 +392,15 @@ def write_vrplib(
             )
             f.write("\n")
 
-            if "release_times" in instance:
-                release_times = instance["release_times"]
+            if "earliest_dispatch" in instance:
+                earliest_dispatch = instance["earliest_dispatch"]
 
-                f.write("RELEASE_TIME_SECTION\n")
+                f.write("EARLIEST_DISPATCH_SECTION\n")
                 f.write(
                     "\n".join(
                         [
                             "{}\t{}".format(i + 1, s)
-                            for i, s in enumerate(release_times)
+                            for i, s in enumerate(earliest_dispatch)
                         ]
                     )
                 )
@@ -426,15 +430,15 @@ def inst_to_vars(inst):
     # - 'time_windows': np.array of [l, u] time windows per client (incl. depot)
     # - 'service_times': np.array of service times at each client (incl. depot)
     # - 'duration_matrix': distance matrix between clients (incl. depot)
-    # - optional 'release_times': earliest possible time to leave depot
+    # - optional 'earliest_dispatch': earliest possible time to leave depot
     # - optional 'latest_dispatch': latest possible time to leave depot
 
     # Notice that the dictionary key names are not entirely free-form: these
     # should match the argument names defined in the C++/Python bindings.
-    if "release_times" in inst:
-        release_times = inst["release_times"]
+    if "earliest_dispatch" in inst:
+        earliest_dispatch = inst["earliest_dispatch"]
     else:
-        release_times = np.zeros_like(inst["service_times"])
+        earliest_dispatch = np.zeros_like(inst["service_times"])
 
     if "latest_dispatch" in inst:
         latest_dispatch = inst["latest_dispatch"]
@@ -443,7 +447,7 @@ def inst_to_vars(inst):
         horizon = inst["time_windows"][0][1]
         latest_dispatch = np.ones_like(inst["service_times"]) * horizon
 
-    assert len(release_times) == len(latest_dispatch)
+    assert len(earliest_dispatch) == len(latest_dispatch)
 
     return dict(
         coords=inst["coords"],
@@ -452,7 +456,7 @@ def inst_to_vars(inst):
         time_windows=inst["time_windows"],
         service_durations=inst["service_times"],
         duration_matrix=inst["duration_matrix"],
-        release_times=release_times,
+        earliest_dispatch=earliest_dispatch,
         latest_dispatch=latest_dispatch,
     )
 

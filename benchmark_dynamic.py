@@ -28,6 +28,10 @@ def parse_args():
     )
     parser.add_argument("--epoch_tlim", type=float, default=60)
 
+    parser.add_argument("--n_cycles", type=int)
+    parser.add_argument("--n_simulations", type=int)
+    parser.add_argument("--n_lookahead", type=int)
+
     return parser.parse_args()
 
 
@@ -38,6 +42,9 @@ def solve(
     config_loc: str,
     hindsight: bool,
     epoch_tlim: int,
+    n_cycles: int,
+    n_simulations: int,
+    n_lookahead: int,
     **kwargs,
 ):
     path = Path(loc)
@@ -51,6 +58,11 @@ def solve(
     start = perf_counter()
 
     config = Config.from_file(config_loc)
+    strategy_params = config.dynamic()["strategy_params"]
+    strategy_params["n_simulations"] = n_simulations
+    strategy_params["n_cycles"] = n_cycles
+    strategy_params["n_lookahead"] = n_lookahead
+    breakpoint()
 
     if hindsight:
         costs, routes = solve_hindsight(env, config.static(), solver_seed)

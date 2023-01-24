@@ -5,6 +5,7 @@ from strategies.static import hgs
 from strategies.utils import filter_instance
 from .simulate_instance import simulate_instance
 from .threshold import threshold
+from .hamming_distance import hamming_distance
 import tools
 
 
@@ -76,14 +77,17 @@ def simulate(
 
             solutions_pool.append(sim_sol)
 
-        to_dispatch, to_postpone = threshold(
-            solutions_pool,
-            to_dispatch,
-            to_postpone,
-            cycle_idx,
-            dispatch_thresholds,
-            postpone_thresholds,
+        to_dispatch, to_postpone = hamming_distance(
+            solutions_pool, to_dispatch, to_postpone
         )
+        # to_dispatch, to_postpone = threshold(
+        #     solutions_pool,
+        #     to_dispatch,
+        #     to_postpone,
+        #     cycle_idx,
+        #     dispatch_thresholds,
+        #     postpone_thresholds,
+        # )
 
         print(
             ep_size,

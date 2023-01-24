@@ -80,6 +80,8 @@ def _merge_nodes(inst, i, j):
         inst[key]["duration_to"][k] = inst[key]["duration_to"].pop(i)
         inst[key]["duration_to"].pop(j)
 
+    return k
+
 
 def fix_subsequences(inst, subsequences):
     """ Create a new instance in which all subsequences are concatenated to a single node """

@@ -50,7 +50,7 @@ def simulate(
     postpone_threshold = postpone_thresholds[min(epoch, num_thresholds - 1)]
 
     for _ in range(n_cycles):
-        # Extract all subsequences
+        # Count all subsequences
         subsequences = Counter()
 
         for _ in range(n_simulations):
@@ -79,7 +79,7 @@ def simulate(
                 if any(idx in must_dispatch for idx in sim_route):
                     dispatch_count[sim_route] += 1
 
-                # Find all subsequences of the simulation routes.
+                # Find and count all subsequences of non-simulated nodes in this route.
                 sim_subsequences = tools.extract_subsequences(sim_route, 2, 10)
                 epoch_subsequences = filter(lambda sub: max(sub) < n_ep_reqs, sim_subsequences)
                 subsequences.update(epoch_subsequences)

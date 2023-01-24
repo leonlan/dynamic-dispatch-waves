@@ -14,7 +14,10 @@ def extract_subsequences(sequence, lmin, lmax):
             yield subsequence
 
 
-def to_node_view(inst):
+def _to_node_view(inst):
+    """
+    Converts an instance as dictionary of attr-array pairs to an instance of nested node-attr-value pairs
+    """
     return {n: {**{k: inst[k][n] for k in inst if k not in ["capacity", "duration_matrix"]},
                 **{"capacity": inst["capacity"],
                    "duration_to": dict(zip(inst["request_idx"],
@@ -22,7 +25,10 @@ def to_node_view(inst):
             for n in inst["request_idx"]}
 
 
-def to_attr_view(inst):
+def _to_attr_view(inst):
+    """
+    Converts an instance of nested node-attr-value pairs to an instance as dictionary of attr-array pairs
+    """
     first = inst[next(iter(inst))]
 
     return {**{k: np.array([inst[n][k] for n in inst], dtype=object if k in ["customer_idx", "request_idx", "coords"] else None)
@@ -33,29 +39,24 @@ def to_attr_view(inst):
                                             for n in inst])}}
 
 
-def fix_subsequences(orig_inst, subsequences):
-    new_inst = to_node_view(orig_inst)
-
-    for subsequence in subsequences:
-        reduce(partial(merge_nodes, new_inst), subsequence)
-
-    return to_attr_view(new_inst)
-
-
-def as_tuple(x):
+def _as_tuple(x):
+    """ Convert non-tuple input to being a single element of a tuple """
     return x if isinstance(x, tuple) else x,
 
 
-def merge_nodes(inst, i, j):
+def _merge_nodes(inst, i, j):
+    """ Merge two nodes of a node-view instance in place"""
     n = inst.pop(i)
     m = inst.pop(j)
 
-    k = as_tuple(i) + as_tuple(j)
+    k = _as_tuple(i) + _as_tuple(j)
 
+    # Use the concatenation scheme of Vidal 2013 to merge two nodes
     min_time_between = n["service_times"] + n["duration_to"][j]
     min_waiting_time = max(m["time_windows"][0] - min_time_between - n["time_windows"][1], 0)
     min_time_warping = max(n["time_windows"][0] + min_time_between - m["time_windows"][1], 0)
 
+    # Merging nodes isn't allowed if the concatenation is certain to violate time windows
     assert min_time_warping == 0
 
     tw_start = max(m["time_windows"][0] - min_time_between, n["time_windows"][0]) - min_waiting_time
@@ -63,9 +64,9 @@ def merge_nodes(inst, i, j):
 
     inst[k] = {
         "is_depot": n["is_depot"] | m["is_depot"],
-        "customer_idx": as_tuple(n["customer_idx"]) + as_tuple(m["customer_idx"]),
-        "request_idx": as_tuple(n["request_idx"]) + as_tuple(m["request_idx"]),
-        "coords": as_tuple(n["coords"]) + as_tuple(m["coords"]),
+        "customer_idx": _as_tuple(n["customer_idx"]) + _as_tuple(m["customer_idx"]),
+        "request_idx": _as_tuple(n["request_idx"]) + _as_tuple(m["request_idx"]),
+        "coords": _as_tuple(n["coords"]) + _as_tuple(m["coords"]),
         "demands": n["demands"] + m["demands"],
         "time_windows": np.array([tw_start, tw_close]),
         "service_times": n["service_times"] + m["service_times"] + n["duration_to"][j] + min_waiting_time,
@@ -74,9 +75,20 @@ def merge_nodes(inst, i, j):
         "duration_to": m["duration_to"]
     }
 
+    # Update the travel durations from all (other) nodes towards the old & new current nodes
     for key in inst:
         inst[key]["duration_to"][k] = inst[key]["duration_to"].pop(i)
         inst[key]["duration_to"].pop(j)
+
+
+def fix_subsequences(orig_inst, subsequences):
+    """ Create a new instance in which all subsequences are concatenated to a single node """
+    new_inst = _to_node_view(orig_inst)
+
+    for subsequence in subsequences:
+        reduce(partial(_merge_nodes, new_inst), subsequence)
+
+    return _to_attr_view(new_inst)
 
 
 def compute_solution_driving_time(instance, solution):

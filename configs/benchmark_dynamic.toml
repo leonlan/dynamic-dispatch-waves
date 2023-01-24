@@ -68,13 +68,13 @@ nbIter = 6318
 simulate_tlim_factor = 0.7703517587939699
 n_cycles = 3
 n_simulations = 40
-n_lookahead = 5
-n_requests = 69
+n_lookahead = 3
+n_requests = 100
 postpone_thresholds = [
-    0.6289158289264459,
-    0.8485448714466843,
-    0.7330547338912516,
-    0.8039337145760462,
+    0.85,
+]
+dispatch_thresholds = [
+    0.40,
 ]
 
 node_ops = [

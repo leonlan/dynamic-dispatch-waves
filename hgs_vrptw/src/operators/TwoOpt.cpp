@@ -50,10 +50,18 @@ int TwoOpt::evalBetweenRoutes(Node *U, Node *V)
 
     auto const uTWS = TWS::merge(U->twBefore, n(V)->twAfter);
 
+    // Shortcut if new route is not dispatch feasible
+    if (!uTWS.isDispatchFeasible())
+        return INT_MAX;
+
     deltaCost += d_params.twPenalty(uTWS.totalTimeWarp());
     deltaCost -= d_params.twPenalty(U->route->timeWarp());
 
     auto const vTWS = TWS::merge(V->twBefore, n(U)->twAfter);
+
+    // Shortcut if new route is not dispatch feasible
+    if (!vTWS.isDispatchFeasible())
+        return INT_MAX;
 
     deltaCost += d_params.twPenalty(vTWS.totalTimeWarp());
     deltaCost -= d_params.twPenalty(V->route->timeWarp());

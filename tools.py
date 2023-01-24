@@ -1,3 +1,5 @@
+from functools import partial, reduce
+
 import numpy as np
 
 
@@ -10,6 +12,71 @@ def extract_subsequences(sequence, lmin, lmax):
     for l in range(lmin, min(lmax, n) + 1):
         for subsequence in zip(*(sequence[i:] for i in range(l))):
             yield subsequence
+
+
+def to_node_view(inst):
+    return {n: {**{k: inst[k][n] for k in inst if k not in ["capacity", "duration_matrix"]},
+                **{"capacity": inst["capacity"],
+                   "duration_to": dict(zip(inst["request_idx"],
+                                           inst["duration_matrix"][n]))}}
+            for n in inst["request_idx"]}
+
+
+def to_attr_view(inst):
+    first = inst[next(iter(inst))]
+
+    return {**{k: np.array([inst[n][k] for n in inst], dtype=object if k in ["customer_idx", "request_idx", "coords"] else None)
+               for k in first if k not in ["capacity", "duration_to"]},
+            **{"capacity": first["capacity"],
+               "duration_matrix": np.array([[inst[n]["duration_to"][m]
+                                             for m in inst]
+                                            for n in inst])}}
+
+
+def fix_subsequences(orig_inst, subsequences):
+    new_inst = to_node_view(orig_inst)
+
+    for subsequence in subsequences:
+        reduce(partial(merge_nodes, new_inst), subsequence)
+
+    return to_attr_view(new_inst)
+
+
+def as_tuple(x):
+    return x if isinstance(x, tuple) else x,
+
+
+def merge_nodes(inst, i, j):
+    n = inst.pop(i)
+    m = inst.pop(j)
+
+    k = as_tuple(i) + as_tuple(j)
+
+    min_time_between = n["service_times"] + n["duration_to"][j]
+    min_waiting_time = max(m["time_windows"][0] - min_time_between - n["time_windows"][1], 0)
+    min_time_warping = max(n["time_windows"][0] + min_time_between - m["time_windows"][1], 0)
+
+    assert min_time_warping == 0
+
+    tw_start = max(m["time_windows"][0] - min_time_between, n["time_windows"][0]) - min_waiting_time
+    tw_close = min(m["time_windows"][1] - min_time_between, n["time_windows"][1]) + min_time_warping
+
+    inst[k] = {
+        "is_depot": n["is_depot"] | m["is_depot"],
+        "customer_idx": as_tuple(n["customer_idx"]) + as_tuple(m["customer_idx"]),
+        "request_idx": as_tuple(n["request_idx"]) + as_tuple(m["request_idx"]),
+        "coords": as_tuple(n["coords"]) + as_tuple(m["coords"]),
+        "demands": n["demands"] + m["demands"],
+        "time_windows": np.array([tw_start, tw_close]),
+        "service_times": n["service_times"] + m["service_times"] + n["duration_to"][j] + min_waiting_time,
+        "must_dispatch": n["must_dispatch"] | m["must_dispatch"],
+        "capacity": n["capacity"],
+        "duration_to": m["duration_to"]
+    }
+
+    for key in inst:
+        inst[key]["duration_to"][k] = inst[key]["duration_to"].pop(i)
+        inst[key]["duration_to"].pop(j)
 
 
 def compute_solution_driving_time(instance, solution):

@@ -22,6 +22,8 @@ class Params
         int twLate;       // Latest arrival (when using time windows)
         int releaseTime;  // Routes with this client cannot leave depot before
                           // this time
+        int latestDispatch;  // Routes with this client must leave
+                             // depot before this time
     };
 
     // Penalty booster that increases the penalty on capacity and time window
@@ -141,6 +143,7 @@ public:
      * @param servDurs     Service durations.
      * @param distMat      Distance matrix.
      * @param releases     Client release times.
+     * @param latestDispatch     Client latest dispatch times.
      */
     Params(Config const &config,
            std::vector<std::pair<int, int>> const &coords,
@@ -149,7 +152,8 @@ public:
            std::vector<std::pair<int, int>> const &timeWindows,
            std::vector<int> const &servDurs,
            std::vector<std::vector<int>> const &distMat,
-           std::vector<int> const &releases);
+           std::vector<int> const &releases,
+           std::vector<int> const &latestDispatch);
 };
 
 #endif

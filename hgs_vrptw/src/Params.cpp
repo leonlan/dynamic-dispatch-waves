@@ -248,11 +248,27 @@ Params::Params(Config const &config, std::string const &instPath)
                                                  " client order");
                     }
                 }
-                // Check if the service duration of the depot is 0
+                // Check if the release time of the depot is 0
                 if (clients[0].releaseTime != 0)
                 {
                     throw std::runtime_error(
                         "Release time for depot should be 0");
+                }
+            }
+            else if (content == "LATEST_DISPATCH_SECTION")
+            {
+                for (int i = 0; i <= nbClients; i++)
+                {
+                    int clientNr = 0;
+                    inputFile >> clientNr >> clients[i].latestDispatch;
+
+                    // Check if the clients are in order
+                    if (clientNr != i + 1)
+                    {
+                        throw std::runtime_error(
+                            "Latest dispatch times are not in"
+                            " client order");
+                    }
                 }
             }
             // Read the time windows of all the clients (the depot should
@@ -345,7 +361,8 @@ Params::Params(Config const &config,
                std::vector<std::pair<int, int>> const &timeWindows,
                std::vector<int> const &servDurs,
                std::vector<std::vector<int>> const &distMat,
-               std::vector<int> const &releases)
+               std::vector<int> const &releases,
+               std::vector<int> const &latestDispatch)
     : config(config),
       nbClients(static_cast<int>(coords.size()) - 1),
       nbVehicles(std::max(std::min(config.nbVeh, nbClients), 1)),
@@ -376,7 +393,8 @@ Params::Params(Config const &config,
                         demands[idx],
                         timeWindows[idx].first,
                         timeWindows[idx].second,
-                        releases[idx]};
+                        releases[idx],
+                        latestDispatch[idx]};
 
     calculateNeighbours();
 }
@@ -395,9 +413,10 @@ void Params::calculateNeighbours()
             if (i == j)  // exclude the current client
                 continue;
 
-            // Compute proximity using Eq. 4 in Vidal 2012. The proximity is
-            // computed by the distance, min. wait time and min. time warp
-            // going from either i -> j or j -> i, whichever is the least.
+            // Compute proximity using Eq. 4 in Vidal 2012. The
+            // proximity is computed by the distance, min. wait time and
+            // min. time warp going from either i -> j or j -> i,
+            // whichever is the least.
             int const maxRelease
                 = std::max(clients[i].releaseTime, clients[j].releaseTime);
 
@@ -423,7 +442,12 @@ void Params::calculateNeighbours()
                               + config.weightWaitTime * std::max(0, waitTime2)
                               + config.weightTimeWarp * std::max(0, timeWarp2);
 
-            proximity.emplace_back(std::min(prox1, prox2), j);
+            // Take into account dispatch window infeasibilities
+            if (clients[i].releaseTime > clients[j].latestDispatch
+                || clients[j].releaseTime > clients[i].latestDispatch)
+                proximity.emplace_back(INT_MAX, j);
+            else
+                proximity.emplace_back(std::min(prox1, prox2), j);
         }
 
         std::sort(proximity.begin(), proximity.end());

@@ -16,28 +16,23 @@ struct InsertPos  // best insert position, used to plan unplanned clients
 // Evaluates the cost change of inserting client between prev and next.
 int deltaCost(Client client, Client prev, Client next, Params const &params)
 {
-    int prevClientRelease = std::max(params.clients[prev].releaseTime,
-                                     params.clients[client].releaseTime);
-    int prevEarliestArrival = std::max(prevClientRelease + params.dist(0, prev),
-                                       params.clients[prev].twEarly);
+    int prevEarliestArrival
+        = std::max(params.dist(0, prev), params.clients[prev].twEarly);
     int prevEarliestFinish = prevEarliestArrival + params.clients[prev].servDur;
     int distPrevClient = params.dist(prev, client);
     int clientLate = params.clients[client].twLate;
 
-    if (prevEarliestFinish + distPrevClient >= clientLate)
+    if (prevEarliestFinish + distPrevClient > clientLate)
         return INT_MAX;
 
-    int clientNextRelease = std::max(params.clients[client].releaseTime,
-                                     params.clients[next].releaseTime);
     int clientEarliestArrival
-        = std::max(clientNextRelease + params.dist(0, client),
-                   params.clients[client].twEarly);
+        = std::max(params.dist(0, client), params.clients[client].twEarly);
     int clientEarliestFinish
         = clientEarliestArrival + params.clients[client].servDur;
     int distClientNext = params.dist(client, next);
     int nextLate = params.clients[next].twLate;
 
-    if (clientEarliestFinish + distClientNext >= nextLate)
+    if (clientEarliestFinish + distClientNext > nextLate)
         return INT_MAX;
 
     return distPrevClient + distClientNext - params.dist(prev, next);
@@ -48,10 +43,7 @@ void crossover::greedyRepair(Routes &routes,
                              std::vector<Client> const &unplanned,
                              Params const &params)
 {
-    size_t numRoutes = 0;  // points just after the last non-empty route
-    for (size_t rIdx = 0; rIdx != routes.size(); ++rIdx)
-        if (!routes[rIdx].empty())
-            numRoutes = rIdx + 1;
+    size_t numRoutes = routes.size();
 
     for (Client client : unplanned)
     {
@@ -61,11 +53,33 @@ void crossover::greedyRepair(Routes &routes,
         {
             auto &route = routes[rIdx];
 
-            for (size_t idx = 0; idx <= route.size() && !route.empty(); ++idx)
+            // TODO Pre-compute and cache dispatch windows instead.
+            // Compute dispatch window of route. Skip this route if its
+            // not compatible with the to be inserted client.
+            int routeLastRelease = 0;
+            int routeLatestDispatch = INT_MAX;
+            for (auto const cust : route)
+            {
+                routeLastRelease = std::max(routeLastRelease,
+                                            params.clients[cust].releaseTime);
+                routeLatestDispatch = std::min(
+                    routeLatestDispatch, params.clients[cust].latestDispatch);
+            }
+
+            if (params.clients[client].releaseTime > routeLatestDispatch
+                || params.clients[client].latestDispatch < routeLastRelease)
+                continue;
+
+            for (size_t idx = 0; idx <= route.size(); ++idx)
             {
                 Client prev, next;
 
-                if (idx == 0)  // try after depot
+                if (route.empty())  // try empty route
+                {
+                    prev = 0;
+                    next = 0;
+                }
+                else if (idx == 0)  // try after depot
                 {
                     prev = 0;
                     next = route[0];
@@ -87,7 +101,7 @@ void crossover::greedyRepair(Routes &routes,
             }
         }
 
-        auto const [_, route, offset] = best;
+        auto const [cost, route, offset] = best;
         route->insert(route->begin() + static_cast<long>(offset), client);
     }
 }

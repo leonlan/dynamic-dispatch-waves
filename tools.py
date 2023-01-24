@@ -118,6 +118,11 @@ def validate_static_solution(
             instance["service_times"],
         )
 
+        if "latest_dispatch" in instance:
+            validate_route_dispatch_windows(
+                route, instance["release_times"], instance["latest_dispatch"]
+            )
+
     return compute_solution_driving_time(instance, solution)
 
 
@@ -207,6 +212,11 @@ def validate_route_time_windows(route, dist, timew, service_t, release_t=None):
     ), f"Time window violated for depot: {current_time} not in ({earliest_start_depot}, {latest_arrival_depot})"
 
 
+def validate_route_dispatch_windows(route, release_times, latest_dispatch):
+    if route:
+        assert max(release_times[route]) <= min(latest_dispatch[route])
+
+
 def readlines(filename):
     try:
         with open(filename, "r") as f:
@@ -265,6 +275,7 @@ def read_vrplib(filename, rounded=True):
     service_t = []
     timewi = []
     release_times = []
+    latest_dispatch = []
     with open(filename, "r") as f:
 
         for line in f:
@@ -293,6 +304,8 @@ def read_vrplib(filename, rounded=True):
                 mode = "service_t"
             elif line == "RELEASE_TIME_SECTION":
                 mode = "release_time"
+            elif line == "LATEST_DISPATCH_SECTION":
+                mode = "latest_dispatch"
             elif line == "EOF":
                 break
             elif mode == "coord":
@@ -340,7 +353,12 @@ def read_vrplib(filename, rounded=True):
                 node, release_time = line.split()
                 release_time = int(release_time)
                 release_times.append(release_time)
+            elif mode == "latest_dispatch":
+                node, dispatch_time = line.split()
+                dispatch_time = int(dispatch_time)
+                latest_dispatch.append(dispatch_time)
 
+    horizon = timewi[0][1]  # time horizon, i.e., depot latest tw
     return {
         "is_depot": np.array([1] + [0] * len(loc), dtype=bool),
         "coords": np.array([depot] + loc),
@@ -354,6 +372,9 @@ def read_vrplib(filename, rounded=True):
         "release_times": np.array(release_times)
         if release_times
         else np.zeros(len(loc) + 1, dtype=int),
+        "latest_dispatch": np.array(latest_dispatch)
+        if latest_dispatch
+        else np.ones(len(loc) + 1, dtype=int) * horizon,
     }
 
 
@@ -471,6 +492,18 @@ def write_vrplib(
                 )
                 f.write("\n")
 
+            if "latest_dispatch" in instance:
+                f.write("LATEST_DISPATCH_SECTION\n")
+                f.write(
+                    "\n".join(
+                        [
+                            "{}\t{}".format(i + 1, s)
+                            for i, s in enumerate(instance["latest_dispatch"])
+                        ]
+                    )
+                )
+                f.write("\n")
+
         f.write("EOF\n")
 
 
@@ -484,6 +517,7 @@ def inst_to_vars(inst):
     # - 'service_times': np.array of service times at each client (incl. depot)
     # - 'duration_matrix': distance matrix between clients (incl. depot)
     # - optional 'release_times': earliest possible time to leave depot
+    # - optional 'latest_dispatch': latest possible time to leave depot
 
     # Notice that the dictionary key names are not entirely free-form: these
     # should match the argument names defined in the C++/Python bindings.
@@ -491,6 +525,15 @@ def inst_to_vars(inst):
         release_times = inst["release_times"]
     else:
         release_times = np.zeros_like(inst["service_times"])
+
+    if "latest_dispatch" in inst:
+        latest_dispatch = inst["latest_dispatch"]
+    else:
+        # Default latest dispatch is equal to the latest depot time window
+        horizon = inst["time_windows"][0][1]
+        latest_dispatch = np.ones_like(inst["service_times"]) * horizon
+
+    assert len(release_times) == len(latest_dispatch)
 
     return dict(
         coords=inst["coords"],
@@ -500,6 +543,7 @@ def inst_to_vars(inst):
         service_durations=inst["service_times"],
         duration_matrix=inst["duration_matrix"],
         release_times=release_times,
+        latest_dispatch=latest_dispatch,
     )
 
 

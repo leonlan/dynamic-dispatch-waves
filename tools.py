@@ -81,14 +81,14 @@ def _merge_nodes(inst, i, j):
         inst[key]["duration_to"].pop(j)
 
 
-def fix_subsequences(orig_inst, subsequences):
+def fix_subsequences(inst, subsequences):
     """ Create a new instance in which all subsequences are concatenated to a single node """
-    new_inst = _to_node_view(orig_inst)
+    inst = _to_node_view(inst)
 
     for subsequence in subsequences:
-        reduce(partial(_merge_nodes, new_inst), subsequence)
+        reduce(partial(_merge_nodes, inst), subsequence)
 
-    return _to_attr_view(new_inst)
+    return _to_attr_view(inst)
 
 
 def compute_solution_driving_time(instance, solution):

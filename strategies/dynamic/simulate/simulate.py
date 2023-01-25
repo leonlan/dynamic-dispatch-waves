@@ -47,8 +47,6 @@ def simulate(
     to_dispatch = ep_inst["must_dispatch"].copy()
     to_postpone = np.zeros(ep_size, dtype=bool)
 
-    consensus_func = CONSENSUS[consensus]
-
     for cycle_idx in range(n_cycles):
         disp_init = solve_dispatch_inst(
             ep_inst,
@@ -87,22 +85,13 @@ def simulate(
 
             solution_pool.append(sim_sol)
 
-            to_dispatch, to_postpone = consensus_func(
-                cycle_idx,
-                solution_pool,
-                to_dispatch,
-                to_postpone,
-                **consensus_params,
-            )
-
-        print(
-            ep_size,
-            " | ",
-            to_dispatch.sum() + to_postpone.sum(),
-            " = ",
-            to_dispatch.sum(),
-            " + ",
-            to_postpone.sum(),
+        # Use the consensus function to mark requests dispatched or postponed
+        to_dispatch, to_postpone = CONSENSUS[consensus](
+            cycle_idx,
+            solution_pool,
+            to_dispatch,
+            to_postpone,
+            **consensus_params,
         )
 
         # Stop the simulation run early when all requests have been marked

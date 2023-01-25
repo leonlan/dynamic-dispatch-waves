@@ -1,9 +1,9 @@
 import numpy as np
 
 
-def threshold(
+def fixed_threshold(
     cycle_idx,
-    solutions,
+    solution_pool,
     to_dispatch,
     to_postpone,
     dispatch_thresholds,
@@ -20,15 +20,29 @@ def threshold(
     threshold_idx = min(cycle_idx, len(dispatch_thresholds) - 1)
     dispatch_threshold = dispatch_thresholds[threshold_idx]
 
-    n_simulations = len(solutions)
+    n_simulations = len(solution_pool)
     ep_size = to_dispatch.size
     dispatch_count = np.zeros(ep_size, dtype=int)
 
-    for sol in solutions:
+    for sol in solution_pool:
         for route in sol:
             # Count a request as dispatched if routed with `to_dispatch`
             if any(to_dispatch[idx] for idx in route if idx < ep_size):
                 dispatch_count[route] += 1
+
+    avg_sol_len = np.mean(
+        [
+            sum(
+                [
+                    len(route)
+                    for route in sol
+                    if any(to_dispatch[idx] for idx in route if idx < ep_size)
+                ]
+            )
+            for sol in solution_pool
+        ]
+    ).astype(int)
+    print(avg_sol_len)
 
     # Mark requests as dispatched or postponed
     to_dispatch = dispatch_count >= dispatch_threshold * n_simulations

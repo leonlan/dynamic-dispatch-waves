@@ -10,7 +10,8 @@ def fixed_threshold(
     postpone_thresholds,
 ):
     """
-    # TODO
+    Uses an user-specified dispatch and postpone thresholds to mark requests
+    as dispatched or postponed.
     """
     # Get the threshold belonging to the current cycle, or the last one
     # available if there are more cycles than thresholds.
@@ -29,20 +30,6 @@ def fixed_threshold(
             # Count a request as dispatched if routed with `to_dispatch`
             if any(to_dispatch[idx] for idx in route if idx < ep_size):
                 dispatch_count[route] += 1
-
-    avg_sol_len = np.mean(
-        [
-            sum(
-                [
-                    len(route)
-                    for route in sol
-                    if any(to_dispatch[idx] for idx in route if idx < ep_size)
-                ]
-            )
-            for sol in solution_pool
-        ]
-    ).astype(int)
-    print(avg_sol_len)
 
     # Mark requests as dispatched or postponed
     to_dispatch = dispatch_count >= dispatch_threshold * n_simulations

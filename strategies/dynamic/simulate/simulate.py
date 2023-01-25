@@ -71,7 +71,7 @@ def simulate(
             )
 
             sim_sol = [r for r in res.get_best_found().get_routes() if r]
-            tools.validate_static_solution(sim_inst, sim_sol)
+            tools.validation.validate_static_solution(sim_inst, sim_sol)
 
             for sim_route in sim_sol:
                 # Count a request as dispatched if routed with `to_dispatch`

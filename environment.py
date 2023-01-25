@@ -107,7 +107,7 @@ class VRPEnvironment:
             self.is_done = True
             return (None, float("inf"), self.is_done, {"error": str(error)})
 
-        cost = tools.validate_dynamic_epoch_solution(self.ep_inst, solution)
+        cost = tools.validation.validate_dynamic_epoch_solution(self.ep_inst, solution)
 
         self.final_solutions[self.current_epoch] = solution
         self.final_costs[self.current_epoch] = cost
@@ -134,7 +134,7 @@ class VRPEnvironment:
         assert on_time, "Time limit exceeded"
 
         # Check if solution is valid
-        tools.validate_dynamic_epoch_solution(self.ep_inst, solution)
+        tools.validation.validate_dynamic_epoch_solution(self.ep_inst, solution)
 
         # Mark orders of submitted solution as dispatched
         for route in solution:

@@ -44,7 +44,7 @@ def solve(
 
     env = VRPEnvironment(
         seed=instance_seed,
-        instance=tools.read_vrplib(path),
+        instance=tools.io.read_vrplib(path),
         epoch_tlim=epoch_tlim,
     )
 
@@ -103,7 +103,7 @@ def main():
     ]
     data = np.asarray(data, dtype=dtypes)
 
-    table = tools.tabulate(headers, data)
+    table = tools.io.tabulate(headers, data)
 
     print(
         Path(__file__).name,

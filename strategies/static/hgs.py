@@ -11,7 +11,7 @@ def hgs(
     stop,
     initial_solutions=(),
 ):
-    params = hgspy.Params(config, **tools.inst_to_vars(instance))
+    params = hgspy.Params(config, **tools.io.inst_to_vars(instance))
 
     rng = hgspy.XorShift128(seed=config.seed)
     pop = hgspy.Population(params, rng)

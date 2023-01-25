@@ -30,7 +30,7 @@ def _merge_nodes(inst, i, j):
         "is_depot": n["is_depot"] | m["is_depot"],
         "customer_idx": _as_tuple(n["customer_idx"]) + _as_tuple(m["customer_idx"]),
         "request_idx": _as_tuple(n["request_idx"]) + _as_tuple(m["request_idx"]),
-        "coords": _as_tuple(n["coords"]) + _as_tuple(m["coords"]),
+        "coords": n["coords"],
         "demands": n["demands"] + m["demands"],
         "time_windows": np.array([tw_start, tw_close]),
         "service_times": n["service_times"] + m["service_times"] + n["duration_to"][j] + min_waiting_time,

@@ -2,17 +2,22 @@ import numpy as np
 
 
 def threshold(
+    cycle_idx,
     solutions,
     to_dispatch,
     to_postpone,
-    cycle_idx,
     dispatch_thresholds,
     postpone_thresholds,
 ):
-    # Get the threshold belonging to the current cycle_idx, or the last one
-    # available if there are more epochs than thresholds.
+    """
+    # TODO
+    """
+    # Get the threshold belonging to the current cycle, or the last one
+    # available if there are more cycles than thresholds.
     threshold_idx = min(cycle_idx, len(postpone_thresholds) - 1)
     postpone_threshold = postpone_thresholds[threshold_idx]
+
+    threshold_idx = min(cycle_idx, len(dispatch_thresholds) - 1)
     dispatch_threshold = dispatch_thresholds[threshold_idx]
 
     n_simulations = len(solutions)

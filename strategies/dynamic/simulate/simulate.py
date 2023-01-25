@@ -12,17 +12,18 @@ def simulate(
     info,
     obs,
     rng,
+    init_tlim_factor: float,
     simulate_tlim_factor: float,
     n_cycles: int,
     n_simulations: int,
     n_lookahead: int,
     n_requests: int,
-    postpone_thresholds: list,
-    dispatch_thresholds: list,
     sim_config: dict,
     node_ops: list,
     route_ops: list,
     crossover_ops: list,
+    consensus: str,
+    consensus_params: dict,
     **kwargs,
 ):
     """
@@ -36,6 +37,10 @@ def simulate(
     # Parameters
     ep_inst = obs["epoch_instance"]
     ep_size = ep_inst["is_depot"].size  # includes depot
+
+    total_init_tlim = init_tlim_factor * info["epoch_tlim"]
+    single_init_tlim = total_init_tlim / n_cycles
+
     total_sim_tlim = simulate_tlim_factor * info["epoch_tlim"]
     single_sim_tlim = total_sim_tlim / (n_cycles * n_simulations)
 
@@ -44,7 +49,12 @@ def simulate(
 
     for cycle_idx in range(n_cycles):
         disp_init = solve_dispatch_inst(
-            ep_inst, to_dispatch, node_ops, route_ops, crossover_ops
+            ep_inst,
+            to_dispatch,
+            node_ops,
+            route_ops,
+            crossover_ops,
+            single_init_tlim,
         )
 
         solutions_pool = []
@@ -67,7 +77,6 @@ def simulate(
                 [getattr(hgspy.operators, op) for op in route_ops],
                 [getattr(hgspy.crossover, op) for op in crossover_ops],
                 hgspy.stop.MaxRuntime(single_sim_tlim),
-                # TODO Do we really need this or can this be removed?
                 initial_solutions=(make_sim_init(sim_inst, disp_init),),
             )
 
@@ -76,14 +85,14 @@ def simulate(
 
             solutions_pool.append(sim_sol)
 
-        to_dispatch, to_postpone = threshold(
-            solutions_pool,
-            to_dispatch,
-            to_postpone,
-            cycle_idx,
-            dispatch_thresholds,
-            postpone_thresholds,
-        )
+        if consensus == "treshold":
+            to_dispatch, to_postpone = threshold(
+                cycle_idx,
+                solutions_pool,
+                to_dispatch,
+                to_postpone,
+                **consensus_params,
+            )
 
         print(
             ep_size,
@@ -103,7 +112,7 @@ def simulate(
 
 
 def solve_dispatch_inst(
-    ep_inst, to_dispatch, node_ops, route_ops, crossover_ops
+    ep_inst, to_dispatch, node_ops, route_ops, crossover_ops, time_limit
 ):
     """
     Solves the instance formed by dispatched requests. The solution indices
@@ -116,7 +125,7 @@ def solve_dispatch_inst(
         [getattr(hgspy.operators, op) for op in node_ops],
         [getattr(hgspy.operators, op) for op in route_ops],
         [getattr(hgspy.crossover, op) for op in crossover_ops],
-        hgspy.stop.MaxRuntime(3),  # TODO Make param
+        hgspy.stop.MaxRuntime(time_limit),
     )
 
     # Map the new indices back to the epoch instance indices.

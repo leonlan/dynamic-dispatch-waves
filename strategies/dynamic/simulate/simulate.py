@@ -1,10 +1,10 @@
 import numpy as np
 
 import hgspy
+from .consensus import CONSENSUS
 from strategies.static import hgs
 from strategies.utils import filter_instance
 from .simulate_instance import simulate_instance
-from .threshold import threshold
 import tools
 
 
@@ -47,6 +47,8 @@ def simulate(
     to_dispatch = ep_inst["must_dispatch"].copy()
     to_postpone = np.zeros(ep_size, dtype=bool)
 
+    consensus_func = CONSENSUS[consensus]
+
     for cycle_idx in range(n_cycles):
         disp_init = solve_dispatch_inst(
             ep_inst,
@@ -57,7 +59,7 @@ def simulate(
             single_init_tlim,
         )
 
-        solutions_pool = []
+        solution_pool = []
 
         for _ in range(n_simulations):
             sim_inst = simulate_instance(
@@ -83,12 +85,11 @@ def simulate(
             sim_sol = [r for r in res.get_best_found().get_routes() if r]
             tools.validate_static_solution(sim_inst, sim_sol)
 
-            solutions_pool.append(sim_sol)
+            solution_pool.append(sim_sol)
 
-        if consensus == "treshold":
-            to_dispatch, to_postpone = threshold(
+            to_dispatch, to_postpone = consensus_func(
                 cycle_idx,
-                solutions_pool,
+                solution_pool,
                 to_dispatch,
                 to_postpone,
                 **consensus_params,

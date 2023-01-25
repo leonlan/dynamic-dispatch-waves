@@ -62,7 +62,6 @@ def solve(
     strategy_params["n_simulations"] = n_simulations
     strategy_params["n_cycles"] = n_cycles
     strategy_params["n_lookahead"] = n_lookahead
-    breakpoint()
 
     if hindsight:
         costs, routes = solve_hindsight(env, config.static(), solver_seed)

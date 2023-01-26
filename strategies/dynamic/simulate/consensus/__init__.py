@@ -1,3 +1,4 @@
+from .adaptive_threshold import adaptive_threshold
 from .fixed_threshold import fixed_threshold
 
 # This dict stores consensus functions that can be used to determine which
@@ -14,5 +15,6 @@ from .fixed_threshold import fixed_threshold
 # Using these arguments, the consensus function should return which requests
 # to dispatch and which to postpone.
 CONSENSUS = {
+    "adaptive_threshold": adaptive_threshold,
     "fixed_threshold": fixed_threshold,
 }

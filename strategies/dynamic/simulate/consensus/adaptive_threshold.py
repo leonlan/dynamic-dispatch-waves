@@ -25,10 +25,10 @@ def adaptive_threshold(
                 dispatch_count[route] += 1
 
     num_disp = [num_dispatched(sol, to_dispatch) for sol in solution_pool]
-    avg_num_disp = np.mean(num_disp, dtype=int)
+    avg_num_disp = int(np.mean(num_disp) * pct_dispatch)
 
-    top_dispatch = (-dispatch_count).argsort()[: avg_num_disp * pct_dispatch]
-    to_dispatch[top_dispatch] = True
+    top_k_dispatch = (-dispatch_count).argsort()[:avg_num_disp]
+    to_dispatch[top_k_dispatch] = True
 
     # Never dispatch or postpone the depot
     to_dispatch[0] = False

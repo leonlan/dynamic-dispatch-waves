@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def hamming_distance(solutions, to_dispatch, to_postpone, **kwargs):
+def hamming_distance(cycle_idx, solutions, to_dispatch, to_postpone, **kwargs):
     """
     Selects the solution with the smallest average Hamming distance w.r.t.
     the other solutions. The requests of this solution are marked dispatch.

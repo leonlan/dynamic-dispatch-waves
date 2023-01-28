@@ -1,4 +1,5 @@
 from .adaptive_threshold import adaptive_threshold
+from .hamming_distance import hamming_distance
 from .fixed_threshold import fixed_threshold
 
 # This dict stores consensus functions that can be used to determine which
@@ -17,4 +18,5 @@ from .fixed_threshold import fixed_threshold
 CONSENSUS = {
     "adaptive_threshold": adaptive_threshold,
     "fixed_threshold": fixed_threshold,
+    "hamming_distance": hamming_distance,
 }

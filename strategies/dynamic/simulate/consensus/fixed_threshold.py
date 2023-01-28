@@ -1,5 +1,7 @@
 import numpy as np
 
+from .utils import is_dispatched, is_postponed
+
 
 def fixed_threshold(
     cycle_idx,
@@ -28,17 +30,21 @@ def fixed_threshold(
 
     n_simulations = len(solution_pool)
     ep_size = to_dispatch.size
+
     dispatch_count = np.zeros(ep_size, dtype=int)
+    postpone_count = np.zeros(ep_size, dtype=int)
 
     for sol in solution_pool:
         for route in sol:
-            # Count a request as dispatched if routed with `to_dispatch` reqs
-            if any(to_dispatch[idx] for idx in route if idx < ep_size):
+            if is_dispatched(route, to_dispatch):
                 dispatch_count[route] += 1
+            elif is_postponed(route, to_postpone):
+                rte = [idx for idx in route if idx < ep_size]
+                postpone_count[rte] += 1
+            else:  # undecided
+                pass
 
     to_dispatch = dispatch_count >= dispatch_threshold * n_simulations
-
-    postpone_count = n_simulations - dispatch_count
     to_postpone = postpone_count > postpone_threshold * n_simulations
 
     # Never dispatch or postpone the depot

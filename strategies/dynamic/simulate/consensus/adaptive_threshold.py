@@ -1,5 +1,7 @@
 import numpy as np
 
+from .utils import is_dispatched
+
 
 def adaptive_threshold(
     cycle_idx,
@@ -20,7 +22,6 @@ def adaptive_threshold(
 
     for sol in solution_pool:
         for route in sol:
-            # Count a request as dispatched if routed with `to_dispatch` reqs
             if is_dispatched(route, to_dispatch):
                 dispatch_count[route] += 1
 
@@ -39,7 +40,3 @@ def adaptive_threshold(
 
 def num_dispatched(solution, to_dispatch):
     return sum([len(rt) for rt in solution if is_dispatched(rt, to_dispatch)])
-
-
-def is_dispatched(route, to_dispatch):
-    return any(to_dispatch[idx] for idx in route if idx < to_dispatch.size)

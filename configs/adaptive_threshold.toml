@@ -1,24 +1,3 @@
-[static]
-node_ops = [
-    "Exchange10",
-    "Exchange11",
-    "Exchange20",
-    "MoveTwoClientsReversed",
-    "Exchange21",
-    "Exchange22",
-    "TwoOpt",
-]
-
-route_ops = [
-    "RelocateStar",
-    "SwapStar",
-]
-
-crossover_ops = [
-    "selective_route_exchange",
-]
-
-
 [dynamic]
 node_ops = [
     "Exchange10",
@@ -85,15 +64,10 @@ crossover_ops = [
     "selective_route_exchange",
 ]
 
-consensus = "fixed_threshold"
+consensus = "adaptive_threshold"
 
 [dynamic.strategy_params.consensus_params]
-postpone_thresholds = [
-    0.95, 0.85, 0.75
-]
-dispatch_thresholds = [
-    0.45, 0.35, 0.25
-]
+pct_dispatch = 1
 
 [dynamic.strategy_params.sim_config]
 seed = 1

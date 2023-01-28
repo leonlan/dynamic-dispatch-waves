@@ -26,7 +26,7 @@ def fixed_threshold(
 
     # This asserts that we cannot have thresholds that allow a request to be
     # marked both dispatched and postponed.
-    assert dispatch_threshold + (1 - postpone_threshold) < 1
+    assert dispatch_threshold + (1 - postpone_threshold) <= 1
 
     n_simulations = len(solution_pool)
     ep_size = to_dispatch.size

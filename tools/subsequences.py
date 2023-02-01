@@ -47,28 +47,47 @@ def _merge_nodes(inst, i, j):
     return k
 
 
+def __get_dtype(key):
+    objects = ["customer_idx", "request_idx", "coords"]
+    return object if key in objects else None
+
+
+def __get_attributes(inst, keys):
+    return {k: np.array([inst[n][k] for n in inst], dtype=__get_dtype(k))
+            for k in keys if k not in ["capacity", "duration_to"]}
+
+
+def __get_duration_matrix(inst):
+    return np.array([[inst[n]["duration_to"][m] for m in inst] for n in inst])
+
+
 def _to_attr_view(inst):
     """
     Converts an instance of nested node-attr-value pairs to an instance as dictionary of attr-array pairs
     """
     first = inst[next(iter(inst))]
 
-    return {**{k: np.array([inst[n][k] for n in inst], dtype=object if k in ["customer_idx", "request_idx", "coords"] else None)
-               for k in first if k not in ["capacity", "duration_to"]},
-            **{"capacity": first["capacity"],
-               "duration_matrix": np.array([[inst[n]["duration_to"][m]
-                                             for m in inst]
-                                            for n in inst])}}
+    return {**__get_attributes(inst, first.keys()),
+            "capacity": first["capacity"],
+            "duration_matrix": __get_duration_matrix(inst)}
+
+
+def __get_node_attributes(inst, n):
+    return {k: inst[k][n] for k in inst
+            if k not in ["capacity", "duration_matrix"]}
+
+
+def __get_node_durations(inst, n):
+    return dict(zip(inst["request_idx"], inst["duration_matrix"][n]))
 
 
 def _to_node_view(inst):
     """
     Converts an instance as dictionary of attr-array pairs to an instance of nested node-attr-value pairs
     """
-    return {n: {**{k: inst[k][n] for k in inst if k not in ["capacity", "duration_matrix"]},
-                **{"capacity": inst["capacity"],
-                   "duration_to": dict(zip(inst["request_idx"],
-                                           inst["duration_matrix"][n]))}}
+    return {n: {**__get_node_attributes(inst, n),
+                "capacity": inst["capacity"],
+                "duration_to": __get_node_durations(inst, n)}
             for n in inst["request_idx"]}
 
 

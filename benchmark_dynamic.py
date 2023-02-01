@@ -3,6 +3,7 @@ from functools import partial
 from glob import glob
 from pathlib import Path
 from time import perf_counter
+from typing import Union
 
 import numpy as np
 from tqdm.contrib.concurrent import process_map
@@ -27,6 +28,9 @@ def parse_args():
         "--instance_pattern", default="instances/ortec/ORTEC-VRPTW-ASYM-*.txt"
     )
     parser.add_argument("--epoch_tlim", type=float, default=60)
+    parser.add_argument("--num_epochs", type=int, default=8)
+    parser.add_argument("--requests_per_epoch", type=int, nargs="+", default=100)
+    parser.add_argument("--dispatch_margin", type=int, default=3600)
 
     return parser.parse_args()
 
@@ -38,6 +42,9 @@ def solve(
     config_loc: str,
     hindsight: bool,
     epoch_tlim: int,
+    num_epochs: int,
+    requests_per_epoch: Union[int, list],
+    dispatch_margin: int,
     **kwargs,
 ):
     path = Path(loc)
@@ -46,6 +53,9 @@ def solve(
         seed=instance_seed,
         instance=tools.io.read_vrplib(path),
         epoch_tlim=epoch_tlim,
+        num_epochs=num_epochs,
+        requests_per_epoch=requests_per_epoch,
+        dispatch_margin=dispatch_margin
     )
 
     start = perf_counter()

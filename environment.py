@@ -35,7 +35,7 @@ class VRPEnvironment:
         seed: int,
         instance: Dict,
         epoch_tlim: float,
-        requests_per_epoch: int = 100,
+        requests_per_epoch: Union[int, List] = 100,
         dispatch_margin: int = 3600,
         epoch_duration: int = 3600,
     ):
@@ -63,6 +63,9 @@ class VRPEnvironment:
         self.end_epoch = int(max(latest_open // self.epoch_duration, 0)) - \
                          int(max(earliest_open // self.epoch_duration, 0))
         self.num_epochs = self.end_epoch - self.start_epoch + 1
+
+        if isinstance(self.requests_per_epoch, int):
+            self.requests_per_epoch = [self.requests_per_epoch] * self.num_epochs
 
         self.current_epoch = self.start_epoch
         self.current_time = self.current_epoch * self.epoch_duration
@@ -164,7 +167,7 @@ class VRPEnvironment:
         dispatch_time = self.current_time + self.dispatch_margin
 
         n_customers = self.instance["is_depot"].size - 1  # Exclude depot
-        n_samples = self.requests_per_epoch
+        n_samples = self.requests_per_epoch[self.current_epoch]
 
         feas = np.zeros(n_samples, dtype=bool)
 

@@ -1,6 +1,6 @@
 import time
 import tools
-from typing import Any, Dict, Optional, List, Tuple
+from typing import Any, Dict, Optional, List, Tuple, Union
 
 import numpy as np
 
@@ -59,8 +59,10 @@ class VRPEnvironment:
         earliest_open = tw[1:, 0].min() - self.dispatch_margin
         latest_open = tw[1:, 0].max() - self.dispatch_margin
 
-        self.start_epoch = int(max(earliest_open // self.epoch_duration, 0))
-        self.end_epoch = int(max(latest_open // self.epoch_duration, 0))
+        self.start_epoch = 0
+        self.end_epoch = int(max(latest_open // self.epoch_duration, 0)) - \
+                         int(max(earliest_open // self.epoch_duration, 0))
+        self.num_epochs = self.end_epoch - self.start_epoch + 1
 
         self.current_epoch = self.start_epoch
         self.current_time = self.current_epoch * self.epoch_duration
@@ -87,7 +89,7 @@ class VRPEnvironment:
             "dynamic_context": self.instance,
             "start_epoch": self.start_epoch,
             "end_epoch": self.end_epoch,
-            "num_epochs": self.end_epoch - self.start_epoch + 1,
+            "num_epochs": self.num_epochs,
             "epoch_tlim": self.epoch_tlim,
         }
 

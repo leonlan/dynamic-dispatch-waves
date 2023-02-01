@@ -93,6 +93,7 @@ class VRPEnvironment:
             "start_epoch": self.start_epoch,
             "end_epoch": self.end_epoch,
             "num_epochs": self.num_epochs,
+            "requests_per_epoch": self.requests_per_epoch,
             "epoch_tlim": self.epoch_tlim,
         }
 

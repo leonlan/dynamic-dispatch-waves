@@ -17,7 +17,6 @@ def simulate(
     n_cycles: int,
     n_simulations: int,
     n_lookahead: int,
-    n_requests: int,
     sim_config: dict,
     node_ops: list,
     route_ops: list,
@@ -31,12 +30,15 @@ def simulate(
     those simulations.
     """
     # Return the full epoch instance for the last epoch
-    if obs["current_epoch"] == info["end_epoch"]:
+    current_epoch = obs["current_epoch"]
+    if current_epoch == info["end_epoch"]:
         return obs["epoch_instance"]
 
     # Parameters
     ep_inst = obs["epoch_instance"]
     ep_size = ep_inst["is_depot"].size  # includes depot
+
+    n_requests = info["requests_per_epoch"][current_epoch]
 
     total_init_tlim = init_tlim_factor * info["epoch_tlim"]
     single_init_tlim = total_init_tlim / n_cycles

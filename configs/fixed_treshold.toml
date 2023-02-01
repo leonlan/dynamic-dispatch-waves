@@ -45,8 +45,7 @@ nbIter = 6318
 
 
 [dynamic.strategy_params]
-init_tlim_factor = 0.10
-simulate_tlim_factor = 0.75
+simulate_tlim_factor = 0.80
 n_cycles = 3
 n_simulations = 40
 n_lookahead = 3

@@ -44,7 +44,6 @@ def simulate_instance(
 
     cust_idx = np.empty(n_samples, dtype=int)
     tw_idx = np.empty(n_samples, dtype=int)
-    demand_idx = np.empty(n_samples, dtype=int)
     service_idx = np.empty(n_samples, dtype=int)
 
     while not feas.all():

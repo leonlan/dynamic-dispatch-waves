@@ -202,7 +202,6 @@ def read_vrplib(filename, rounded=True):
     }
 
 
-
 def tabulate(headers, rows) -> str:
     # These lengths are used to space each column properly.
     lengths = [len(header) for header in headers]
@@ -351,4 +350,3 @@ def write_vrplib(
                 f.write("\n")
 
         f.write("EOF\n")
-

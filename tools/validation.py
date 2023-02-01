@@ -20,7 +20,9 @@ def _validate_route_dispatch_windows(route, release_times, latest_dispatch):
         assert max(release_times[route]) <= min(latest_dispatch[route])
 
 
-def _validate_route_time_windows(route, dist, timew, service_t, release_t=None):
+def _validate_route_time_windows(
+    route, dist, timew, service_t, release_t=None
+):
     depot = 0  # For readability, define variable
     earliest_start_depot, latest_arrival_depot = timew[depot]
     if release_t is not None:

@@ -40,41 +40,39 @@ def simulate_instance(
 
     n_customers = static_inst["is_depot"].size - 1  # Exclude depot
 
-    cust_idx = rng.integers(n_customers, size=n_samples) + 1
-    tw_idx = rng.integers(n_customers, size=n_samples) + 1
-    service_idx = rng.integers(n_customers, size=n_samples) + 1
+    feas = np.zeros(n_samples, dtype=bool)
 
-    # These are static time windows and release times, which are used to
-    # determine request feasibility. Will be clipped later to fit the epoch.
-    sim_tw = tws[tw_idx]
-    sim_epochs = np.repeat(np.arange(1, max_lookahead + 1), n_requests)
-    sim_release = dispatch_time + sim_epochs * _EPOCH_DURATION
-    sim_service = static_inst["service_times"][service_idx]
+    cust_idx = np.empty(n_samples, dtype=int)
+    tw_idx = np.empty(n_samples, dtype=int)
+    demand_idx = np.empty(n_samples, dtype=int)
+    service_idx = np.empty(n_samples, dtype=int)
 
-    # Earliest arrival is release time + drive time or earliest time window.
-    earliest_arrival = np.maximum(
-        sim_release + dist[0, cust_idx], sim_tw[:, 0]
-    )
-    earliest_return = earliest_arrival + sim_service + dist[cust_idx, 0]
-    feas = (earliest_arrival <= sim_tw[:, 1]) & (earliest_return <= tws[0, 1])
+    while not feas.all():
+        to_sample = np.sum(~feas)
 
-    new_custs = cust_idx[feas]
-    n_new_customers = len(new_custs)
+        cust_idx = np.append(cust_idx[feas], rng.integers(n_customers, size=to_sample) + 1)
+        tw_idx = np.append(tw_idx[feas], rng.integers(n_customers, size=to_sample) + 1)
+        service_idx = np.append(service_idx[feas], rng.integers(n_customers, size=to_sample) + 1)
 
-    if n_new_customers == 0:  # this should not happen a lot
-        return simulate_instance(
-            info, obs, rng, n_lookahead, n_requests, to_postpone, to_dispatch
+        # These are static time windows and release times, which are used to
+        # determine request feasibility. Will be clipped later to fit the epoch.
+        sim_tw = tws[tw_idx]
+        sim_epochs = np.repeat(np.arange(1, max_lookahead + 1), n_requests)
+        sim_release = dispatch_time + sim_epochs * _EPOCH_DURATION
+        sim_service = static_inst["service_times"][service_idx]
+
+        # Earliest arrival is release time + drive time or earliest time window.
+        earliest_arrival = np.maximum(
+            sim_release + dist[0, cust_idx], sim_tw[:, 0]
         )
-
-    sim_tw = sim_tw[feas]
-    sim_release = sim_release[feas]
-    sim_service = sim_service[feas]
+        earliest_return = earliest_arrival + sim_service + dist[cust_idx, 0]
+        feas = (earliest_arrival <= sim_tw[:, 1]) & (earliest_return <= tws[0, 1])
 
     # Concatenate the new feasible requests to the epoch instance
-    req_customer_idx = np.concatenate((ep_inst["customer_idx"], new_custs))
+    req_customer_idx = np.concatenate((ep_inst["customer_idx"], cust_idx))
 
     # Simulated request indices are always negative (so we can identify them)
-    sim_req_idx = -(np.arange(n_new_customers) + 1)
+    sim_req_idx = -(np.arange(n_samples) + 1)
     req_idx = np.concatenate((ep_inst["request_idx"], sim_req_idx))
 
     # Normalize TW and release to start_time, and clip the past
@@ -97,7 +95,7 @@ def simulate_instance(
     if to_dispatch is not None:
         req_latest_dispatch[to_dispatch.nonzero()] = 0
 
-    demand_idx = rng.integers(n_customers, size=n_new_customers) + 1
+    demand_idx = rng.integers(n_customers, size=n_samples) + 1
     sim_demand = static_inst["demands"][demand_idx]
 
     req_demand = np.concatenate((ep_inst["demands"], sim_demand))

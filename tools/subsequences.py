@@ -53,7 +53,7 @@ def __get_dtype(key):
 
 
 def __get_attributes(inst, keys):
-    return {k: np.array([inst[n][k] for n in inst], dtype=__get_dtype(k))
+    return {k: np.array([inst[i][k] for i in inst], dtype=__get_dtype(k))
             for k in keys if k not in ["capacity", "duration_to"]}
 
 
@@ -72,23 +72,24 @@ def _to_attr_view(inst):
             "duration_matrix": __get_duration_matrix(inst)}
 
 
-def __get_node_attributes(inst, n):
-    return {k: inst[k][n] for k in inst
+def __get_node_attributes(inst, i):
+    return {k: inst[k][i] for k in inst
             if k not in ["capacity", "duration_matrix"]}
 
 
-def __get_node_durations(inst, n):
-    return dict(zip(inst["request_idx"], inst["duration_matrix"][n]))
+def __get_node_durations(inst, i, n):
+    return dict(zip(range(n), inst["duration_matrix"][i]))
 
 
 def _to_node_view(inst):
     """
     Converts an instance as dictionary of attr-array pairs to an instance of nested node-attr-value pairs
     """
-    return {n: {**__get_node_attributes(inst, n),
+    n = inst["request_idx"].size
+    return {i: {**__get_node_attributes(inst, i),
                 "capacity": inst["capacity"],
-                "duration_to": __get_node_durations(inst, n)}
-            for n in inst["request_idx"]}
+                "duration_to": __get_node_durations(inst, i, n)}
+            for i in range(n)}
 
 
 def extract_subsequences(sequence, lmin, lmax):

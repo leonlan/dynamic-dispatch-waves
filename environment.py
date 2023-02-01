@@ -20,7 +20,7 @@ class VRPEnvironment:
         The static VRP instance from which requests are sampled.
     epoch_tlim
         The epoch time limit.
-    max_requests_per_epoch
+    requests_per_epoch
         The maximum number of revealed requests per epoch.
     dispatch_margin
         The preparation time needed to dispatch a set of routes. That is, when
@@ -35,14 +35,14 @@ class VRPEnvironment:
         seed: int,
         instance: Dict,
         epoch_tlim: float,
-        max_requests_per_epoch: int = 100,
+        requests_per_epoch: int = 100,
         dispatch_margin: int = 3600,
         epoch_duration: int = 3600,
     ):
         self.rng = np.random.default_rng(seed)
         self.instance = instance
         self.epoch_tlim = epoch_tlim
-        self.max_requests_per_epoch = max_requests_per_epoch
+        self.requests_per_epoch = requests_per_epoch
         self.dispatch_margin = dispatch_margin
         self.epoch_duration = epoch_duration
 
@@ -162,54 +162,61 @@ class VRPEnvironment:
         dispatch_time = self.current_time + self.dispatch_margin
 
         n_customers = self.instance["is_depot"].size - 1  # Exclude depot
-        n_samples = self.max_requests_per_epoch
+        n_samples = self.requests_per_epoch
 
-        # Sample data uniformly from customers (1 to num_customers)
-        cust_idx = self.rng.integers(n_customers, size=n_samples) + 1
-        tw_idx = self.rng.integers(n_customers, size=n_samples) + 1
-        demand_idx = self.rng.integers(n_customers, size=n_samples) + 1
-        service_idx = self.rng.integers(n_customers, size=n_samples) + 1
+        feas = np.zeros(n_samples, dtype=bool)
 
-        new_tw = self.instance["time_windows"][tw_idx]
-        new_demand = self.instance["demands"][demand_idx]
-        new_service = self.instance["service_times"][service_idx]
+        cust_idx = np.empty(n_samples, dtype=int)
+        tw_idx = np.empty(n_samples, dtype=int)
+        demand_idx = np.empty(n_samples, dtype=int)
+        service_idx = np.empty(n_samples, dtype=int)
 
-        # Filter sampled requests that cannot be served in a round trip
-        earliest_arrival = np.maximum(
-            dispatch_time + dist[0, cust_idx], new_tw[:, 0]
+        while not feas.all():
+            # Sample data uniformly from customers (1 to num_customers)
+            to_sample = np.sum(~feas)
+
+            cust_idx = np.append(cust_idx[feas], self.rng.integers(n_customers, size=to_sample) + 1)
+            tw_idx = np.append(tw_idx[feas], self.rng.integers(n_customers, size=to_sample) + 1)
+            demand_idx = np.append(demand_idx[feas], self.rng.integers(n_customers, size=to_sample) + 1)
+            service_idx = np.append(service_idx[feas], self.rng.integers(n_customers, size=to_sample) + 1)
+
+            new_tw = self.instance["time_windows"][tw_idx]
+            new_demand = self.instance["demands"][demand_idx]
+            new_service = self.instance["service_times"][service_idx]
+
+            # Filter sampled requests that cannot be served in a round trip
+            earliest_arrival = np.maximum(
+                dispatch_time + dist[0, cust_idx], new_tw[:, 0]
+            )
+            earliest_return = earliest_arrival + new_service + dist[cust_idx, 0]
+            depot_closed = self.instance["time_windows"][0, 1]
+
+            feas = (earliest_arrival <= new_tw[:, 1]) & (
+                earliest_return <= depot_closed
+            )
+
+        self.req_idx = np.concatenate(
+            (
+                self.req_idx,
+                np.arange(n_samples) + len(self.req_idx),
+            )
         )
-        earliest_return = earliest_arrival + new_service + dist[cust_idx, 0]
-        depot_closed = self.instance["time_windows"][0, 1]
-
-        feas = (earliest_arrival <= new_tw[:, 1]) & (
-            earliest_return <= depot_closed
+        self.req_customer_idx = np.concatenate(
+            (self.req_customer_idx, cust_idx)
         )
-
-        if feas.any():  # Store all new feasible requests
-            n_new_requests = feas.sum()
-
-            self.req_idx = np.concatenate(
-                (
-                    self.req_idx,
-                    np.arange(n_new_requests) + len(self.req_idx),
-                )
-            )
-            self.req_customer_idx = np.concatenate(
-                (self.req_customer_idx, cust_idx[feas])
-            )
-            self.req_tw = np.concatenate((self.req_tw, new_tw[feas]))
-            self.req_service = np.concatenate(
-                (self.req_service, new_service[feas])
-            )
-            self.req_demand = np.concatenate(
-                (self.req_demand, new_demand[feas])
-            )
-            self.req_is_dispatched = np.pad(
-                self.req_is_dispatched, (0, n_new_requests), mode="constant"
-            )
-            self.req_epoch = np.concatenate(
-                (self.req_epoch, np.full(n_new_requests, self.current_epoch))
-            )
+        self.req_tw = np.concatenate((self.req_tw, new_tw))
+        self.req_service = np.concatenate(
+            (self.req_service, new_service)
+        )
+        self.req_demand = np.concatenate(
+            (self.req_demand, new_demand)
+        )
+        self.req_is_dispatched = np.pad(
+            self.req_is_dispatched, (0, n_samples), mode="constant"
+        )
+        self.req_epoch = np.concatenate(
+            (self.req_epoch, np.full(n_samples, self.current_epoch))
+        )
 
         # Determine which requests are must-dispatch in the next epoch
         if self.current_epoch < self.end_epoch:

@@ -40,7 +40,7 @@ def solve(
 ):
     path = Path(loc)
 
-    instance = tools.read_vrplib(path)
+    instance = tools.io.read_vrplib(path)
     start = perf_counter()
 
     if max_runtime is not None:
@@ -110,7 +110,7 @@ def main():
         "Time (s)",
     ]
 
-    table = tools.tabulate(headers, data)
+    table = tools.io.tabulate(headers, data)
 
     print("\n", table, "\n", sep="")
 

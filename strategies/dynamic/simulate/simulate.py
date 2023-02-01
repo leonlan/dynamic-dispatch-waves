@@ -1,11 +1,11 @@
 import numpy as np
 
 import hgspy
+import tools
 from .consensus import CONSENSUS
 from strategies.static import hgs
 from strategies.utils import filter_instance
 from .simulate_instance import simulate_instance
-import tools
 
 
 def simulate(
@@ -81,7 +81,7 @@ def simulate(
             )
 
             sim_sol = [r for r in res.get_best_found().get_routes() if r]
-            tools.validate_static_solution(sim_inst, sim_sol)
+            tools.validation.validate_static_solution(sim_inst, sim_sol)
 
             solution_pool.append(sim_sol)
 

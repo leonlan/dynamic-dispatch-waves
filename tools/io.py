@@ -1,133 +1,7 @@
 import numpy as np
 
 
-def compute_solution_driving_time(instance, solution):
-    return sum(
-        [
-            compute_route_driving_time(route, instance["duration_matrix"])
-            for route in solution
-        ]
-    )
-
-
-def validate_static_solution(
-    instance, solution, allow_skipped_customers=False
-):
-
-    if not allow_skipped_customers:
-        validate_all_customers_visited(solution, len(instance["coords"]) - 1)
-
-    for route in solution:
-        validate_route_capacity(
-            route, instance["demands"], instance["capacity"]
-        )
-        validate_route_time_windows(
-            route,
-            instance["duration_matrix"],
-            instance["time_windows"],
-            instance["service_times"],
-        )
-
-        if "latest_dispatch" in instance:
-            validate_route_dispatch_windows(
-                route, instance["release_times"], instance["latest_dispatch"]
-            )
-
-    return compute_solution_driving_time(instance, solution)
-
-
-def validate_dynamic_epoch_solution(epoch_instance, epoch_solution):
-    """
-    Validates a solution for a VRPTW instance, raises assertion if not valid
-    Returns total driving time (excluding waiting time)
-    """
-
-    # Renumber requests (and depot) to 0,1...n
-    request_idx = epoch_instance["request_idx"]
-    assert request_idx[0] == 0
-    assert (request_idx[1:] > request_idx[:-1]).all()
-    # Look up positions of request idx
-    solution = [
-        np.searchsorted(request_idx, route) for route in epoch_solution
-    ]
-
-    # Check that all 'must_dispatch' requests are dispatched
-    # if 'must_dispatch' in instance:
-    must_dispatch = epoch_instance["must_dispatch"].copy()
-    for route in solution:
-        must_dispatch[route] = False
-    assert (
-        not must_dispatch.any()
-    ), f"Some requests must be dispatched but were not: {request_idx[must_dispatch]}"
-
-    static_instance = {
-        k: v
-        for k, v in epoch_instance.items()
-        if k not in ("request_idx", "customer_idx", "must_dispatch")
-    }
-
-    return validate_static_solution(
-        static_instance, solution, allow_skipped_customers=True
-    )
-
-
-def compute_route_driving_time(route, duration_matrix):
-    """
-    Computes the total route driving time, excluding waiting and service time.
-    """
-    return (
-        duration_matrix[0, route[0]]
-        + duration_matrix[route[:-1], route[1:]].sum()
-        + duration_matrix[route[-1], 0]
-    )
-
-
-def validate_all_customers_visited(solution, num_customers):
-    flat_solution = np.array([stop for route in solution for stop in route])
-    assert len(flat_solution) == num_customers, "Not all customers are visited"
-    visited = np.zeros(num_customers + 1)  # Add padding for depot
-    visited[flat_solution] = True
-    assert visited[1:].all(), "Not all customers are visited"
-
-
-def validate_route_capacity(route, demands, capacity):
-    assert (
-        sum(demands[route]) <= capacity
-    ), f"Capacity validated for route, {sum(demands[route])} > {capacity}"
-
-
-def validate_route_time_windows(route, dist, timew, service_t, release_t=None):
-    depot = 0  # For readability, define variable
-    earliest_start_depot, latest_arrival_depot = timew[depot]
-    if release_t is not None:
-        earliest_start_depot = max(
-            earliest_start_depot, release_t[route].max()
-        )
-    current_time = earliest_start_depot + service_t[depot]
-
-    prev_stop = depot
-    for stop in route:
-        earliest_arrival, latest_arrival = timew[stop]
-        arrival_time = current_time + dist[prev_stop, stop]
-        # Wait if we arrive before earliest_arrival
-        current_time = max(arrival_time, earliest_arrival)
-        assert (
-            current_time <= latest_arrival
-        ), f"Time window violated for stop {stop}: {current_time} not in ({earliest_arrival}, {latest_arrival})"
-        current_time += service_t[stop]
-        prev_stop = stop
-    current_time += dist[prev_stop, depot]
-    assert (
-        current_time <= latest_arrival_depot
-    ), f"Time window violated for depot: {current_time} not in ({earliest_start_depot}, {latest_arrival_depot})"
-
-
-def validate_route_dispatch_windows(route, release_times, latest_dispatch):
-    if route:
-        assert max(release_times[route]) <= min(latest_dispatch[route])
-
-
-def readlines(filename):
+def _readlines(filename):
     try:
         with open(filename, "r") as f:
             return f.readlines()
@@ -139,12 +13,52 @@ def readlines(filename):
             ]
 
 
+def inst_to_vars(inst):
+    # Instance is a dict that has the following entries:
+    # - 'is_depot': boolean np.array. True for depot; False otherwise.
+    # - 'coords': np.array of locations (incl. depot)
+    # - 'demands': np.array of location demands (incl. depot with demand zero)
+    # - 'capacity': int of vehicle capacity
+    # - 'time_windows': np.array of [l, u] time windows per client (incl. depot)
+    # - 'service_times': np.array of service times at each client (incl. depot)
+    # - 'duration_matrix': distance matrix between clients (incl. depot)
+    # - optional 'release_times': earliest possible time to leave depot
+    # - optional 'latest_dispatch': latest possible time to leave depot
+
+    # Notice that the dictionary key names are not entirely free-form: these
+    # should match the argument names defined in the C++/Python bindings.
+    if "release_times" in inst:
+        release_times = inst["release_times"]
+    else:
+        release_times = np.zeros_like(inst["service_times"])
+
+    if "latest_dispatch" in inst:
+        latest_dispatch = inst["latest_dispatch"]
+    else:
+        # Default latest dispatch is equal to the latest depot time window
+        horizon = inst["time_windows"][0][1]
+        latest_dispatch = np.ones_like(inst["service_times"]) * horizon
+
+    assert len(release_times) == len(latest_dispatch)
+
+    return dict(
+        coords=inst["coords"],
+        demands=inst["demands"],
+        vehicle_cap=inst["capacity"],
+        time_windows=inst["time_windows"],
+        service_durations=inst["service_times"],
+        duration_matrix=inst["duration_matrix"],
+        release_times=release_times,
+        latest_dispatch=latest_dispatch,
+    )
+
+
 def read_vrptw_solution(filename, return_extra=False):
     """Reads a VRPTW solution in VRPLib format (one route per row)"""
     solution = []
     extra = {}
 
-    for line in readlines(filename):
+    for line in _readlines(filename):
         if line.startswith("Route"):
             solution.append(
                 np.array(
@@ -288,6 +202,27 @@ def read_vrplib(filename, rounded=True):
     }
 
 
+def tabulate(headers, rows) -> str:
+    # These lengths are used to space each column properly.
+    lengths = [len(header) for header in headers]
+
+    for row in rows:
+        for idx, cell in enumerate(row):
+            lengths[idx] = max(lengths[idx], len(str(cell)))
+
+    header = [
+        "  ".join(f"{h:<{l}s}" for l, h in zip(lengths, headers)),
+        "  ".join("-" * l for l in lengths),
+    ]
+
+    content = [
+        "  ".join(f"{str(c):>{l}s}" for l, c in zip(lengths, row))
+        for row in rows
+    ]
+
+    return "\n".join(header + content)
+
+
 def write_vrplib(
     filename, instance, name="problem", euclidean=False, is_vrptw=True
 ):
@@ -415,64 +350,3 @@ def write_vrplib(
                 f.write("\n")
 
         f.write("EOF\n")
-
-
-def inst_to_vars(inst):
-    # Instance is a dict that has the following entries:
-    # - 'is_depot': boolean np.array. True for depot; False otherwise.
-    # - 'coords': np.array of locations (incl. depot)
-    # - 'demands': np.array of location demands (incl. depot with demand zero)
-    # - 'capacity': int of vehicle capacity
-    # - 'time_windows': np.array of [l, u] time windows per client (incl. depot)
-    # - 'service_times': np.array of service times at each client (incl. depot)
-    # - 'duration_matrix': distance matrix between clients (incl. depot)
-    # - optional 'release_times': earliest possible time to leave depot
-    # - optional 'latest_dispatch': latest possible time to leave depot
-
-    # Notice that the dictionary key names are not entirely free-form: these
-    # should match the argument names defined in the C++/Python bindings.
-    if "release_times" in inst:
-        release_times = inst["release_times"]
-    else:
-        release_times = np.zeros_like(inst["service_times"])
-
-    if "latest_dispatch" in inst:
-        latest_dispatch = inst["latest_dispatch"]
-    else:
-        # Default latest dispatch is equal to the latest depot time window
-        horizon = inst["time_windows"][0][1]
-        latest_dispatch = np.ones_like(inst["service_times"]) * horizon
-
-    assert len(release_times) == len(latest_dispatch)
-
-    return dict(
-        coords=inst["coords"],
-        demands=inst["demands"],
-        vehicle_cap=inst["capacity"],
-        time_windows=inst["time_windows"],
-        service_durations=inst["service_times"],
-        duration_matrix=inst["duration_matrix"],
-        release_times=release_times,
-        latest_dispatch=latest_dispatch,
-    )
-
-
-def tabulate(headers, rows) -> str:
-    # These lengths are used to space each column properly.
-    lengths = [len(header) for header in headers]
-
-    for row in rows:
-        for idx, cell in enumerate(row):
-            lengths[idx] = max(lengths[idx], len(str(cell)))
-
-    header = [
-        "  ".join(f"{h:<{l}s}" for l, h in zip(lengths, headers)),
-        "  ".join("-" * l for l in lengths),
-    ]
-
-    content = [
-        "  ".join(f"{str(c):>{l}s}" for l, c in zip(lengths, row))
-        for row in rows
-    ]
-
-    return "\n".join(header + content)

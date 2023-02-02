@@ -39,9 +39,6 @@ def simulate(
 
     n_requests = info["requests_per_epoch"][current_epoch]
 
-    total_init_tlim = init_tlim_factor * info["epoch_tlim"]
-    single_init_tlim = total_init_tlim / n_cycles
-
     total_sim_tlim = simulate_tlim_factor * info["epoch_tlim"]
     single_sim_tlim = total_sim_tlim / (n_cycles * n_simulations)
 

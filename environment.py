@@ -37,13 +37,11 @@ class VRPEnvironment:
         epoch_tlim: float,
         num_epochs: int,
         requests_per_epoch: Union[int, List],
-        dispatch_margin: int,
     ):
         self.rng = np.random.default_rng(seed)
         self.instance = instance
         self.epoch_tlim = epoch_tlim
         self.requests_per_epoch = requests_per_epoch
-        self.dispatch_margin = dispatch_margin
         self.num_epochs = num_epochs
 
         self.is_done = True  # Requires reset to be called first
@@ -56,10 +54,10 @@ class VRPEnvironment:
 
         # The start and end epochs are determined by the earliest and latest
         # opening moments of time windows, corrected by the dispatch margin.
-        earliest_open = tw[1:, 0].min() - self.dispatch_margin
+        earliest_open = tw[1:, 0].min()
         latest_open = tw[1:, 0].max()
 
-        self.epoch_duration = (latest_open - earliest_open) // self.num_epochs
+        self.epoch_duration = (latest_open - earliest_open) // (self.num_epochs - 1)
 
         self.start_epoch = 0
         self.end_epoch = self.num_epochs - 1
@@ -165,7 +163,7 @@ class VRPEnvironment:
         """
         dist = self.instance["duration_matrix"]
 
-        dispatch_time = self.current_time + self.dispatch_margin
+        dispatch_time = self.current_time + self.epoch_duration
 
         n_customers = self.instance["is_depot"].size - 1  # Exclude depot
         n_samples = self.requests_per_epoch[self.current_epoch]

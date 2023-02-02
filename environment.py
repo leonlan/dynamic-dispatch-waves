@@ -20,14 +20,10 @@ class VRPEnvironment:
         The static VRP instance from which requests are sampled.
     epoch_tlim
         The epoch time limit.
+    num_epochs
+        The number of epochs in which the time horizon is separated
     requests_per_epoch
         The maximum number of revealed requests per epoch.
-    dispatch_margin
-        The preparation time needed to dispatch a set of routes. That is, when
-        a set of routes are to be dispatched at epoch t, then the start time of
-        the routes is `t * epoch_duration + dispatch_margin`.
-    epoch_duration
-        The time between two consecutive epochs.
     """
 
     def __init__(

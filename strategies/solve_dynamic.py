@@ -38,7 +38,7 @@ def solve_dynamic(env, config, solver_seed):
 
         strategy = STRATEGIES[config.strategy()]
         dispatch_inst = strategy(
-            static_info, observation, rng, **config.strategy_params()
+            env, static_info, observation, rng, **config.strategy_params()
         )
 
         solve_tlim = ep_tlim - (time.perf_counter() - start)

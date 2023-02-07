@@ -9,6 +9,7 @@ from .simulate_instance import simulate_instance
 
 
 def simulate(
+    env,
     info,
     obs,
     rng,
@@ -37,8 +38,6 @@ def simulate(
     ep_inst = obs["epoch_instance"]
     ep_size = ep_inst["is_depot"].size  # includes depot
 
-    n_requests = info["requests_per_epoch"][current_epoch]
-
     total_sim_tlim = simulate_tlim_factor * info["epoch_tlim"]
     single_sim_tlim = total_sim_tlim / (n_cycles * n_simulations)
 
@@ -50,13 +49,13 @@ def simulate(
 
         for _ in range(n_simulations):
             sim_inst = simulate_instance(
+                env,
                 info,
                 obs,
                 rng,
                 n_lookahead,
-                n_requests,
-                to_dispatch=to_dispatch,
-                to_postpone=to_postpone,
+                to_dispatch,
+                to_postpone,
             )
 
             res = hgs(

@@ -123,7 +123,7 @@ class VRPEnvironment:
                 self.req_is_dispatched, (0, n_ep_reqs), mode="constant"
             )
             self.req_epoch = np.concatenate(
-                (self.req_epoch, epoch_reqs["epoch_idx"])
+                (self.req_epoch, np.full(n_ep_reqs, epoch_idx))
             )
             self.req_release_time = np.concatenate(
                 (self.req_release_time, epoch_reqs["release_times"])
@@ -185,7 +185,7 @@ class VRPEnvironment:
         undispatched = (self.req_must_dispatch & ~self.req_is_dispatched).any()
         assert not undispatched, "Must dispatch requests not dispatched."
 
-    def sample_epoch_requests(self, epoch_idx):
+    def sample_epoch_requests(self, epoch_idx, rng=None):
         """
         Samples requests from an epoch.
         """
@@ -197,11 +197,15 @@ class VRPEnvironment:
         n_customers = self.instance["is_depot"].size - 1  # Exclude depot
         n_samples = self.max_requests_per_epoch
 
+        # The solution method may need to use a different rng
+        if rng is None:
+            rng = self.rng
+
         # Sample data uniformly from customers (1 to num_customers)
-        cust_idx = self.rng.integers(n_customers, size=n_samples) + 1
-        tw_idx = self.rng.integers(n_customers, size=n_samples) + 1
-        demand_idx = self.rng.integers(n_customers, size=n_samples) + 1
-        service_idx = self.rng.integers(n_customers, size=n_samples) + 1
+        cust_idx = rng.integers(n_customers, size=n_samples) + 1
+        tw_idx = rng.integers(n_customers, size=n_samples) + 1
+        demand_idx = rng.integers(n_customers, size=n_samples) + 1
+        service_idx = rng.integers(n_customers, size=n_samples) + 1
 
         new_tw = self.instance["time_windows"][tw_idx]
         new_demand = self.instance["demands"][demand_idx]
@@ -219,14 +223,12 @@ class VRPEnvironment:
         )
         n_new_requests = feas.sum()
         new_release = np.full(n_new_requests, dispatch_time)
-        epoch_idcs = np.full(n_new_requests, epoch_idx)
 
         return {
             "customer_idx": cust_idx[feas],
             "time_windows": new_tw[feas],
             "demands": new_demand[feas],
             "service_times": new_service[feas],
-            "epoch_idx": epoch_idcs,
             "release_times": new_release,
         }
 

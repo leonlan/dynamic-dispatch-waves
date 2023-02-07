@@ -5,7 +5,7 @@ from .utils import is_dispatched
 
 def adaptive_threshold(
     cycle_idx,
-    solution_pool,
+    scenarios,
     to_dispatch,
     to_postpone,
     pct_dispatch,
@@ -20,12 +20,14 @@ def adaptive_threshold(
     ep_size = to_dispatch.size
     dispatch_count = np.zeros(ep_size, dtype=int)
 
-    for sol in solution_pool:
+    for (inst, sol) in scenarios:
         for route in sol:
-            if is_dispatched(route, to_dispatch):
+            if is_dispatched(inst, route, to_dispatch):
                 dispatch_count[route] += 1
 
-    num_disp = [num_dispatched(sol, to_dispatch) for sol in solution_pool]
+    num_disp = [
+        num_dispatched(inst, sol, to_dispatch) for (inst, sol) in scenarios
+    ]
     avg_num_disp = int(np.mean(num_disp) * pct_dispatch)
 
     top_k_dispatch = (-dispatch_count).argsort()[:avg_num_disp]
@@ -38,5 +40,5 @@ def adaptive_threshold(
     return to_dispatch, to_postpone
 
 
-def num_dispatched(solution, to_dispatch):
-    return sum([len(rt) for rt in solution if is_dispatched(rt, to_dispatch)])
+def num_dispatched(inst, sol, to_dispatch):
+    return sum([len(rt) for rt in sol if is_dispatched(inst, rt, to_dispatch)])

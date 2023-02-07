@@ -46,7 +46,7 @@ def simulate(
     to_postpone = np.zeros(ep_size, dtype=bool)
 
     for cycle_idx in range(n_cycles):
-        solution_pool = []
+        scenarios = []
 
         for _ in range(n_simulations):
             sim_inst = simulate_instance(
@@ -71,12 +71,12 @@ def simulate(
             sim_sol = [r for r in res.get_best_found().get_routes() if r]
             tools.validation.validate_static_solution(sim_inst, sim_sol)
 
-            solution_pool.append(sim_sol)
+            scenarios.append((sim_inst, sim_sol))
 
         # Use the consensus function to mark requests dispatched or postponed
         to_dispatch, to_postpone = CONSENSUS[consensus](
             cycle_idx,
-            solution_pool,
+            scenarios,
             to_dispatch,
             to_postpone,
             **consensus_params,

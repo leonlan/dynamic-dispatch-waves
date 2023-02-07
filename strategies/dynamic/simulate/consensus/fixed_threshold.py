@@ -1,6 +1,6 @@
 import numpy as np
 
-from .utils import is_dispatched, is_postponed
+from .utils import is_dispatched
 
 
 def fixed_threshold(
@@ -18,11 +18,11 @@ def fixed_threshold(
     """
     # Get the threshold belonging to the current cycle, or the last one
     # available if there are more cycles than thresholds.
-    threshold_idx = min(cycle_idx, len(postpone_thresholds) - 1)
-    postpone_threshold = postpone_thresholds[threshold_idx]
+    post_thresh_idx = min(cycle_idx, len(postpone_thresholds) - 1)
+    postpone_threshold = postpone_thresholds[post_thresh_idx]
 
-    threshold_idx = min(cycle_idx, len(dispatch_thresholds) - 1)
-    dispatch_threshold = dispatch_thresholds[threshold_idx]
+    disp_thresh_idx = min(cycle_idx, len(dispatch_thresholds) - 1)
+    dispatch_threshold = dispatch_thresholds[disp_thresh_idx]
 
     # This asserts that we cannot have thresholds that allow a request to be
     # marked both dispatched and postponed.

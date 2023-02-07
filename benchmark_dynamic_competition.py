@@ -8,7 +8,7 @@ import numpy as np
 from tqdm.contrib.concurrent import process_map
 
 import tools
-from environment import VRPEnvironment
+from environment_competition import VRPEnvironment
 from strategies import solve_dynamic, solve_hindsight
 from strategies.config import Config
 

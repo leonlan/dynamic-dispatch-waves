@@ -32,7 +32,7 @@ class VRPEnvironment:
         instance: Dict,
         epoch_tlim: float,
         num_epochs: int = 8,
-        requests_per_epoch: Union[int, List] = 10,
+        requests_per_epoch: Union[int, List] = 100,
     ):
         self.rng = np.random.default_rng(seed)
         self.instance = instance

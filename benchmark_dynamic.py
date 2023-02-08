@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument("--epoch_tlim", type=float, default=60)
     parser.add_argument("--num_epochs", type=int, default=8)
     parser.add_argument(
-        "--requests_per_epoch", type=int, nargs="+", default=40
+        "--requests_per_epoch", type=int, nargs="+", default=100
     )
 
     return parser.parse_args()

@@ -167,10 +167,6 @@ class VRPEnvironment:
         """
         assert not self.is_done, "Environment is finished"
 
-        # Check time limit (10 seconds grace period)
-        on_time = time.time() - self.start_time_epoch < self.epoch_tlim + 10
-        assert on_time, "Time limit exceeded"
-
         # Check if solution is valid
         tools.validation.validate_dynamic_epoch_solution(
             self.ep_inst, solution

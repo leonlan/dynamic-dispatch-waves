@@ -1,5 +1,3 @@
-import time
-
 import numpy as np
 
 import hgspy
@@ -34,14 +32,16 @@ def solve_dynamic(env, config, solver_seed):
     config = config.dynamic()
 
     while not done:
-        start = time.perf_counter()
-
         strategy = STRATEGIES[config.strategy()]
         dispatch_inst = strategy(
             env, static_info, observation, rng, **config.strategy_params()
         )
 
-        solve_tlim = ep_tlim - (time.perf_counter() - start)
+        solve_tlim = ep_tlim
+
+        if "simulate_tlim_factor" in config["strategy_params"]:
+            sim_tlim_factor = config["strategy_params"]["simulate_tlim_factor"]
+            solve_tlim *= 1 - sim_tlim_factor
 
         # TODO use a seed different from the dynamic rng for the static solver
         res = hgs(

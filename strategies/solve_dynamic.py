@@ -39,9 +39,10 @@ def solve_dynamic(env, config, solver_seed):
 
         solve_tlim = ep_tlim
 
-        if "simulate_tlim_factor" in config["strategy_params"]:
-            sim_tlim_factor = config["strategy_params"]["simulate_tlim_factor"]
-            solve_tlim *= 1 - sim_tlim_factor
+        # Reduce the solving time limit by the simulation time
+        strategy_params = config.get("strategy_params", {})
+        sim_tlim_factor = strategy_params.get("simulate_tlim_factor", 0)
+        solve_tlim *= 1 - sim_tlim_factor
 
         # TODO use a seed different from the dynamic rng for the static solver
         res = hgs(

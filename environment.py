@@ -34,7 +34,7 @@ class VRPEnvironment:
         num_epochs: int = 8,
         requests_per_epoch: Union[int, List] = 100,
     ):
-        self.rng = np.random.default_rng(seed)
+        self.seed = seed
         self.instance = instance
         self.epoch_tlim = epoch_tlim
         self.requests_per_epoch = requests_per_epoch
@@ -46,6 +46,8 @@ class VRPEnvironment:
         """
         Resets the environment.
         """
+        self.rng = np.random.default_rng(self.seed)
+
         tw = self.instance["time_windows"]
 
         # The start and end epochs are determined by the earliest and latest

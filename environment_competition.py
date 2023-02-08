@@ -39,7 +39,7 @@ class VRPEnvironment:
         dispatch_margin: int = 3600,
         epoch_duration: int = 3600,
     ):
-        self.rng = np.random.default_rng(seed)
+        self.seed = seed
         self.instance = instance
         self.epoch_tlim = epoch_tlim
         self.max_requests_per_epoch = max_requests_per_epoch
@@ -52,6 +52,7 @@ class VRPEnvironment:
         """
         Resets the environment.
         """
+        self.rng = np.random.default_rng(self.seed)
         tw = self.instance["time_windows"]
 
         # The start and end epochs are determined by the earliest and latest
@@ -304,16 +305,9 @@ class VRPEnvironment:
         """
         After the episode is completed, this function can be used to obtain the
         'hindsight problem', i.e., as if we had future information about all the
-        requests. This includes the release times of the requests.
+        requests.
         """
         customer_idx = self.req_customer_idx
-
-        # Release times indicate that a route containing this request cannot
-        # dispatch before this time. This includes the margin time for dispatch
-        release_times = (
-            self.epoch_duration * self.req_epoch + self.dispatch_margin
-        )
-        release_times[self.instance["is_depot"][customer_idx]] = 0
 
         return {
             "is_depot": self.instance["is_depot"][customer_idx],
@@ -327,5 +321,5 @@ class VRPEnvironment:
             "duration_matrix": self.instance["duration_matrix"][
                 np.ix_(customer_idx, customer_idx)
             ],
-            "release_times": release_times,
+            "release_times": self.req_release_time,
         }

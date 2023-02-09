@@ -70,7 +70,6 @@ simulate_tlim_factor = 0.80
 n_cycles = 8
 n_simulations = 20
 n_lookahead = 1
-n_requests = 100
 
 node_ops = [
     "Exchange10",

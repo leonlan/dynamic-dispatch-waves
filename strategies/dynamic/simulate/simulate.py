@@ -9,6 +9,7 @@ from .simulate_instance import simulate_instance
 
 
 def simulate(
+    env,
     info,
     obs,
     rng,
@@ -16,7 +17,6 @@ def simulate(
     n_cycles: int,
     n_simulations: int,
     n_lookahead: int,
-    n_requests: int,
     sim_config: dict,
     node_ops: list,
     route_ops: list,
@@ -30,7 +30,8 @@ def simulate(
     those simulations.
     """
     # Return the full epoch instance for the last epoch
-    if obs["current_epoch"] == info["end_epoch"]:
+    current_epoch = obs["current_epoch"]
+    if current_epoch == info["end_epoch"]:
         return obs["epoch_instance"]
 
     # Parameters
@@ -48,13 +49,13 @@ def simulate(
 
         for _ in range(n_simulations):
             sim_inst = simulate_instance(
+                env,
                 info,
                 obs,
                 rng,
                 n_lookahead,
-                n_requests,
-                to_dispatch=to_dispatch,
-                to_postpone=to_postpone,
+                to_dispatch,
+                to_postpone,
             )
 
             res = hgs(

@@ -67,8 +67,8 @@ nbIter = 6318
 
 [dynamic.strategy_params]
 simulate_tlim_factor = 0.80
-n_cycles = 8
-n_simulations = 20
+n_cycles = 15
+n_simulations = 15
 n_lookahead = 1
 
 node_ops = [
@@ -87,10 +87,10 @@ consensus = "fixed_threshold"
 
 [dynamic.strategy_params.consensus_params]
 postpone_thresholds = [
-    0.90,
+    0.92,
 ]
 dispatch_thresholds = [
-    0.45,
+    0.50,
 ]
 
 [dynamic.strategy_params.sim_config]

@@ -68,7 +68,7 @@ def solve(
     if stats_dir:
         where = Path(stats_dir)
         where.mkdir(parents=True, exist_ok=True)
-        with open(where / path.name, "wb") as fh:
+        with open(where / (path.stem + ".pickle"), "wb") as fh:
             pickle.dump(stats, fh)
 
     return (

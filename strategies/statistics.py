@@ -13,10 +13,18 @@ class Statistics:
         if self.collect:
             self.static_info = static_info
 
-    def collect_iteration_action(self, epoch, solutions):
+    def collect_scenario_solutions(self, epoch, solutions):
         if self.collect:
             self.scenario_solutions[epoch].append(solutions)
 
     def collect_epoch(self, epoch, instance, solution):
         if self.collect:
-            self.epoch[epoch] = (instance, solution)
+            # The solution contains request indices. We use the instance to
+            # map the solution to customer indices of the epoch instance,
+            # so we can easily plot the routes.
+            mapper = {
+                req: idx for idx, req in enumerate(instance["request_idx"])
+            }
+
+            routes = [[mapper[req] for req in route] for route in solution]
+            self.epoch[epoch] = (instance, routes)

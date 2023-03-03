@@ -1,4 +1,7 @@
+import pickle
+
 import numpy as np
+from .statistics import Statistics
 
 import hgspy
 from strategies.dynamic import STRATEGIES
@@ -6,7 +9,7 @@ from strategies.static import hgs
 from .utils import sol2ep
 
 
-def solve_dynamic(env, config, solver_seed):
+def solve_dynamic(env, config, stats, solver_seed):
     """
     Solve the dynamic VRPTW problem using the passed-in dispatching strategy.
     The given seed is used to initialise both the random number stream on the
@@ -14,10 +17,13 @@ def solve_dynamic(env, config, solver_seed):
 
     Parameters
     ----------
-    env : Environment
-    config : Config
+    env
+        The dynamic environment.
+    config
         The configuration object, storing the strategy and solver parameters.
-    solver_seed : int
+    stats
+        The statistics object, collecting statistics of the solver run.
+    solver_seed
         RNG seed. Seed is shared between static and dynamic solver.
     """
     rng = np.random.default_rng(solver_seed)
@@ -34,7 +40,12 @@ def solve_dynamic(env, config, solver_seed):
     while not done:
         strategy = STRATEGIES[config.strategy()]
         dispatch_inst = strategy(
-            env, static_info, observation, rng, **config.strategy_params()
+            env,
+            static_info,
+            observation,
+            stats,
+            rng,
+            **config.strategy_params()
         )
 
         solve_tlim = ep_tlim
@@ -61,6 +72,10 @@ def solve_dynamic(env, config, solver_seed):
 
         current_epoch = observation["current_epoch"]
         solutions[current_epoch] = ep_sol
+
+        stats.collect_epoch(
+            current_epoch, observation["epoch_instance"], ep_sol
+        )
 
         observation, reward, done, info = env.step(ep_sol)
         costs[current_epoch] = abs(reward)

@@ -12,6 +12,7 @@ def simulate(
     env,
     info,
     obs,
+    stats,
     rng,
     simulate_tlim_factor: float,
     n_cycles: int,
@@ -79,6 +80,10 @@ def simulate(
             to_dispatch,
             to_postpone,
             **consensus_params,
+        )
+
+        stats.collect_scenario_solutions(
+            current_epoch, [sol for _, sol in scenarios]
         )
 
         # Stop the simulation run early when all requests have been marked

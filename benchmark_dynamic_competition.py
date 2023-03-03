@@ -2,7 +2,9 @@ import argparse
 from functools import partial
 from glob import glob
 from pathlib import Path
+import pickle
 from time import perf_counter
+from typing import Optional
 
 import numpy as np
 from tqdm.contrib.concurrent import process_map
@@ -11,6 +13,7 @@ import tools
 from environment_competition import VRPEnvironment
 from strategies import solve_dynamic, solve_hindsight
 from strategies.config import Config
+from strategies.statistics import Statistics
 
 
 def parse_args():
@@ -27,6 +30,7 @@ def parse_args():
         "--instance_pattern", default="instances/ortec/ORTEC-VRPTW-ASYM-*.txt"
     )
     parser.add_argument("--epoch_tlim", type=float, default=60)
+    parser.add_argument("--stats_dir")
 
     return parser.parse_args()
 
@@ -38,6 +42,7 @@ def solve(
     config_loc: str,
     hindsight: bool,
     epoch_tlim: int,
+    stats_dir: Optional[str],
     **kwargs,
 ):
     path = Path(loc)
@@ -51,13 +56,20 @@ def solve(
     start = perf_counter()
 
     config = Config.from_file(config_loc)
+    stats = Statistics(config)
 
     if hindsight:
         costs, routes = solve_hindsight(env, config.static(), solver_seed)
     else:
-        costs, routes = solve_dynamic(env, config, solver_seed)
+        costs, routes = solve_dynamic(env, config, stats, solver_seed)
 
     run_time = round(perf_counter() - start, 2)
+
+    if stats_dir:
+        where = Path(stats_dir)
+        where.mkdir(parents=True, exist_ok=True)
+        with open(where / path.name, "wb") as fh:
+            pickle.dump(stats, fh)
 
     return (
         path.stem,

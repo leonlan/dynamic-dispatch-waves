@@ -17,6 +17,7 @@ numpy = "^1.22.2"
 matplotlib = "^3.5.1"
 tomli = "^2.0.1"
 tqdm = "^4.64.0"
+vrplib = "^1.0.1"
 
 [tool.poetry.group.tune]
 optional = true

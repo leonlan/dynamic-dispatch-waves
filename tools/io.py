@@ -79,7 +79,7 @@ def read_vrptw_solution(filename, return_extra=False):
     return solution
 
 
-def read_vrplib(filename):
+def read_vrplib(filename, instance_format="vrplib"):
     """
     Read a VRPLIB instance from file and return an `instance` dict, containing
     - 'is_depot': boolean np.array. True for depot; False otherwise.
@@ -90,8 +90,8 @@ def read_vrplib(filename):
     - 'service_times': np.array of service times at each client (incl. depot)
     - 'duration_matrix': distance matrix between clients (incl. depot)
     """
-    instance = vrplib.read_instance(filename)
-    n_locations = instance["dimension"]
+    instance = vrplib.read_instance(filename, instance_format=instance_format)
+    n_locations = instance.get("dimension", len(instance["node_coord"]))
     horizon = instance["time_window"][0][1]  # depot latest tw
 
     return {
@@ -101,7 +101,7 @@ def read_vrplib(filename):
         "capacity": instance["capacity"],
         "time_windows": instance["time_window"],
         "service_times": instance["service_time"],
-        "duration_matrix": instance["edge_weight"],
+        "duration_matrix": instance["edge_weight"].astype(int),
         "release_times": instance["release_time"]
         if "release_time" in instance
         else np.zeros(n_locations, dtype=int),

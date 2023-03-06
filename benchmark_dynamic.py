@@ -27,6 +27,7 @@ def parse_args():
     parser.add_argument(
         "--instance_pattern", default="instances/ortec/ORTEC-VRPTW-ASYM-*.txt"
     )
+    parser.add_argument("--instance_format", default="vrplib")
     parser.add_argument("--epoch_tlim", type=float, default=60)
     parser.add_argument("--num_epochs", type=int, default=8)
     parser.add_argument(
@@ -39,6 +40,7 @@ def parse_args():
 def solve(
     loc: str,
     instance_seed: int,
+    instance_format: str,
     solver_seed: int,
     config_loc: str,
     hindsight: bool,
@@ -51,7 +53,7 @@ def solve(
 
     env = VRPEnvironment(
         seed=instance_seed,
-        instance=tools.io.read_vrplib(path),
+        instance=tools.io.read_vrplib(path, instance_format),
         epoch_tlim=epoch_tlim,
         num_epochs=num_epochs,
         requests_per_epoch=requests_per_epoch,

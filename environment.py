@@ -24,6 +24,10 @@ class VRPEnvironment:
         The number of epochs in which the time horizon is separated
     requests_per_epoch
         The number of revealed requests per epoch.
+    time_window_style
+        The time window style, one of ['static', 'fixed', 'deadline'].
+    time_window_width
+        The width of the time window in number of epoch durations.
     """
 
     def __init__(
@@ -33,12 +37,16 @@ class VRPEnvironment:
         epoch_tlim: float,
         num_epochs: int = 8,
         requests_per_epoch: Union[int, List] = 100,
+        time_window_style: str = "static",
+        time_window_width: int = 3,
     ):
         self.seed = seed
         self.instance = instance
         self.epoch_tlim = epoch_tlim
         self.requests_per_epoch = requests_per_epoch
         self.num_epochs = num_epochs
+        self.time_window_style = time_window_style
+        self.time_window_with = time_window_width
 
         self.is_done = True  # Requires reset to be called first
 
@@ -56,7 +64,7 @@ class VRPEnvironment:
         latest_open = tw[1:, 0].max()
 
         self.epoch_duration = (latest_open - earliest_open) // (
-            self.num_epochs - 1
+            self.num_epochs - 1 + 3  # GRACE
         )
         self.start_epoch = 0
         self.end_epoch = self.num_epochs - 1
@@ -211,10 +219,7 @@ class VRPEnvironment:
                 cust_idx[feas],
                 self.rng.integers(n_customers, size=to_sample) + 1,
             )
-            tw_idx = np.append(
-                tw_idx[feas],
-                self.rng.integers(n_customers, size=to_sample) + 1,
-            )
+
             demand_idx = np.append(
                 demand_idx[feas],
                 self.rng.integers(n_customers, size=to_sample) + 1,
@@ -224,9 +229,16 @@ class VRPEnvironment:
                 self.rng.integers(n_customers, size=to_sample) + 1,
             )
 
-            new_tw = self.instance["time_windows"][tw_idx]
             new_demand = self.instance["demands"][demand_idx]
             new_service = self.instance["service_times"][service_idx]
+            new_tw = self._sample_time_windows(
+                self.time_window_style,
+                feas,
+                n_samples,
+                to_sample,
+                tw_idx,
+                dispatch_time,
+            )
 
             # Filter sampled requests that cannot be served in a round trip
             earliest_arrival = np.maximum(
@@ -248,6 +260,24 @@ class VRPEnvironment:
             "service_times": new_service,
             "release_times": np.full(n_samples, dispatch_time),
         }
+
+    def _sample_time_windows(
+        self, style, feas, n_samples, to_sample, tw_idx, dispatch_time
+    ):
+        if style == "static":
+            tw_idx = np.append(
+                tw_idx[feas],
+                self.rng.integers(self.n_customers, size=to_sample) + 1,
+            )
+            return self.instance["time_windows"][tw_idx]
+        elif style == "deadline":
+            early_tw = dispatch_time * np.ones(n_samples, dtype=int)
+            tw_width = self.epoch_duration * self.time_window_with
+            late_tw = early_tw + tw_width
+            return np.vstack((early_tw, late_tw)).T
+        elif style == "fixed":
+            # TODO: Implement fixed time window logic here
+            pass
 
     def _next_observation(self) -> State:
         """

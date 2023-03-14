@@ -8,7 +8,7 @@ def adaptive_threshold(
     scenarios,
     to_dispatch,
     to_postpone,
-    pct_dispatch,
+    pct_dispatch=1,
     **kwargs,
 ):
     """
@@ -22,16 +22,26 @@ def adaptive_threshold(
 
     for (inst, sol) in scenarios:
         for route in sol:
-            if is_dispatched(inst, route, to_dispatch):
+            if is_dispatched(inst, route, to_dispatch, to_postpone):
                 dispatch_count[route] += 1
 
-    num_disp = [
-        num_dispatched(inst, sol, to_dispatch) for (inst, sol) in scenarios
-    ]
-    avg_num_disp = int(np.mean(num_disp) * pct_dispatch)
+    postpone_count = 1 - dispatch_count
 
-    top_k_dispatch = (-dispatch_count).argsort()[:avg_num_disp]
+    num_disp = [
+        num_dispatched(inst, sol, to_dispatch, to_postpone)
+        for (inst, sol) in scenarios
+    ]
+    min_num_disp = int(np.mean(num_disp) * pct_dispatch)
+    min_num_post = np.min([ep_size - n_disp for n_disp in num_disp])
+    print("Min dispatch: ", np.min(num_disp))
+    print("Min postpone: ", min_num_post)
+
+    top_k_dispatch = (-dispatch_count).argsort()[:min_num_disp]
     to_dispatch[top_k_dispatch] = True
+
+    # if cycle_idx > 0:
+    #     top_k_postpone = (-postpone_count).argsort()[:min_num_post]
+    #     to_postpone[top_k_postpone] = True
 
     # Never dispatch or postpone the depot
     to_dispatch[0] = False
@@ -40,5 +50,11 @@ def adaptive_threshold(
     return to_dispatch, to_postpone
 
 
-def num_dispatched(inst, sol, to_dispatch):
-    return sum([len(rt) for rt in sol if is_dispatched(inst, rt, to_dispatch)])
+def num_dispatched(inst, sol, to_dispatch, to_postpone):
+    return sum(
+        [
+            len(rt)
+            for rt in sol
+            if is_dispatched(inst, rt, to_dispatch, to_postpone)
+        ]
+    )

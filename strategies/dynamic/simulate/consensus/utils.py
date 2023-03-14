@@ -1,10 +1,15 @@
-def is_dispatched(instance, route, to_dispatch):
+def is_dispatched(instance, route, to_dispatch, to_postpone):
     """
     Returns true if the route contains requests that are marked `to_dispatch`,
     or if the route, consisting of epoch requests, cannot be postponed to the
     next epoch.
     """
     n_reqs = to_dispatch.size
+
+    # TODO document this
+    is_to_postpone = any(to_postpone[idx] for idx in route if idx < n_reqs)
+    if is_to_postpone:
+        return False
 
     is_to_dispatch = any(to_dispatch[idx] for idx in route if idx < n_reqs)
     only_ep_reqs = all(idx < n_reqs for idx in route)

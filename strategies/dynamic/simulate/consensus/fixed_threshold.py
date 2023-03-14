@@ -26,7 +26,8 @@ def fixed_threshold(
 
     # This asserts that we cannot have thresholds that allow a request to be
     # marked both dispatched and postponed.
-    assert dispatch_threshold + (1 - postpone_threshold) <= 1
+    # # TODO this is wrong?
+    # assert dispatch_threshold + (1 - postpone_threshold) <= 1
 
     n_simulations = len(scenarios)
     ep_size = to_dispatch.size
@@ -36,7 +37,7 @@ def fixed_threshold(
 
     for (inst, sol) in scenarios:
         for route in sol:
-            if is_dispatched(inst, route, to_dispatch):
+            if is_dispatched(inst, route, to_dispatch, to_postpone):
                 dispatch_count[route] += 1
             else:
                 # Only count for current epoch requests

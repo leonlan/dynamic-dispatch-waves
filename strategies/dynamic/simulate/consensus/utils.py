@@ -1,21 +1,28 @@
+import numpy as np
+
+
 def is_dispatched(instance, route, to_dispatch, to_postpone):
     """
-    Returns true if the route contains requests that are marked `to_dispatch`,
-    or if the route, consisting of epoch requests, cannot be postponed to the
-    next epoch.
+    Determines whether the passed-in route was a dispatched route in the
+    simulations or not. A route is considered dispatched w.r.t. the current
+    instance if:
+    - at least one the requests is marked dispatched, or
+    - the route does not contain postponed or simulated requests and the route
+      can be postponed to the next epoch without violating feasibility.
     """
     n_reqs = to_dispatch.size
 
-    # TODO document this
-    is_to_postpone = any(to_postpone[idx] for idx in route if idx < n_reqs)
-    if is_to_postpone:
+    # Shortcut when route contains postponed or simulated requests
+    has_postponed_reqs = any(to_postpone[idx] for idx in route if idx < n_reqs)
+    has_simulated_reqs = any(idx >= n_reqs for idx in route)
+
+    if has_postponed_reqs or has_simulated_reqs:
         return False
 
-    is_to_dispatch = any(to_dispatch[idx] for idx in route if idx < n_reqs)
-    only_ep_reqs = all(idx < n_reqs for idx in route)
+    has_to_dispatch = any(to_dispatch[idx] for idx in route if idx < n_reqs)
     cannot_postpone = not can_postpone_route(instance, route)
 
-    return is_to_dispatch or (only_ep_reqs and cannot_postpone)
+    return has_to_dispatch or cannot_postpone
 
 
 def can_postpone_route(instance, route):
@@ -28,9 +35,10 @@ def can_postpone_route(instance, route):
     dist = instance["duration_matrix"]
     service = instance["service_times"]
 
-    current_time = (
-        3600  # TODO This should be the epoch duration from the environment
-    )
+    # HACK The next epoch time is inferred from the smallest non-zero release
+    # times. We can also infer this from the environment.
+    release_times = instance["release_times"]
+    current_time = np.min(release_times[np.nonzero(release_times)])
 
     for idx in range(len(tour) - 1):
         pred, succ = tour[idx], tour[idx + 1]

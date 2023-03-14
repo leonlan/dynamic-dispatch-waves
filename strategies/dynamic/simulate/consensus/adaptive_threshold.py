@@ -6,55 +6,34 @@ from .utils import is_dispatched
 def adaptive_threshold(
     cycle_idx,
     scenarios,
-    to_dispatch,
-    to_postpone,
-    pct_dispatch=1,
+    old_dispatch,
+    old_postpone,
     **kwargs,
 ):
     """
     Determines how many requests to dispatch based on the average number of
     dispatched requests in the solutions pool. Let k be this number. Then the
-    top-(k * pct_dispatch) requests that were most frequently dispatched in the
-    simulations are marked dispatched.
+    k most frequently dispatched requests are marked dispatched.
     """
-    ep_size = to_dispatch.size
+    ep_size = old_dispatch.size
+    new_dispatch = old_dispatch.copy()
+    new_postpone = old_postpone.copy()
+
     dispatch_count = np.zeros(ep_size, dtype=int)
+    num_dispatch_scenario = []
 
     for (inst, sol) in scenarios:
+        num_disp = 0
+
         for route in sol:
-            if is_dispatched(inst, route, to_dispatch, to_postpone):
+            if is_dispatched(inst, route, old_dispatch, old_postpone):
                 dispatch_count[route] += 1
+                num_disp += len(route)
 
-    postpone_count = 1 - dispatch_count
+        num_dispatch_scenario.append(num_disp)
 
-    num_disp = [
-        num_dispatched(inst, sol, to_dispatch, to_postpone)
-        for (inst, sol) in scenarios
-    ]
-    min_num_disp = int(np.mean(num_disp) * pct_dispatch)
-    min_num_post = np.min([ep_size - n_disp for n_disp in num_disp])
-    print("Min dispatch: ", np.min(num_disp))
-    print("Min postpone: ", min_num_post)
-
+    min_num_disp = int(np.mean(num_dispatch_scenario))
     top_k_dispatch = (-dispatch_count).argsort()[:min_num_disp]
-    to_dispatch[top_k_dispatch] = True
+    new_dispatch[top_k_dispatch] = True
 
-    # if cycle_idx > 0:
-    #     top_k_postpone = (-postpone_count).argsort()[:min_num_post]
-    #     to_postpone[top_k_postpone] = True
-
-    # Never dispatch or postpone the depot
-    to_dispatch[0] = False
-    to_postpone[0] = False
-
-    return to_dispatch, to_postpone
-
-
-def num_dispatched(inst, sol, to_dispatch, to_postpone):
-    return sum(
-        [
-            len(rt)
-            for rt in sol
-            if is_dispatched(inst, rt, to_dispatch, to_postpone)
-        ]
-    )
+    return new_dispatch, new_postpone

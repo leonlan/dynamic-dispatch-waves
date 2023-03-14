@@ -17,7 +17,6 @@ def adaptive_threshold(
     """
     ep_size = old_dispatch.size
     new_dispatch = old_dispatch.copy()
-    new_postpone = old_postpone.copy()
 
     dispatch_count = np.zeros(ep_size, dtype=int)
     num_dispatch_scenario = []
@@ -36,4 +35,4 @@ def adaptive_threshold(
     top_k_dispatch = (-dispatch_count).argsort()[:min_num_disp]
     new_dispatch[top_k_dispatch] = True
 
-    return new_dispatch, new_postpone
+    return new_dispatch, old_postpone.copy()

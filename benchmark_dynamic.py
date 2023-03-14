@@ -33,7 +33,8 @@ def parse_args():
     parser.add_argument(
         "--requests_per_epoch", type=int, nargs="+", default=100
     )
-
+    parser.add_argument("--time_window_style", type=str, default="static")
+    parser.add_argument("--time_window_width", type=int, default=3)
     return parser.parse_args()
 
 

@@ -22,6 +22,7 @@ class VRPEnvironment:
         The epoch time limit.
     num_epochs
         The number of epochs in which the time horizon is separated
+    # TODO should this be average?
     requests_per_epoch
         The number of revealed requests per epoch.
     time_window_style
@@ -234,8 +235,6 @@ class VRPEnvironment:
             new_tw = self._sample_time_windows(
                 self.time_window_style,
                 feas,
-                n_samples,
-                to_sample,
                 tw_idx,
                 dispatch_time,
             )
@@ -261,21 +260,26 @@ class VRPEnvironment:
             "release_times": np.full(n_samples, dispatch_time),
         }
 
-    def _sample_time_windows(
-        self, style, feas, n_samples, to_sample, tw_idx, dispatch_time
-    ):
+    def _sample_time_windows(self, style, feas, tw_idx, dispatch_time):
         if style == "static":
+            # TODO explain
             tw_idx = np.append(
                 tw_idx[feas],
-                self.rng.integers(self.n_customers, size=to_sample) + 1,
+                self.rng.integers(self.n_customers, size=np.sum(~feas)) + 1,
             )
             return self.instance["time_windows"][tw_idx]
         elif style == "deadline":
-            early_tw = dispatch_time * np.ones(n_samples, dtype=int)
-            tw_width = self.epoch_duration * self.time_window_with
-            late_tw = early_tw + tw_width
-            return np.vstack((early_tw, late_tw)).T
+            # The time window is set to a deadline of fixed width. The earliest
+            # section starts at the dispatch time, i.e., the moment that the
+            # order is released. # TODO rewrite
+            early = dispatch_time * np.ones(feas.size, dtype=int)
+            width = self.epoch_duration * self.time_window_with
+            return np.vstack((early, early + width)).T
         elif style == "fixed":
+            # For each new sampled request, we take a point in the future
+            # between [dispatch_time, horizon] and then we let the time window
+            # start at that point and end at + time window width.
+            # TODO rewrite this.
             # TODO: Implement fixed time window logic here
             pass
 

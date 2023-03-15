@@ -211,7 +211,7 @@ class VRPEnvironment:
         cust_idx = np.empty(n_samples, dtype=int)
         demand_idx = np.empty(n_samples, dtype=int)
         service_idx = np.empty(n_samples, dtype=int)
-        old_tw = np.empty(n_samples, dtype=int)
+        old_tw = np.empty(shape=(0, 2), dtype=int)
 
         while not feas.all():
             # Sample data uniformly from customers (1 to num_customers)
@@ -274,7 +274,7 @@ class VRPEnvironment:
             new_idx = rng.integers(n_static_custs, size=n_infeas) + 1
             new_tw = self.instance["time_windows"][new_idx]
 
-            return np.append(old_tw, new_tw)
+            return np.concatenate((old_tw, new_tw))
 
         if style == "deadline":
             # The time window is a deadline of fixed width. The earliest
@@ -295,7 +295,7 @@ class VRPEnvironment:
             early = rng.uniform(dispatch_time, last_dispatch_time, n_infeas)
             new_tw = np.vstack((early, early + width)).T
 
-            return np.append(old_tw, new_tw)
+            return np.concatenate((old_tw, new_tw))
 
         raise ValueError("Time window style unknown.")
 

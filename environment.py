@@ -22,9 +22,8 @@ class VRPEnvironment:
         The epoch time limit.
     num_epochs
         The number of epochs in which the time horizon is separated
-    # TODO should this be average?
     requests_per_epoch
-        The number of revealed requests per epoch.
+        The expected number of revealed requests per epoch.
     time_window_style
         The time window style, one of ['static', 'fixed', 'deadline'].
     time_window_width
@@ -47,7 +46,7 @@ class VRPEnvironment:
         self.requests_per_epoch = requests_per_epoch
         self.num_epochs = num_epochs
         self.time_window_style = time_window_style
-        self.time_window_with = time_window_width
+        self.time_window_width = time_window_width
 
         self.is_done = True  # Requires reset to be called first
 
@@ -65,7 +64,7 @@ class VRPEnvironment:
         latest_open = tw[1:, 0].max()
 
         self.epoch_duration = (latest_open - earliest_open) // (
-            self.num_epochs - 1 + 3  # GRACE
+            self.num_epochs  # TODO we need some sort of grace period here
         )
         self.start_epoch = 0
         self.end_epoch = self.num_epochs - 1
@@ -200,17 +199,19 @@ class VRPEnvironment:
         dispatch_time = (epoch_idx + 1) * self.epoch_duration  # next epoch
 
         n_customers = self.instance["is_depot"].size - 1  # Exclude depot
-        n_samples = self.requests_per_epoch[epoch_idx]
 
-        # The solution method may need to use a different rng
+        # The solution method may need to use a different rng to sample
         if rng is None:
             rng = self.rng
 
+        noise = rng.uniform(0.9, 1.1)
+        n_samples = int(self.requests_per_epoch[epoch_idx] * noise)
+
         feas = np.zeros(n_samples, dtype=bool)
         cust_idx = np.empty(n_samples, dtype=int)
-        tw_idx = np.empty(n_samples, dtype=int)
         demand_idx = np.empty(n_samples, dtype=int)
         service_idx = np.empty(n_samples, dtype=int)
+        old_tw = np.empty(n_samples, dtype=int)
 
         while not feas.all():
             # Sample data uniformly from customers (1 to num_customers)
@@ -233,10 +234,11 @@ class VRPEnvironment:
             new_demand = self.instance["demands"][demand_idx]
             new_service = self.instance["service_times"][service_idx]
             new_tw = self._sample_time_windows(
+                old_tw,
                 self.time_window_style,
                 feas,
-                tw_idx,
                 dispatch_time,
+                rng,
             )
 
             # Filter sampled requests that cannot be served in a round trip
@@ -251,6 +253,7 @@ class VRPEnvironment:
             feas = (earliest_arrival <= new_tw[:, 1]) & (
                 earliest_return <= depot_closed
             )
+            old_tw = new_tw[feas]
 
         return {
             "customer_idx": cust_idx,
@@ -260,29 +263,41 @@ class VRPEnvironment:
             "release_times": np.full(n_samples, dispatch_time),
         }
 
-    def _sample_time_windows(self, style, feas, tw_idx, dispatch_time):
+    def _sample_time_windows(self, old_tw, style, feas, dispatch_time, rng):
+        n_infeas = np.sum(~feas)
+
         if style == "static":
-            n_customers = self.instance["is_depot"].size - 1  # Exclude depot
-            # TODO explain
-            tw_idx = np.append(
-                tw_idx[feas],
-                self.rng.integers(n_customers, size=np.sum(~feas)) + 1,
-            )
-            return self.instance["time_windows"][tw_idx]
-        elif style == "deadline":
-            # The time window is set to a deadline of fixed width. The earliest
-            # section starts at the dispatch time, i.e., the moment that the
-            # order is released. # TODO rewrite
+            # This variant uses the static instance to sample time windows
+            # for requests. For sampled requests that were infeasible, new
+            # time windows are sampled.
+            n_static_custs = self.instance["is_depot"].size - 1
+            new_idx = rng.integers(n_static_custs, size=n_infeas) + 1
+            new_tw = self.instance["time_windows"][new_idx]
+
+            return np.append(old_tw, new_tw)
+
+        if style == "deadline":
+            # The time window is a deadline of fixed width. The earliest
+            # time window starts at the moment that the order can be dispatched
+            # and the latest time window is the same plus a specific width.
             early = dispatch_time * np.ones(feas.size, dtype=int)
-            width = self.epoch_duration * self.time_window_with
+            width = self.epoch_duration * self.time_window_width
+
             return np.vstack((early, early + width)).T
-        elif style == "fixed":
+
+        if style == "fixed":
             # For each new sampled request, we take a point in the future
-            # between [dispatch_time, horizon] and then we let the time window
-            # start at that point and end at + time window width.
-            # TODO rewrite this.
-            # TODO: Implement fixed time window logic here
-            pass
+            # between [dispatch_time, last_dispatch_time] and then the time
+            # window starts at that point T and ends at T + time window width.
+            horizon = self.instance["time_windows"][0][1]
+            last_dispatch_time = horizon - self.epoch_duration
+
+            early = rng.uniform(dispatch_time, last_dispatch_time, n_infeas)
+            new_tw = np.vstack((early, early + width)).T
+
+            return np.append(old_tw, new_tw)
+
+        raise ValueError("Time window style unknown.")
 
     def _next_observation(self) -> State:
         """

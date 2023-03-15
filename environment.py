@@ -36,7 +36,7 @@ class VRPEnvironment:
         instance: Dict,
         epoch_tlim: float,
         num_epochs: int = 8,
-        requests_per_epoch: Union[int, List] = 100,
+        requests_per_epoch: Union[int, List] = 50,
         time_window_style: str = "static",
         time_window_width: int = 3,
     ):

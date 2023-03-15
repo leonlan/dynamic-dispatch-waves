@@ -8,21 +8,22 @@ def is_dispatched(instance, route, to_dispatch, to_postpone):
     instance if:
     - at least one the requests is marked dispatched, or
     - the route does not contain postponed or simulated requests and the route
-      can be postponed to the next epoch without violating feasibility.
+      cannot be postponed to the next epoch without violating feasibility.
     """
     n_reqs = to_dispatch.size
 
-    # Shortcut when route contains postponed or simulated requests
+    has_to_dispatch = any(to_dispatch[idx] for idx in route if idx < n_reqs)
+
+    if has_to_dispatch:
+        return True
+
     has_postponed_reqs = any(to_postpone[idx] for idx in route if idx < n_reqs)
     has_simulated_reqs = any(idx >= n_reqs for idx in route)
 
     if has_postponed_reqs or has_simulated_reqs:
         return False
 
-    has_to_dispatch = any(to_dispatch[idx] for idx in route if idx < n_reqs)
-    cannot_postpone = not can_postpone_route(instance, route)
-
-    return has_to_dispatch or cannot_postpone
+    return not can_postpone_route(instance, route)
 
 
 def can_postpone_route(instance, route):

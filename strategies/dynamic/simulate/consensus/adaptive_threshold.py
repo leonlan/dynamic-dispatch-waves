@@ -31,8 +31,11 @@ def adaptive_threshold(
 
         num_dispatch_scenario.append(num_disp)
 
-    min_num_disp = int(np.mean(num_dispatch_scenario))
-    top_k_dispatch = (-dispatch_count).argsort()[:min_num_disp]
+    avg_num_dispatch = int(np.mean(num_dispatch_scenario))
+    top_k_dispatch = (-dispatch_count).argsort()[:avg_num_dispatch]
     new_dispatch[top_k_dispatch] = True
+
+    # Verify that the previously fixed dispatch actions have not changed
+    assert np.all(old_dispatch <= new_dispatch)
 
     return new_dispatch, old_postpone.copy()

@@ -262,10 +262,11 @@ class VRPEnvironment:
 
     def _sample_time_windows(self, style, feas, tw_idx, dispatch_time):
         if style == "static":
+            n_customers = self.instance["is_depot"].size - 1  # Exclude depot
             # TODO explain
             tw_idx = np.append(
                 tw_idx[feas],
-                self.rng.integers(self.n_customers, size=np.sum(~feas)) + 1,
+                self.rng.integers(n_customers, size=np.sum(~feas)) + 1,
             )
             return self.instance["time_windows"][tw_idx]
         elif style == "deadline":

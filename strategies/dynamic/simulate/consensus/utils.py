@@ -1,6 +1,31 @@
 import numpy as np
 
 
+def get_counts(scenarios, to_dispatch, to_postpone):
+    """
+    Computes the dispatch and postponement counts for the given solved scenarios.
+    """
+    dispatch_matrix = get_actions(scenarios, to_dispatch, to_postpone)
+    return dispatch_matrix.sum(axis=0)
+
+
+def get_actions(scenarios, to_dispatch, to_postpone):
+    """
+    Returns a matrix, where each row corresponds to the scenario action. The
+    action is a binary vector, where 1 means that the request is dispatched,
+    and 0 means it is postponed.
+    """
+    n_reqs = to_dispatch.size  # including depot
+    dispatch_matrix = np.zeros((len(scenarios), n_reqs), dtype=int)
+
+    for scenario_idx, (inst, sol) in enumerate(scenarios):
+        for route in sol:
+            if is_dispatched(inst, route, to_dispatch, to_postpone):
+                dispatch_matrix[scenario_idx, route] += 1
+
+    return dispatch_matrix
+
+
 def is_dispatched(instance, route, to_dispatch, to_postpone):
     """
     Determines whether the passed-in route was a dispatched route in the

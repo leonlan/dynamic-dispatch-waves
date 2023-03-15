@@ -1,6 +1,6 @@
 import numpy as np
 
-from .utils import is_dispatched
+from .utils import get_counts
 
 
 def fixed_threshold(
@@ -25,19 +25,8 @@ def fixed_threshold(
     postpone_threshold = postpone_thresholds[post_thresh_idx]
 
     n_simulations = len(scenarios)
-    ep_size = old_dispatch.size
-
-    dispatch_count = np.zeros(ep_size, dtype=int)
-    postpone_count = np.zeros(ep_size, dtype=int)
-
-    for (inst, sol) in scenarios:
-        for route in sol:
-            if is_dispatched(inst, route, old_dispatch, old_postpone):
-                dispatch_count[route] += 1
-            else:
-                # Only count for current epoch requests
-                reqs = [idx for idx in route if idx < ep_size]
-                postpone_count[reqs] += 1
+    dispatch_count = get_counts(scenarios, old_dispatch, old_postpone)
+    postpone_count = n_simulations - dispatch_count
 
     new_dispatch = dispatch_count >= dispatch_threshold * n_simulations
     new_postpone = postpone_count > postpone_threshold * n_simulations

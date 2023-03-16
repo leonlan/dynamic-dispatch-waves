@@ -1,6 +1,6 @@
 import numpy as np
 
-from .utils import get_counts, get_actions
+from .utils import get_dispatch_count, get_dispatch_matrix
 
 
 def adaptive_threshold(
@@ -15,8 +15,8 @@ def adaptive_threshold(
     dispatched requests in the solutions pool. Let k be this number. Then the
     k most frequently dispatched requests are marked dispatched.
     """
-    dispatch_count, _ = get_counts(scenarios, old_dispatch, old_postpone)
-    dispatch_matrix = get_actions(scenarios, old_dispatch, old_postpone)
+    dispatch_matrix = get_dispatch_matrix(scenarios, old_dispatch, old_postpone)
+    dispatch_count = dispatch_matrix.sum(axis=0)
     num_dispatch_per_scenario = dispatch_matrix.sum(axis=1)
 
     avg_num_dispatch = np.mean(num_dispatch_per_scenario, dtype=int)
@@ -25,10 +25,7 @@ def adaptive_threshold(
     new_dispatch = old_dispatch.copy()
     new_dispatch[top_k_dispatch] = True
 
-    # Verify that the previously fixed dispatch actions have not changed
-    assert np.all(old_dispatch <= new_dispatch)
-
-    # Never dispatch the depot
-    new_dispatch[0] = False
+    assert np.all(old_dispatch <= new_dispatch) # old action doesn't change
+    assert not new_dispatch[0] # depot should not be dispatched
 
     return new_dispatch, old_postpone.copy()

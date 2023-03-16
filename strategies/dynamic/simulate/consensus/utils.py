@@ -1,19 +1,19 @@
 import numpy as np
 
 
-def get_counts(scenarios, to_dispatch, to_postpone):
+def get_dispatch_count(scenarios, to_dispatch, to_postpone):
     """
-    Computes the dispatch and postponement counts for the given solved scenarios.
+    Computes the dispatch counts for the given solved scenarios.
     """
-    dispatch_matrix = get_actions(scenarios, to_dispatch, to_postpone)
+    dispatch_matrix = get_dispatch_matrix(scenarios, to_dispatch, to_postpone)
     return dispatch_matrix.sum(axis=0)
 
 
-def get_actions(scenarios, to_dispatch, to_postpone):
+def get_dispatch_matrix(scenarios, to_dispatch, to_postpone):
     """
     Returns a matrix, where each row corresponds to the scenario action. The
-    action is a binary vector, where 1 means that the request is dispatched,
-    and 0 means it is postponed.
+    scenario action is a binary vector, where 1 means that the request was
+    dispatched in this scenario, and 0 means it is postponed.
     """
     n_reqs = to_dispatch.size  # including depot
     dispatch_matrix = np.zeros((len(scenarios), n_reqs), dtype=int)

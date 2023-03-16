@@ -1,6 +1,6 @@
 import numpy as np
 
-from .utils import get_counts, is_dispatched
+from .utils import get_dispatch_count
 
 
 def fixed_threshold(
@@ -25,18 +25,16 @@ def fixed_threshold(
     postpone_threshold = postpone_thresholds[post_thresh_idx]
 
     n_simulations = len(scenarios)
-    dispatch_count = get_counts(scenarios, old_dispatch, old_postpone)
+    dispatch_count = get_dispatch_count(scenarios, old_dispatch, old_postpone)
     postpone_count = n_simulations - dispatch_count
+    postpone_count[0] = 0  # do not postpone depot
 
     new_dispatch = dispatch_count >= dispatch_threshold * n_simulations
     new_postpone = postpone_count > postpone_threshold * n_simulations
 
-    # Verify that the previously fixed actions have not changed
-    assert np.all(old_dispatch <= new_dispatch)
+    assert np.all(old_dispatch <= new_dispatch)  # old action doesn't change
     assert np.all(old_postpone <= new_postpone)
-
-    # Never dispatch or postpone the depot
-    new_dispatch[0] = False
-    new_postpone[0] = False
+    assert not new_dispatch[0]  # depot should not be dispatched
+    assert not new_postpone[0]  # depot should not be postponed
 
     return new_dispatch, new_postpone

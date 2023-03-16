@@ -83,7 +83,7 @@ crossover_ops = [
     "selective_route_exchange",
 ]
 
-consensus = "fixed_threshold"
+consensus = "dynamic_stochastic_hedging_heuristic"
 
 [dynamic.strategy_params.consensus_params]
 postpone_thresholds = [

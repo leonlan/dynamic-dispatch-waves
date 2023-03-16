@@ -32,7 +32,7 @@ def fixed_threshold(
     new_dispatch = dispatch_count >= dispatch_threshold * n_simulations
     new_postpone = postpone_count > postpone_threshold * n_simulations
 
-    assert np.all(old_dispatch <= new_dispatch)  # old action doesn't change
+    assert np.all(old_dispatch <= new_dispatch)  # old action shouldn't change
     assert np.all(old_postpone <= new_postpone)
     assert not new_dispatch[0]  # depot should not be dispatched
     assert not new_postpone[0]  # depot should not be postponed

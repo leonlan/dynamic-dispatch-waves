@@ -17,6 +17,11 @@ def dynamic_stochastic_hedging_heuristic(
     with dispatch probability above ``dispatch_threshold``. Otherwise, it
     selects the most frequently dispatched request that is at least dispatched
     with probability ``min_dispatch_threshold``.
+
+    [1] Hvattum, L. M., Løkketangen, A., & Laporte, G. (2006). Solving a
+        Dynamic and Stochastic Vehicle Routing Problem with a Sample
+        Scenario Hedging Heuristic. Transportation Science, 40(4), 421–438.
+        https://doi.org/10.1287/trsc.1060.0166
     """
     n_simulations = len(scenarios)
     dispatch_count = get_dispatch_count(scenarios, old_dispatch, old_postpone)

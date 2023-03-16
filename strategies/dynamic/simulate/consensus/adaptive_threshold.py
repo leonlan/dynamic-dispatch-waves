@@ -28,4 +28,7 @@ def adaptive_threshold(
     # Verify that the previously fixed dispatch actions have not changed
     assert np.all(old_dispatch <= new_dispatch)
 
+    # Never dispatch the depot
+    new_dispatch[0] = False
+
     return new_dispatch, old_postpone.copy()

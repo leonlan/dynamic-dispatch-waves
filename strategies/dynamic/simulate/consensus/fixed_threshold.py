@@ -1,6 +1,6 @@
 import numpy as np
 
-from .utils import get_counts
+from .utils import get_counts, is_dispatched
 
 
 def fixed_threshold(
@@ -34,5 +34,9 @@ def fixed_threshold(
     # Verify that the previously fixed actions have not changed
     assert np.all(old_dispatch <= new_dispatch)
     assert np.all(old_postpone <= new_postpone)
+
+    # Never dispatch or postpone the depot
+    new_dispatch[0] = False
+    new_postpone[0] = False
 
     return new_dispatch, new_postpone

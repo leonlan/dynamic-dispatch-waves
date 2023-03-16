@@ -6,7 +6,7 @@ from strategies.static import hgs
 from .utils import sol2ep
 
 
-def solve_dynamic(env, config, solver_seed):
+def solve_dynamic(env, config, sim_solver, disp_solver, solver_seed):
     """
     Solve the dynamic VRPTW problem using the passed-in dispatching strategy.
     The given seed is used to initialise both the random number stream on the
@@ -34,7 +34,12 @@ def solve_dynamic(env, config, solver_seed):
     while not done:
         strategy = STRATEGIES[config.strategy()]
         dispatch_inst = strategy(
-            env, static_info, observation, rng, **config.strategy_params()
+            env,
+            static_info,
+            observation,
+            rng,
+            sim_solver,
+            **config.strategy_params()
         )
 
         solve_tlim = ep_tlim
@@ -44,16 +49,7 @@ def solve_dynamic(env, config, solver_seed):
         sim_tlim_factor = strategy_params.get("simulate_tlim_factor", 0)
         solve_tlim *= 1 - sim_tlim_factor
 
-        # TODO use a seed different from the dynamic rng for the static solver
-        res = hgs(
-            dispatch_inst,
-            hgspy.Config(seed=solver_seed, **config.solver_params()),
-            config.node_ops(),
-            config.route_ops(),
-            config.crossover_ops(),
-            hgspy.stop.MaxRuntime(solve_tlim),
-        )
-
+        res = disp_solver(dispatch_inst, solve_tlim)
         best = res.get_best_found()
         routes = [route for route in best.get_routes() if route]
 

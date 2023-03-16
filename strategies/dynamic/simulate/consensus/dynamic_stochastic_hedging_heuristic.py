@@ -32,7 +32,7 @@ def dynamic_stochastic_hedging_heuristic(
         if dispatch_count[candidate] >= min_dispatch_threshold * n_simulations:
             new_dispatch[candidate] = True
 
-    assert np.all(old_dispatch <= new_dispatch)  # old action doesn't change
+    assert np.all(old_dispatch <= new_dispatch)  # old action shouldn't change
     assert not new_dispatch[0]  # depot should not be dispatched
 
     return new_dispatch, old_postpone.copy()

@@ -8,8 +8,8 @@ def dynamic_stochastic_hedging_heuristic(
     scenarios,
     old_dispatch,
     old_postpone,
-    min_dispatch_threshold=0.5,
-    dispatch_threshold=0.7,
+    min_dispatch_threshold,
+    dispatch_threshold,
     **kwargs
 ):
     """

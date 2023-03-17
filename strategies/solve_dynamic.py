@@ -15,10 +15,16 @@ def solve_dynamic(env, dyn_config, disp_config, sim_config, solver_seed):
     Parameters
     ----------
     env : Environment
-    config : Config
-        The configuration object, storing the strategy and solver parameters.
+    dyn_config : Config
+        Configuration object storing parameters for the dynamic solver.
+    disp_config : Config
+        Configuration object storing parameters for the dispatch instance
+        static solver.
+    sim_config : Config
+        Configuration object storing parameters for the simulation instance
+        static solver.
     solver_seed : int
-        RNG seed. Seed is shared between static and dynamic solver.
+        RNG seed for the dynamic solver.
     """
     rng = np.random.default_rng(solver_seed)
 

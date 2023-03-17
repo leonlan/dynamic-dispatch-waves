@@ -8,4 +8,4 @@ simulate_tlim_factor = 0.80
 n_cycles = 10
 n_simulations = 20
 n_lookahead = 1
-consensus = "adaptive_threshold"
+consensus = "hamming_distance"

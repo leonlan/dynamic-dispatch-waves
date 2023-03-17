@@ -17,7 +17,7 @@ def simulate(
     n_simulations: int,
     n_lookahead: int,
     consensus: str,
-    consensus_params: dict,  # TODO can this become optional?
+    consensus_params: dict = {},
     **kwargs,
 ):
     """

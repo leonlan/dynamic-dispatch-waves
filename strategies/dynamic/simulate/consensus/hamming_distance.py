@@ -3,32 +3,30 @@ import numpy as np
 from .utils import get_dispatch_matrix
 
 
-def adaptive_threshold(
+def hamming_distance(
     cycle_idx, scenarios, old_dispatch, old_postpone, **kwargs
 ):
     """
-    Determines how many requests to dispatch based on the minimum number of
-    dispatched requests in the solutions pool. Let k be this number. Then the
-    k most frequently dispatched requests are marked dispatched. Also, all
-    requests that are always postponed are marked as postponed.
+    Selects the solution with the smallest average Hamming distance w.r.t.
+    the other solutions. The requests of this solution are marked dispatch.
+    Also, all requests that are always postponed are marked as postponed.
+    # TODO refactor always postpone to some utility function
     """
     dispatch_matrix = get_dispatch_matrix(
         scenarios, old_dispatch, old_postpone
     )
+
+    # Mean absolute error a.k.a. average Hamming distance
+    mae = (abs(dispatch_matrix - dispatch_matrix.mean(axis=0))).mean(axis=1)
+    new_dispatch = dispatch_matrix[mae.argsort()[0]].astype(bool)
+
+    # Postpone requests that are always postponed
     dispatch_count = dispatch_matrix.sum(axis=0)
-    num_dispatch_per_scenario = dispatch_matrix.sum(axis=1)
-
-    # TODO This can also be average, but IDK which works better
-    min_num_dispatch = np.min(num_dispatch_per_scenario)
-    top_k_dispatch = (-dispatch_count).argsort()[:min_num_dispatch]
-
-    new_dispatch = old_dispatch.copy()
-    new_dispatch[top_k_dispatch] = True
-
     postpone_count = len(scenarios) - dispatch_count
     postpone_count[0] = False  # do not postpone depot
     new_postpone = postpone_count == len(scenarios)
 
+    # TODO these assertions should become utility
     assert np.all(old_dispatch <= new_dispatch)  # old action shouldn't change
     assert np.all(old_postpone <= new_postpone)
     assert not new_dispatch[0]  # depot should not be dispatched

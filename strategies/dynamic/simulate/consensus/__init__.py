@@ -3,6 +3,7 @@ from .dynamic_stochastic_hedging_heuristic import (
     dynamic_stochastic_hedging_heuristic,
 )
 from .fixed_threshold import fixed_threshold
+from .hamming_distance import hamming_distance
 
 # This dict stores consensus functions that can be used to determine which
 # requests to dispatch or to postpone during the simulation cycles. A consensus
@@ -21,4 +22,5 @@ CONSENSUS = {
     "adaptive_threshold": adaptive_threshold,
     "dynamic_stochastic_hedging_heuristic": dynamic_stochastic_hedging_heuristic,
     "fixed_threshold": fixed_threshold,
+    "hamming_distance": hamming_distance,
 }

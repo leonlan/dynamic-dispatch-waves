@@ -1,0 +1,20 @@
+[dynamic]
+strategy = "simulate"
+postpone_routes = false
+
+
+[dynamic.strategy_params]
+simulate_tlim_factor = 0.80
+n_cycles = 5
+n_simulations = 15
+n_lookahead = 1
+consensus = "fixed_threshold"
+
+
+[dynamic.strategy_params.consensus_params]
+postpone_thresholds = [
+    0.92,
+]
+dispatch_thresholds = [
+    0.50,
+]

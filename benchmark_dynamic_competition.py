@@ -123,9 +123,9 @@ def main():
         " ".join(f"--{key} {value}" for key, value in vars(args).items()),
     )
 
-    config = Config.from_file(args.config_loc)
+    dyn_config = Config.from_file(args.dyn_config_loc).dynamic()
     print("dynamic config:")
-    print(config.dynamic())
+    print(dyn_config)
 
     print("\n", table, "\n", sep="")
     print(f"      Avg. objective: {data['total'].mean():.0f}")

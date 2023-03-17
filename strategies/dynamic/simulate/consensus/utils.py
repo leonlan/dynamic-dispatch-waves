@@ -1,6 +1,27 @@
 import numpy as np
 
 
+def always_postponed(scenarios, to_dispatch, to_postpone):
+    return select_postpone(scenarios, to_dispatch, to_postpone, 1)
+
+
+def select_postpone_on_threshold(
+    scenarios, to_dispatch, to_postpone, postpone_threshold
+):
+    dispatch_count = get_dispatch_count(scenarios, to_dispatch, to_postpone)
+    postpone_count = len(scenarios) - dispatch_count
+    postpone_count[0] = 0  # depot is never postponed
+
+    return postpone_count >= postpone_threshold * len(scenarios)
+
+
+def select_dispatch_on_threshold(
+    scenarios, to_dispatch, to_postpone, dispatch_threshold
+):
+    dispatch_count = get_dispatch_count(scenarios, to_dispatch, to_postpone)
+    return dispatch_count >= dispatch_threshold * len(scenarios)
+
+
 def get_dispatch_count(scenarios, to_dispatch, to_postpone):
     """
     Computes the dispatch counts for the given solved scenarios.

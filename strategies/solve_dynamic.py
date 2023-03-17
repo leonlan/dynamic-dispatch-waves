@@ -29,25 +29,8 @@ def solve_dynamic(env, dyn_config, disp_config, sim_config, solver_seed):
     costs = {}
     done = False
 
-    def sim_solver(instance, time_limit):
-        return hgs(
-            instance,
-            hgspy.Config(**sim_config.solver_params()),
-            sim_config.node_ops(),
-            sim_config.route_ops(),
-            sim_config.crossover_ops(),
-            hgspy.stop.MaxRuntime(time_limit),
-        )
-
-    def disp_solver(instance, time_limit):
-        return hgs(
-            instance,
-            hgspy.Config(**disp_config.solver_params()),
-            disp_config.node_ops(),
-            disp_config.route_ops(),
-            disp_config.crossover_ops(),
-            hgspy.stop.MaxRuntime(time_limit),
-        )
+    sim_solver = make_static_solver(sim_config)
+    disp_solver = make_static_solver(disp_config)
 
     while not done:
         strategy = STRATEGIES[dyn_config.strategy()]
@@ -82,3 +65,17 @@ def solve_dynamic(env, dyn_config, disp_config, sim_config, solver_seed):
         assert info["error"] is None, info["error"]
 
     return costs, solutions
+
+
+def make_static_solver(static_config):
+    def static_solver(instance, time_limit):
+        return hgs(
+            instance,
+            hgspy.Config(**static_config.solver_params()),
+            static_config.node_ops(),
+            static_config.route_ops(),
+            static_config.crossover_ops(),
+            hgspy.stop.MaxRuntime(time_limit),
+        )
+
+    return static_solver

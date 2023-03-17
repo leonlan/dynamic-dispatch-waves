@@ -9,8 +9,7 @@ import numpy as np
 from tqdm.contrib.concurrent import process_map
 
 import tools
-from environment import VRPEnvironment
-from environment_competition import VRPEnvironment as VRPEnvironmentCompetition
+from environments import Environment, EnvironmentCompetition
 from strategies import solve_dynamic, solve_hindsight
 from strategies.config import Config
 
@@ -64,23 +63,27 @@ def solve(
     epoch_tlim: int,
     num_epochs: int,
     requests_per_epoch: Union[int, list],
+    time_window_style: str,
+    time_window_width: int,
     **kwargs,
 ):
     path = Path(loc)
 
     if environment == "competition":
-        env = VRPEnvironmentCompetition(
+        env = EnvironmentCompetition(
             seed=instance_seed,
             instance=tools.io.read_vrplib(path, instance_format),
             epoch_tlim=epoch_tlim,
         )
     else:
-        env = VRPEnvironment(
+        env = Environment(
             seed=instance_seed,
             instance=tools.io.read_vrplib(path, instance_format),
             epoch_tlim=epoch_tlim,
             num_epochs=num_epochs,
             requests_per_epoch=requests_per_epoch,
+            time_window_style=time_window_style,
+            time_window_width=time_window_width,
         )
 
     start = perf_counter()

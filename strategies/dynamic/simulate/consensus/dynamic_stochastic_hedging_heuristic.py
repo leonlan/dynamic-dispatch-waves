@@ -1,6 +1,6 @@
 import numpy as np
 
-from .utils import get_dispatch_count
+from .utils import get_dispatch_count, select_dispatch_on_threshold
 
 
 def dynamic_stochastic_hedging_heuristic(
@@ -26,7 +26,9 @@ def dynamic_stochastic_hedging_heuristic(
     n_simulations = len(scenarios)
     dispatch_count = get_dispatch_count(scenarios, old_dispatch, old_postpone)
 
-    new_dispatch = dispatch_count >= dispatch_threshold * n_simulations
+    new_dispatch = select_dispatch_on_threshold(
+        scenarios, old_dispatch, old_postpone, dispatch_threshold
+    )
 
     if new_dispatch.sum() == old_dispatch.sum():
         # None of the requests have a dispatch probability of at least

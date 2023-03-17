@@ -1,6 +1,10 @@
 import numpy as np
 
-from .utils import get_dispatch_count
+from .utils import (
+    select_dispatch_on_threshold,
+    select_postpone_on_threshold,
+    sanity_check,
+)
 
 
 def fixed_threshold(
@@ -24,17 +28,14 @@ def fixed_threshold(
     post_thresh_idx = min(cycle_idx, len(postpone_thresholds) - 1)
     postpone_threshold = postpone_thresholds[post_thresh_idx]
 
-    n_simulations = len(scenarios)
-    dispatch_count = get_dispatch_count(scenarios, old_dispatch, old_postpone)
-    postpone_count = n_simulations - dispatch_count
-    postpone_count[0] = 0  # do not postpone depot
+    new_dispatch = select_dispatch_on_threshold(
+        scenarios, old_dispatch, old_postpone, dispatch_threshold
+    )
+    new_postpone = select_postpone_on_threshold(
+        scenarios, old_dispatch, old_postpone, postpone_threshold
+    )
 
-    new_dispatch = dispatch_count >= dispatch_threshold * n_simulations
-    new_postpone = postpone_count > postpone_threshold * n_simulations
-
-    assert np.all(old_dispatch <= new_dispatch)  # old action shouldn't change
-    assert np.all(old_postpone <= new_postpone)
-    assert not new_dispatch[0]  # depot should not be dispatched
-    assert not new_postpone[0]  # depot should not be postponed
+    sanity_check(old_dispatch, new_dispatch)
+    sanity_check(old_postpone, new_postpone)
 
     return new_dispatch, new_postpone

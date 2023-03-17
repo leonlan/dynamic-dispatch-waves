@@ -1,6 +1,10 @@
 import numpy as np
 
-from .utils import get_dispatch_matrix
+from .utils import (
+    get_dispatch_matrix,
+    always_postponed,
+    sanity_check,
+)
 
 
 def adaptive_threshold(
@@ -25,13 +29,9 @@ def adaptive_threshold(
     new_dispatch = old_dispatch.copy()
     new_dispatch[top_k_dispatch] = True
 
-    postpone_count = len(scenarios) - dispatch_count
-    postpone_count[0] = False  # do not postpone depot
-    new_postpone = postpone_count == len(scenarios)
+    new_postpone = always_postponed(scenarios, old_dispatch, old_postpone)
 
-    assert np.all(old_dispatch <= new_dispatch)  # old action shouldn't change
-    assert np.all(old_postpone <= new_postpone)
-    assert not new_dispatch[0]  # depot should not be dispatched
-    assert not new_postpone[0]  # depot should not be postponed
+    sanity_check(old_dispatch, new_dispatch)
+    sanity_check(old_postpone, new_postpone)
 
     return new_dispatch, new_postpone

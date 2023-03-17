@@ -2,7 +2,7 @@ import numpy as np
 
 
 def always_postponed(scenarios, to_dispatch, to_postpone):
-    return select_postpone(scenarios, to_dispatch, to_postpone, 1)
+    return select_postpone_on_threshold(scenarios, to_dispatch, to_postpone, 1)
 
 
 def select_postpone_on_threshold(
@@ -28,6 +28,15 @@ def get_dispatch_count(scenarios, to_dispatch, to_postpone):
     """
     dispatch_matrix = get_dispatch_matrix(scenarios, to_dispatch, to_postpone)
     return dispatch_matrix.sum(axis=0)
+
+
+def sanity_check(old_action, new_action):
+    """
+    Checks that the old action is a subset of the new action, and that the
+    depot is never part of an action.
+    """
+    assert np.all(old_action <= new_action)
+    assert not new_action[0]
 
 
 def get_dispatch_matrix(scenarios, to_dispatch, to_postpone):

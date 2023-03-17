@@ -1,6 +1,8 @@
-import numpy as np
-
-from .utils import is_dispatched
+from .utils import (
+    select_dispatch_on_threshold,
+    select_postpone_on_threshold,
+    verify_action,
+)
 
 
 def fixed_threshold(
@@ -24,26 +26,13 @@ def fixed_threshold(
     post_thresh_idx = min(cycle_idx, len(postpone_thresholds) - 1)
     postpone_threshold = postpone_thresholds[post_thresh_idx]
 
-    n_simulations = len(scenarios)
-    ep_size = old_dispatch.size
+    new_dispatch = select_dispatch_on_threshold(
+        scenarios, old_dispatch, old_postpone, dispatch_threshold
+    )
+    new_postpone = select_postpone_on_threshold(
+        scenarios, old_dispatch, old_postpone, postpone_threshold
+    )
 
-    dispatch_count = np.zeros(ep_size, dtype=int)
-    postpone_count = np.zeros(ep_size, dtype=int)
-
-    for (inst, sol) in scenarios:
-        for route in sol:
-            if is_dispatched(inst, route, old_dispatch, old_postpone):
-                dispatch_count[route] += 1
-            else:
-                # Only count for current epoch requests
-                reqs = [idx for idx in route if idx < ep_size]
-                postpone_count[reqs] += 1
-
-    new_dispatch = dispatch_count >= dispatch_threshold * n_simulations
-    new_postpone = postpone_count > postpone_threshold * n_simulations
-
-    # Verify that the previously fixed actions have not changed
-    assert np.all(old_dispatch <= new_dispatch)
-    assert np.all(old_postpone <= new_postpone)
+    verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone)
 
     return new_dispatch, new_postpone

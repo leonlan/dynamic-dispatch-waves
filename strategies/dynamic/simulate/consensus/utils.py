@@ -1,6 +1,67 @@
 import numpy as np
 
 
+def always_postponed(scenarios, to_dispatch, to_postpone):
+    return select_postpone_on_threshold(scenarios, to_dispatch, to_postpone, 1)
+
+
+def select_postpone_on_threshold(
+    scenarios, to_dispatch, to_postpone, postpone_threshold
+):
+    dispatch_count = get_dispatch_count(scenarios, to_dispatch, to_postpone)
+    postpone_count = len(scenarios) - dispatch_count
+    postpone_count[0] = 0  # depot is never postponed
+
+    return postpone_count >= postpone_threshold * len(scenarios)
+
+
+def select_dispatch_on_threshold(
+    scenarios, to_dispatch, to_postpone, dispatch_threshold
+):
+    dispatch_count = get_dispatch_count(scenarios, to_dispatch, to_postpone)
+    return dispatch_count >= dispatch_threshold * len(scenarios)
+
+
+def get_dispatch_count(scenarios, to_dispatch, to_postpone):
+    """
+    Computes the dispatch counts for the given solved scenarios.
+    """
+    dispatch_matrix = get_dispatch_matrix(scenarios, to_dispatch, to_postpone)
+    return dispatch_matrix.sum(axis=0)
+
+
+def verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone):
+    """
+    Checks that (1) the old actions are a subset of the new actions, (2) the
+    depot is never part of any action, and (3) a request is not dispatch and
+    postpone at the same time.
+    """
+    assert np.all(old_dispatch <= new_dispatch)
+    assert np.all(old_postpone <= new_postpone)
+
+    assert not new_dispatch[0]
+    assert not new_postpone[0]
+
+    assert not np.any(new_dispatch & new_postpone)
+
+
+def get_dispatch_matrix(scenarios, to_dispatch, to_postpone):
+    """
+    Returns a matrix, where each row corresponds to the scenario action. The
+    scenario action is a binary vector, where 1 means that the request was
+    dispatched in this scenario, and 0 means it is postponed.
+    """
+    n_reqs = to_dispatch.size  # including depot
+    dispatch_matrix = np.zeros((len(scenarios), n_reqs), dtype=int)
+
+    for scenario_idx, (inst, sol) in enumerate(scenarios):
+        for route in sol:
+            if is_dispatched(inst, route, to_dispatch, to_postpone):
+                dispatch_matrix[scenario_idx, route] += 1
+
+    return dispatch_matrix
+
+
 def is_dispatched(instance, route, to_dispatch, to_postpone):
     """
     Determines whether the passed-in route was a dispatched route in the

@@ -25,7 +25,9 @@ def parse_args():
     parser.add_argument("--instance_seed", type=int, default=1)
     parser.add_argument("--solver_seed", type=int, default=1)
     parser.add_argument("--num_procs", type=int, default=4)
-    parser.add_argument("--dyn_config_loc", default="configs/dynamic.toml")
+    parser.add_argument(
+        "--dyn_config_loc", default="configs/fixed_threshold.toml"
+    )
     parser.add_argument("--disp_config_loc", default="configs/dispatch.toml")
     parser.add_argument("--sim_config_loc", default="configs/simulation.toml")
     parser.add_argument(

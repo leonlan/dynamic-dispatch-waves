@@ -280,32 +280,20 @@ class Environment:
         if style == "fixed_deadline":
             early = dispatch_time * np.ones(feas.size, dtype=int)
             late = np.min(horizon, early + fixed_width)
-
-            # No need to use the old time windows because it's always the same
-            return np.vstack((early, late)).T
-
-        if style == "variable_deadline":
+        elif style == "variable_deadline":
             early = dispatch_time * np.ones(n_infeas, dtype=int)
             late = np.min(horizon, early + var_widths)
-            new_tw = np.vstack((early, late)).T
-
-            return np.concatenate((old_tw, new_tw))
-
-        if style == "fixed_time_window":
+        elif style == "fixed_time_window":
             early = rng.integers(dispatch_time, last_dispatch_time, n_infeas)
             late = np.min(horizon, early + fixed_width)
-            new_tw = np.vstack((early, late)).T
-
-            return np.concatenate((old_tw, new_tw))
-
-        if style == "variable_time_window":
+        elif style == "variable_time_window":
             early = rng.integers(dispatch_time, last_dispatch_time, n_infeas)
             late = np.min(horizon, early + var_widths)
-            new_tw = np.vstack((early, late)).T
+        else:
+            raise ValueError("Time window style unknown.")
 
-            return np.concatenate((old_tw, new_tw))
-
-        raise ValueError("Time window style unknown.")
+        new_tw = np.vstack((early, late)).T
+        return np.concatenate((old_tw, new_tw))
 
     def _next_observation(self) -> State:
         """

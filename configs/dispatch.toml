@@ -1,0 +1,41 @@
+[static]
+node_ops = [
+    "Exchange10",
+    "Exchange11",
+    "Exchange20",
+    "MoveTwoClientsReversed",
+    "Exchange21",
+    "Exchange22",
+    "TwoOpt",
+]
+
+route_ops = [
+    "RelocateStar",
+    "SwapStar",
+]
+
+crossover_ops = [
+    "selective_route_exchange",
+]
+
+
+[static.params]
+nbGranular = 30
+weightWaitTime = 2
+weightTimeWarp = 5
+postProcessPathLength = 1
+initialTimeWarpPenalty = 1
+nbPenaltyManagement = 100
+feasBooster = 2.0
+penaltyIncrease = 1.2
+penaltyDecrease = 0.85
+targetFeasible = 0.4
+repairProbability = 50
+repairBooster = 10
+minPopSize = 38
+generationSize = 32
+nbElite = 10
+lbDiversity = 0.14015151515151514
+ubDiversity = 0.36742424242424243
+nbClose = 17
+nbIter = 6318

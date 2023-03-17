@@ -24,8 +24,8 @@ def parse_args():
         "--hindsight_config_loc", default="configs/static.toml"
     )
     parser.add_argument("--dyn_config_loc", default="configs/dynamic.toml")
-    parser.add_argument("--sim_config_loc", default="configs/simulation.toml")
     parser.add_argument("--disp_config_loc", default="configs/dispatch.toml")
+    parser.add_argument("--sim_config_loc", default="configs/simulation.toml")
     parser.add_argument(
         "--instance_pattern", default="instances/ortec/ORTEC-VRPTW-ASYM-*.txt"
     )
@@ -58,14 +58,14 @@ def solve(
 
     start = perf_counter()
 
-    dyn_config = Config.from_file(dyn_config_loc).dynamic()
-    sim_config = Config.from_file(sim_config_loc).static()
-    disp_config = Config.from_file(disp_config_loc).static()
-
     if hindsight:
         hindsight_config = Config.from_file(hindsight_config_loc).static()
         costs, routes = solve_hindsight(env, hindsight_config, solver_seed)
     else:
+        dyn_config = Config.from_file(dyn_config_loc).dynamic()
+        disp_config = Config.from_file(disp_config_loc).static()
+        sim_config = Config.from_file(sim_config_loc).static()
+
         costs, routes = solve_dynamic(
             env, dyn_config, disp_config, sim_config, solver_seed
         )

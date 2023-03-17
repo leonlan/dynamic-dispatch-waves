@@ -66,7 +66,7 @@ class Environment:
         latest_open = tw[1:, 0].max()
 
         self.epoch_duration = (latest_open - earliest_open) // (
-            self.num_epochs  # TODO we need some sort of grace period here
+            self.num_epochs + 1  # TODO we need some sort of "buffer" period
         )
         self.start_epoch = 0
         self.end_epoch = self.num_epochs - 1
@@ -278,7 +278,7 @@ class Environment:
         )
 
         if style == "fixed_deadlines":
-            early = dispatch_time * np.ones(feas.size, dtype=int)
+            early = dispatch_time * np.ones(n_infeas, dtype=int)
             late = np.minimum(horizon, early + fixed_width)
         elif style == "variable_deadlines":
             early = dispatch_time * np.ones(n_infeas, dtype=int)

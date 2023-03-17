@@ -277,18 +277,18 @@ class Environment:
             epochs_left, size=n_infeas
         )
 
-        if style == "fixed_deadline":
+        if style == "fixed_deadlines":
             early = dispatch_time * np.ones(feas.size, dtype=int)
-            late = np.min(horizon, early + fixed_width)
-        elif style == "variable_deadline":
+            late = np.minimum(horizon, early + fixed_width)
+        elif style == "variable_deadlines":
             early = dispatch_time * np.ones(n_infeas, dtype=int)
-            late = np.min(horizon, early + var_widths)
-        elif style == "fixed_time_window":
+            late = np.minimum(horizon, early + var_widths)
+        elif style == "fixed_time_windows":
             early = rng.integers(dispatch_time, last_dispatch_time, n_infeas)
-            late = np.min(horizon, early + fixed_width)
-        elif style == "variable_time_window":
+            late = np.minimum(horizon, early + fixed_width)
+        elif style == "variable_time_windows":
             early = rng.integers(dispatch_time, last_dispatch_time, n_infeas)
-            late = np.min(horizon, early + var_widths)
+            late = np.minimum(horizon, early + var_widths)
         else:
             raise ValueError("Time window style unknown.")
 

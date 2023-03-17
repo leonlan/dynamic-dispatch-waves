@@ -6,7 +6,7 @@ from strategies.static import hgs
 from .utils import sol2ep
 
 
-def solve_dynamic(env, config, sim_solver, disp_solver, solver_seed):
+def solve_dynamic(env, dyn_config, disp_config, sim_config, solver_seed):
     """
     Solve the dynamic VRPTW problem using the passed-in dispatching strategy.
     The given seed is used to initialise both the random number stream on the
@@ -29,23 +29,41 @@ def solve_dynamic(env, config, sim_solver, disp_solver, solver_seed):
     costs = {}
     done = False
 
-    config = config.dynamic()
+    def sim_solver(instance, time_limit):
+        return hgs(
+            instance,
+            hgspy.Config(**sim_config.solver_params()),
+            sim_config.node_ops(),
+            sim_config.route_ops(),
+            sim_config.crossover_ops(),
+            hgspy.stop.MaxRuntime(time_limit),
+        )
+
+    def disp_solver(instance, time_limit):
+        return hgs(
+            instance,
+            hgspy.Config(**disp_config.solver_params()),
+            disp_config.node_ops(),
+            disp_config.route_ops(),
+            disp_config.crossover_ops(),
+            hgspy.stop.MaxRuntime(time_limit),
+        )
 
     while not done:
-        strategy = STRATEGIES[config.strategy()]
+        strategy = STRATEGIES[dyn_config.strategy()]
         dispatch_inst = strategy(
             env,
             static_info,
             observation,
             rng,
             sim_solver,
-            **config.strategy_params()
+            **dyn_config.strategy_params()
         )
 
         solve_tlim = ep_tlim
 
         # Reduce the solving time limit by the simulation time
-        strategy_params = config.get("strategy_params", {})
+        strategy_params = dyn_config.get("strategy_params", {})
         sim_tlim_factor = strategy_params.get("simulate_tlim_factor", 0)
         solve_tlim *= 1 - sim_tlim_factor
 
@@ -53,7 +71,7 @@ def solve_dynamic(env, config, sim_solver, disp_solver, solver_seed):
         best = res.get_best_found()
         routes = [route for route in best.get_routes() if route]
 
-        ep_sol = sol2ep(routes, dispatch_inst, config["postpone_routes"])
+        ep_sol = sol2ep(routes, dispatch_inst, dyn_config["postpone_routes"])
 
         current_epoch = observation["current_epoch"]
         solutions[current_epoch] = ep_sol

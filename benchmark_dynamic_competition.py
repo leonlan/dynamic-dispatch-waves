@@ -22,9 +22,7 @@ def parse_args():
     parser.add_argument("--solver_seed", type=int, default=1)
     parser.add_argument("--num_procs", type=int, default=4)
     parser.add_argument("--hindsight", action="store_true")
-    parser.add_argument(
-        "--config_loc", default="configs/benchmark_dynamic.toml"
-    )
+    parser.add_argument("--dyn_config_loc", default="configs/dynamic.toml")
     parser.add_argument("--sim_config_loc", default="configs/simulation.toml")
     parser.add_argument("--disp_config_loc", default="configs/dispatch.toml")
     parser.add_argument(
@@ -58,35 +56,15 @@ def solve(
 
     start = perf_counter()
 
-    config = Config.from_file(config_loc)
+    dyn_config = Config.from_file(dyn_config_loc).dynamic()
     sim_config = Config.from_file(sim_config_loc).static()
     disp_config = Config.from_file(disp_config_loc).static()
 
-    def sim_solver(instance, time_limit):
-        return hgs(
-            instance,
-            hgspy.Config(**sim_config.solver_params()),
-            sim_config.node_ops(),
-            sim_config.route_ops(),
-            sim_config.crossover_ops(),
-            hgspy.stop.MaxRuntime(time_limit),
-        )
-
-    def disp_solver(instance, time_limit):
-        return hgs(
-            instance,
-            hgspy.Config(**disp_config.solver_params()),
-            disp_config.node_ops(),
-            disp_config.route_ops(),
-            disp_config.crossover_ops(),
-            hgspy.stop.MaxRuntime(time_limit),
-        )
-
     if hindsight:
-        costs, routes = solve_hindsight(env, config.static(), solver_seed)
+        costs, routes = solve_hindsight(env, disp_config, solver_seed)
     else:
         costs, routes = solve_dynamic(
-            env, config, sim_solver, disp_solver, solver_seed
+            env, dyn_config, disp_config, sim_config, solver_seed
         )
 
     run_time = round(perf_counter() - start, 2)

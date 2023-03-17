@@ -195,13 +195,10 @@ class Environment:
         Samples requests from an epoch.
         """
         dist = self.instance["duration_matrix"]
-
         dispatch_time = (epoch_idx + 1) * self.epoch_duration  # next epoch
-
         n_customers = self.instance["is_depot"].size - 1  # Exclude depot
 
-        # The solution method may need to use a different rng to sample
-        if rng is None:
+        if rng is None:  # enables solution method to use different rng
             rng = self.rng
 
         noise = rng.uniform(0.9, 1.1)

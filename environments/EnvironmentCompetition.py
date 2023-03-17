@@ -187,15 +187,13 @@ class EnvironmentCompetition:
         Samples requests from an epoch.
         """
         dist = self.instance["duration_matrix"]
+        n_customers = self.instance["is_depot"].size - 1  # Exclude depot
+        n_samples = self.max_requests_per_epoch
 
         current_time = epoch_idx * self.epoch_duration
         dispatch_time = current_time + self.dispatch_margin
 
-        n_customers = self.instance["is_depot"].size - 1  # Exclude depot
-        n_samples = self.max_requests_per_epoch
-
-        # The solution method may need to use a different rng
-        if rng is None:
+        if rng is None:  # enables solution method to use different rng
             rng = self.rng
 
         # Sample data uniformly from customers (1 to num_customers)

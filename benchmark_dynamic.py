@@ -18,27 +18,27 @@ from strategies.config import Config
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--instance_seed", type=int, default=1)
-    parser.add_argument("--solver_seed", type=int, default=1)
-    parser.add_argument("--num_procs", type=int, default=4)
-    parser.add_argument("--hindsight", action="store_true")
-    parser.add_argument(
-        "--hindsight_config_loc", default="configs/static.toml"
-    )
-    parser.add_argument("--dyn_config_loc", default="configs/dynamic.toml")
-    parser.add_argument("--disp_config_loc", default="configs/dispatch.toml")
-    parser.add_argument("--sim_config_loc", default="configs/simulation.toml")
     parser.add_argument(
         "--instance_pattern", default="instances/ortec/ORTEC-VRPTW-ASYM-*.txt"
     )
     parser.add_argument("--instance_format", default="vrplib")
-    parser.add_argument("--epoch_tlim", type=float, default=60)
+    parser.add_argument("--instance_seed", type=int, default=1)
+    parser.add_argument("--solver_seed", type=int, default=1)
+    parser.add_argument("--num_procs", type=int, default=4)
+    parser.add_argument("--dyn_config_loc", default="configs/dynamic.toml")
+    parser.add_argument("--disp_config_loc", default="configs/dispatch.toml")
+    parser.add_argument("--sim_config_loc", default="configs/simulation.toml")
+    parser.add_argument(
+        "--hindsight_config_loc", default="configs/static.toml"
+    )
+    parser.add_argument("--hindsight", action="store_true")
     parser.add_argument(
         "--environment",
         type=str,
         default="paper",
         choices=["paper", "competition"],
     )
+    parser.add_argument("--epoch_tlim", type=float, default=60)
     parser.add_argument("--num_epochs", type=int, default=8)
     parser.add_argument(
         "--requests_per_epoch", type=int, nargs="+", default=100
@@ -49,15 +49,15 @@ def parse_args():
 
 def solve(
     loc: str,
-    environment: str,
-    instance_seed: int,
     instance_format: str,
+    instance_seed: int,
     solver_seed: int,
-    hindsight_config_loc: str,
     dyn_config_loc: str,
-    sim_config_loc: str,
     disp_config_loc: str,
+    sim_config_loc: str,
+    hindsight_config_loc: str,
     hindsight: bool,
+    environment: str,
     epoch_tlim: int,
     num_epochs: int,
     requests_per_epoch: Union[int, list],

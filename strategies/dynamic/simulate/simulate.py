@@ -1,9 +1,7 @@
 import numpy as np
 
-import hgspy
 import tools
 from .consensus import CONSENSUS
-from strategies.static import hgs
 from strategies.utils import filter_instance
 from .simulate_instance import simulate_instance
 
@@ -13,16 +11,13 @@ def simulate(
     info,
     obs,
     rng,
+    sim_solver,
     simulate_tlim_factor: float,
     n_cycles: int,
     n_simulations: int,
     n_lookahead: int,
-    sim_config: dict,
-    node_ops: list,
-    route_ops: list,
-    crossover_ops: list,
     consensus: str,
-    consensus_params: dict,
+    consensus_params: dict = {},
     **kwargs,
 ):
     """
@@ -37,6 +32,7 @@ def simulate(
     # Parameters
     ep_inst = obs["epoch_instance"]
     ep_size = ep_inst["is_depot"].size  # includes depot
+    n_cycles = n_cycles if n_cycles > 0 else ep_size  # for DSHH and BRH
 
     total_sim_tlim = simulate_tlim_factor * info["epoch_tlim"]
     single_sim_tlim = total_sim_tlim / (n_cycles * n_simulations)
@@ -58,15 +54,7 @@ def simulate(
                 to_postpone,
             )
 
-            res = hgs(
-                sim_inst,
-                hgspy.Config(**sim_config),
-                [getattr(hgspy.operators, op) for op in node_ops],
-                [getattr(hgspy.operators, op) for op in route_ops],
-                [getattr(hgspy.crossover, op) for op in crossover_ops],
-                hgspy.stop.MaxRuntime(single_sim_tlim),
-            )
-
+            res = sim_solver(sim_inst, single_sim_tlim)
             sim_sol = [r for r in res.get_best_found().get_routes() if r]
             tools.validation.validate_static_solution(sim_inst, sim_sol)
 

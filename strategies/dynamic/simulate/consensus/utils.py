@@ -1,16 +1,90 @@
-def is_dispatched(instance, route, to_dispatch):
+import numpy as np
+
+
+def always_postponed(scenarios, to_dispatch, to_postpone):
+    return select_postpone_on_threshold(scenarios, to_dispatch, to_postpone, 1)
+
+
+def select_postpone_on_threshold(
+    scenarios, to_dispatch, to_postpone, postpone_threshold
+):
+    dispatch_count = get_dispatch_count(scenarios, to_dispatch, to_postpone)
+    postpone_count = len(scenarios) - dispatch_count
+    postpone_count[0] = 0  # depot is never postponed
+
+    return postpone_count >= postpone_threshold * len(scenarios)
+
+
+def select_dispatch_on_threshold(
+    scenarios, to_dispatch, to_postpone, dispatch_threshold
+):
+    dispatch_count = get_dispatch_count(scenarios, to_dispatch, to_postpone)
+    return dispatch_count >= dispatch_threshold * len(scenarios)
+
+
+def get_dispatch_count(scenarios, to_dispatch, to_postpone):
     """
-    Returns true if the route contains requests that are marked `to_dispatch`,
-    or if the route, consisting of epoch requests, cannot be postponed to the
-    next epoch.
+    Computes the dispatch counts for the given solved scenarios.
+    """
+    dispatch_matrix = get_dispatch_matrix(scenarios, to_dispatch, to_postpone)
+    return dispatch_matrix.sum(axis=0)
+
+
+def verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone):
+    """
+    Checks that (1) the old actions are a subset of the new actions, (2) the
+    depot is never part of any action, and (3) a request is not dispatch and
+    postpone at the same time.
+    """
+    assert np.all(old_dispatch <= new_dispatch)
+    assert np.all(old_postpone <= new_postpone)
+
+    assert not new_dispatch[0]
+    assert not new_postpone[0]
+
+    assert not np.any(new_dispatch & new_postpone)
+
+
+def get_dispatch_matrix(scenarios, to_dispatch, to_postpone):
+    """
+    Returns a matrix, where each row corresponds to the scenario action. The
+    scenario action is a binary vector, where 1 means that the request was
+    dispatched in this scenario, and 0 means it is postponed.
+    """
+    n_reqs = to_dispatch.size  # including depot
+    dispatch_matrix = np.zeros((len(scenarios), n_reqs), dtype=int)
+
+    for scenario_idx, (inst, sol) in enumerate(scenarios):
+        for route in sol:
+            if is_dispatched(inst, route, to_dispatch, to_postpone):
+                dispatch_matrix[scenario_idx, route] += 1
+
+    return dispatch_matrix
+
+
+def is_dispatched(instance, route, to_dispatch, to_postpone):
+    """
+    Determines whether the passed-in route was a dispatched route in the
+    simulations or not. A route is considered dispatched w.r.t. the current
+    instance if:
+    - at least one the requests is marked dispatched, or
+    - the route does not contain postponed or simulated requests and the route
+      cannot be postponed to the next epoch without violating feasibility.
     """
     n_reqs = to_dispatch.size
 
-    is_to_dispatch = any(to_dispatch[idx] for idx in route if idx < n_reqs)
-    only_ep_reqs = all(idx < n_reqs for idx in route)
-    cannot_postpone = not can_postpone_route(instance, route)
+    has_to_dispatch = any(to_dispatch[idx] for idx in route if idx < n_reqs)
 
-    return is_to_dispatch or (only_ep_reqs and cannot_postpone)
+    if has_to_dispatch:
+        return True
+
+    has_postponed_reqs = any(to_postpone[idx] for idx in route if idx < n_reqs)
+    has_simulated_reqs = any(idx >= n_reqs for idx in route)
+
+    if has_postponed_reqs or has_simulated_reqs:
+        return False
+
+    return not can_postpone_route(instance, route)
 
 
 def can_postpone_route(instance, route):
@@ -23,9 +97,10 @@ def can_postpone_route(instance, route):
     dist = instance["duration_matrix"]
     service = instance["service_times"]
 
-    current_time = (
-        3600  # TODO This should be the epoch duration from the environment
-    )
+    # HACK The next epoch time is inferred from the smallest non-zero release
+    # times. We can also infer this from the environment.
+    release_times = instance["release_times"]
+    current_time = np.min(release_times[np.nonzero(release_times)])
 
     for idx in range(len(tour) - 1):
         pred, succ = tour[idx], tour[idx + 1]

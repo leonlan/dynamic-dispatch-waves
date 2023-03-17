@@ -10,6 +10,7 @@ from tqdm.contrib.concurrent import process_map
 
 import tools
 from environment import VRPEnvironment
+from environment_competition import VRPEnvironment as VRPEnvironmentCompetition
 from strategies import solve_dynamic, solve_hindsight
 from strategies.config import Config
 
@@ -17,17 +18,28 @@ from strategies.config import Config
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--instance_seed", type=int, default=1)
-    parser.add_argument("--solver_seed", type=int, default=1)
-    parser.add_argument("--num_procs", type=int, default=4)
-    parser.add_argument("--hindsight", action="store_true")
-    parser.add_argument(
-        "--config_loc", default="configs/benchmark_dynamic.toml"
-    )
     parser.add_argument(
         "--instance_pattern", default="instances/ortec/ORTEC-VRPTW-ASYM-*.txt"
     )
     parser.add_argument("--instance_format", default="vrplib")
+    parser.add_argument("--instance_seed", type=int, default=1)
+    parser.add_argument("--solver_seed", type=int, default=1)
+    parser.add_argument("--num_procs", type=int, default=4)
+    parser.add_argument(
+        "--dyn_config_loc", default="configs/fixed_threshold.toml"
+    )
+    parser.add_argument("--disp_config_loc", default="configs/dispatch.toml")
+    parser.add_argument("--sim_config_loc", default="configs/simulation.toml")
+    parser.add_argument(
+        "--hindsight_config_loc", default="configs/static.toml"
+    )
+    parser.add_argument("--hindsight", action="store_true")
+    parser.add_argument(
+        "--environment",
+        type=str,
+        default="paper",
+        choices=["paper", "competition"],
+    )
     parser.add_argument("--epoch_tlim", type=float, default=60)
     parser.add_argument("--num_epochs", type=int, default=8)
     parser.add_argument(
@@ -40,11 +52,15 @@ def parse_args():
 
 def solve(
     loc: str,
-    instance_seed: int,
     instance_format: str,
+    instance_seed: int,
     solver_seed: int,
-    config_loc: str,
+    dyn_config_loc: str,
+    disp_config_loc: str,
+    sim_config_loc: str,
+    hindsight_config_loc: str,
     hindsight: bool,
+    environment: str,
     epoch_tlim: int,
     num_epochs: int,
     requests_per_epoch: Union[int, list],
@@ -52,22 +68,34 @@ def solve(
 ):
     path = Path(loc)
 
-    env = VRPEnvironment(
-        seed=instance_seed,
-        instance=tools.io.read_vrplib(path, instance_format),
-        epoch_tlim=epoch_tlim,
-        num_epochs=num_epochs,
-        requests_per_epoch=requests_per_epoch,
-    )
+    if environment == "competition":
+        env = VRPEnvironmentCompetition(
+            seed=instance_seed,
+            instance=tools.io.read_vrplib(path, instance_format),
+            epoch_tlim=epoch_tlim,
+        )
+    else:
+        env = VRPEnvironment(
+            seed=instance_seed,
+            instance=tools.io.read_vrplib(path, instance_format),
+            epoch_tlim=epoch_tlim,
+            num_epochs=num_epochs,
+            requests_per_epoch=requests_per_epoch,
+        )
 
     start = perf_counter()
 
-    config = Config.from_file(config_loc)
-
     if hindsight:
-        costs, routes = solve_hindsight(env, config.static(), solver_seed)
+        hindsight_config = Config.from_file(hindsight_config_loc).static()
+        costs, routes = solve_hindsight(env, hindsight_config, solver_seed)
     else:
-        costs, routes = solve_dynamic(env, config, solver_seed)
+        dyn_config = Config.from_file(dyn_config_loc).dynamic()
+        disp_config = Config.from_file(disp_config_loc).static()
+        sim_config = Config.from_file(sim_config_loc).static()
+
+        costs, routes = solve_dynamic(
+            env, dyn_config, disp_config, sim_config, solver_seed
+        )
 
     run_time = round(perf_counter() - start, 2)
 
@@ -122,9 +150,9 @@ def main():
         " ".join(f"--{key} {value}" for key, value in vars(args).items()),
     )
 
-    config = Config.from_file(args.config_loc)
+    dyn_config = Config.from_file(args.dyn_config_loc).dynamic()
     print("dynamic config:")
-    print(config.dynamic())
+    print(dyn_config)
 
     print("\n", table, "\n", sep="")
     print(f"      Avg. objective: {data['total'].mean():.0f}")

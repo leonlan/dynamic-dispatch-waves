@@ -1,0 +1,11 @@
+[dynamic]
+strategy = "simulate"
+postpone_routes = false
+
+
+[dynamic.strategy_params]
+simulate_tlim_factor = 0.80
+n_cycles = 10
+n_simulations = 20
+n_lookahead = 1
+consensus = "hamming_distance"

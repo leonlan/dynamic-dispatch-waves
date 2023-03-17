@@ -1,44 +1,36 @@
 import numpy as np
 
-from .utils import is_dispatched
+from .utils import (
+    get_dispatch_matrix,
+    always_postponed,
+    verify_action,
+)
 
 
 def adaptive_threshold(
-    cycle_idx,
-    scenarios,
-    to_dispatch,
-    to_postpone,
-    pct_dispatch,
-    **kwargs,
+    cycle_idx, scenarios, old_dispatch, old_postpone, **kwargs
 ):
     """
-    Determines how many requests to dispatch based on the average number of
+    Determines how many requests to dispatch based on the minimum number of
     dispatched requests in the solutions pool. Let k be this number. Then the
-    top-(k * pct_dispatch) requests that were most frequently dispatched in the
-    simulations are marked dispatched.
+    k most frequently dispatched requests are marked dispatched. Also, all
+    requests that are always postponed are marked as postponed.
     """
-    ep_size = to_dispatch.size
-    dispatch_count = np.zeros(ep_size, dtype=int)
+    dispatch_matrix = get_dispatch_matrix(
+        scenarios, old_dispatch, old_postpone
+    )
+    dispatch_count = dispatch_matrix.sum(axis=0)
+    num_dispatch_per_scenario = dispatch_matrix.sum(axis=1)
 
-    for (inst, sol) in scenarios:
-        for route in sol:
-            if is_dispatched(inst, route, to_dispatch):
-                dispatch_count[route] += 1
+    # TODO This can also be average, but IDK which works better
+    min_num_dispatch = np.min(num_dispatch_per_scenario)
+    top_k_dispatch = (-dispatch_count).argsort()[:min_num_dispatch]
 
-    num_disp = [
-        num_dispatched(inst, sol, to_dispatch) for (inst, sol) in scenarios
-    ]
-    avg_num_disp = int(np.mean(num_disp) * pct_dispatch)
+    new_dispatch = old_dispatch.copy()
+    new_dispatch[top_k_dispatch] = True
 
-    top_k_dispatch = (-dispatch_count).argsort()[:avg_num_disp]
-    to_dispatch[top_k_dispatch] = True
+    new_postpone = always_postponed(scenarios, old_dispatch, old_postpone)
 
-    # Never dispatch or postpone the depot
-    to_dispatch[0] = False
-    to_postpone[0] = False
+    verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone)
 
-    return to_dispatch, to_postpone
-
-
-def num_dispatched(inst, sol, to_dispatch):
-    return sum([len(rt) for rt in sol if is_dispatched(inst, rt, to_dispatch)])
+    return new_dispatch, new_postpone

@@ -1,4 +1,5 @@
-from .utils import get_dispatch_matrix, always_postponed, sanity_check
+import numpy as np
+from .utils import get_dispatch_matrix, always_postponed, verify_action
 
 
 def hamming_distance(
@@ -18,7 +19,6 @@ def hamming_distance(
     new_dispatch = dispatch_matrix[mae.argsort()[0]].astype(bool)
     new_postpone = always_postponed(scenarios, old_dispatch, old_postpone)
 
-    sanity_check(old_dispatch, new_dispatch)
-    sanity_check(old_postpone, new_postpone)
+    verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone)
 
     return new_dispatch, new_postpone

@@ -30,13 +30,19 @@ def get_dispatch_count(scenarios, to_dispatch, to_postpone):
     return dispatch_matrix.sum(axis=0)
 
 
-def sanity_check(old_action, new_action):
+def verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone):
     """
-    Checks that the old action is a subset of the new action, and that the
-    depot is never part of an action.
+    Checks that (1) the old actions are a subset of the new actions, (2) the
+    depot is never part of any action, and (3) a request is not dispatch and
+    postpone at the same time.
     """
-    assert np.all(old_action <= new_action)
-    assert not new_action[0]
+    assert np.all(old_dispatch <= new_dispatch)
+    assert np.all(old_postpone <= new_postpone)
+
+    assert not new_dispatch[0]
+    assert not new_postpone[0]
+
+    assert not np.any(new_dispatch & new_postpone)
 
 
 def get_dispatch_matrix(scenarios, to_dispatch, to_postpone):

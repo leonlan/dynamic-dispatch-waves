@@ -1,9 +1,7 @@
-import numpy as np
-
 from .utils import (
     select_dispatch_on_threshold,
     select_postpone_on_threshold,
-    sanity_check,
+    verify_action,
 )
 
 
@@ -35,7 +33,6 @@ def fixed_threshold(
         scenarios, old_dispatch, old_postpone, postpone_threshold
     )
 
-    sanity_check(old_dispatch, new_dispatch)
-    sanity_check(old_postpone, new_postpone)
+    verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone)
 
     return new_dispatch, new_postpone

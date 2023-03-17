@@ -1,6 +1,10 @@
 import numpy as np
 
-from .utils import get_dispatch_count, select_dispatch_on_threshold
+from .utils import (
+    get_dispatch_count,
+    select_dispatch_on_threshold,
+    verify_action,
+)
 
 
 def dynamic_stochastic_hedging_heuristic(
@@ -39,7 +43,7 @@ def dynamic_stochastic_hedging_heuristic(
         if dispatch_count[candidate] >= min_dispatch_threshold * n_simulations:
             new_dispatch[candidate] = True
 
-    assert np.all(old_dispatch <= new_dispatch)  # old action shouldn't change
-    assert not new_dispatch[0]  # depot should not be dispatched
+    new_postpone = old_postpone.copy()
+    verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone)
 
-    return new_dispatch, old_postpone.copy()
+    return new_dispatch, new_postpone

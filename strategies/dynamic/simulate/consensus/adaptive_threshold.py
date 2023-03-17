@@ -3,7 +3,7 @@ import numpy as np
 from .utils import (
     get_dispatch_matrix,
     always_postponed,
-    sanity_check,
+    verify_action,
 )
 
 
@@ -31,7 +31,6 @@ def adaptive_threshold(
 
     new_postpone = always_postponed(scenarios, old_dispatch, old_postpone)
 
-    sanity_check(old_dispatch, new_dispatch)
-    sanity_check(old_postpone, new_postpone)
+    verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone)
 
     return new_dispatch, new_postpone

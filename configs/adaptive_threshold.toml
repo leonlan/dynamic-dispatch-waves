@@ -5,8 +5,8 @@ postpone_routes = false
 
 [dynamic.strategy_params]
 simulate_tlim_factor = 0.80
-n_cycles = 5
-n_simulations = 30
+n_cycles = 10
+n_simulations = 20
 n_lookahead = 1
 consensus = "adaptive_threshold"
 

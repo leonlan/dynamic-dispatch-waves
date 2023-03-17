@@ -25,9 +25,11 @@ class Environment:
     requests_per_epoch
         The expected number of revealed requests per epoch.
     time_window_style
-        The time window style, one of ['static', 'fixed', 'deadline'].
+        The time window style, one of ['fixed_deadline', 'variable_deadline',
+        'fixed_time_window', 'variable_time_window'].
     time_window_width
-        The width of the time window in number of epoch durations.
+        The width of the time window in number of epoch durations. Only
+        applicable when a variable time window style is selected.
     """
 
     def __init__(
@@ -37,7 +39,7 @@ class Environment:
         epoch_tlim: float,
         num_epochs: int = 8,
         requests_per_epoch: Union[int, List] = 50,
-        time_window_style: str = "static",
+        time_window_style: str = "fixed_time_windows",
         time_window_width: int = 3,
     ):
         self.seed = seed
@@ -276,39 +278,30 @@ class Environment:
         )
 
         if style == "fixed_deadline":
-            # The time window is a deadline of fixed width. The earliest
-            # time window starts at the moment that the order can be dispatched
-            # and the latest time window is the same plus a specific width.
             early = dispatch_time * np.ones(feas.size, dtype=int)
+            late = np.min(horizon, early + fixed_width)
 
             # No need to use the old time windows because it's always the same
-            return np.vstack((early, np.min(horizon, early + fixed_width))).T
+            return np.vstack((early, late)).T
 
         if style == "variable_deadline":
-            # The time window is a deadline of variable width. The earliest
-            # time window starts at the moment that the order can be dispatched
-            # and the latest time window is some uniformally sampled time
-            # between early and horizon.
             early = dispatch_time * np.ones(n_infeas, dtype=int)
-            new_tw = np.vstack((early, np.min(horizon, early + var_widths))).T
+            late = np.min(horizon, early + var_widths)
+            new_tw = np.vstack((early, late)).T
 
             return np.concatenate((old_tw, new_tw))
 
         if style == "fixed_time_window":
-            # For each new sampled request, we take a point in the future
-            # between [dispatch_time, last_dispatch_time] and then the time
-            # window starts at that point T and ends at T + time window width.
             early = rng.integers(dispatch_time, last_dispatch_time, n_infeas)
-            new_tw = np.vstack((early, np.min(horizon, early + fixed_width))).T
+            late = np.min(horizon, early + fixed_width)
+            new_tw = np.vstack((early, late)).T
 
             return np.concatenate((old_tw, new_tw))
 
         if style == "variable_time_window":
-            # For each new sampled request, we take a point in the future
-            # between [dispatch_time, last_dispatch_time] and then the time
-            # window starts at that point T and ends at T + time window width.
             early = rng.integers(dispatch_time, last_dispatch_time, n_infeas)
-            new_tw = np.vstack((early, np.min(horizon, early + var_widths))).T
+            late = np.min(horizon, early + var_widths)
+            new_tw = np.vstack((early, late)).T
 
             return np.concatenate((old_tw, new_tw))
 

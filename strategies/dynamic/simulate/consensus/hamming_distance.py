@@ -1,4 +1,3 @@
-import numpy as np
 from .utils import get_dispatch_matrix, always_postponed, verify_action
 
 

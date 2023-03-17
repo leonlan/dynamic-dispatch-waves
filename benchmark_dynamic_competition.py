@@ -8,11 +8,9 @@ import numpy as np
 from tqdm.contrib.concurrent import process_map
 
 import tools
-import hgspy
 from environment_competition import VRPEnvironment
 from strategies import solve_dynamic, solve_hindsight
 from strategies.config import Config
-from strategies.static import hgs
 
 
 def parse_args():
@@ -42,7 +40,8 @@ def solve(
     instance_seed: int,
     instance_format: str,
     solver_seed: int,
-    config_loc: str,
+    hindsight_config_loc: str,
+    dyn_config_loc: str,
     sim_config_loc: str,
     disp_config_loc: str,
     hindsight: bool,
@@ -64,7 +63,8 @@ def solve(
     disp_config = Config.from_file(disp_config_loc).static()
 
     if hindsight:
-        costs, routes = solve_hindsight(env, disp_config, solver_seed)
+        hindsight_config = Config.from_file(hindsight_config_loc).static()
+        costs, routes = solve_hindsight(env, hindsight_config, solver_seed)
     else:
         costs, routes = solve_dynamic(
             env, dyn_config, disp_config, sim_config, solver_seed

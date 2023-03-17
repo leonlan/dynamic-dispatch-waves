@@ -1,3 +1,4 @@
+import numpy as np
 from .utils import get_dispatch_matrix, always_postponed, verify_action
 
 
@@ -13,9 +14,18 @@ def hamming_distance(
         scenarios, old_dispatch, old_postpone
     )
 
-    # Mean absolute error a.k.a. average Hamming distance
-    mae = (abs(dispatch_matrix - dispatch_matrix.mean(axis=0))).mean(axis=1)
-    new_dispatch = dispatch_matrix[mae.argsort()[0]].astype(bool)
+    n, _ = dispatch_matrix.shape
+    hamming_distances = np.zeros(n)
+
+    for i in range(n):
+        row = dispatch_matrix[i, :]
+        other_rows = np.delete(dispatch_matrix, i, axis=0)
+        row_distances = np.sum(np.abs(other_rows - row), axis=1)
+        hamming_distances[i] = np.sum(row_distances)
+
+    sol_idx = hamming_distances.argmin()
+    new_dispatch = dispatch_matrix[sol_idx].astype(bool)
+
     new_postpone = always_postponed(scenarios, old_dispatch, old_postpone)
 
     verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone)

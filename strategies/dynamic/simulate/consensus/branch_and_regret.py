@@ -26,6 +26,7 @@ def branch_and_regret(
 
     dispatch_cost = evaluate_cost(scenarios, dispatch=(candidate,))
     postpone_cost = evaluate_cost(scenarios, postpone=(candidate,))
+    print(dispatch_cost, postpone_cost)
 
     new_dispatch = old_dispatch.copy()
     new_postpone = old_postpone.copy()
@@ -64,15 +65,14 @@ def evaluate_cost(scenarios, dispatch=(), postpone=()):
 
         nn_config_loc = "configs/nearest_neighbour.toml"
         nn_config = Config.from_file(nn_config_loc).static()
-        nearest_neighbour_alg = nearest_neighbour(
+        res = nearest_neighbour(
             inst,
             config=hgspy.Config(**nn_config.solver_params()),
             node_ops=nn_config.node_ops(),
             initial_solution=init,
         )
 
-        res = nearest_neighbour_alg(inst, initial_solutions=[init])
-        total += res.get_best_found().cost()
+        total += res.cost()
 
         # Undo changes to instance
         for req in dispatch:

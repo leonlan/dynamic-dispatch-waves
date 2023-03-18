@@ -185,6 +185,16 @@ Individual::Individual(Params const *params, Routes routes)
       routes_(std::move(routes)),
       neighbours(params->nbClients + 1)
 {
+    if (routes_.size() > static_cast<size_t>(params->nbVehicles))
+    {
+        auto const msg = "Number of routes must not exceed number of vehicles.";
+        throw std::runtime_error(msg);
+    }
+
+    // Expand to at least numVehicles routes, where any newly inserted routes
+    // will be empty.
+    routes_.resize(params->nbVehicles);
+
     // a precedes b only when a is not empty and b is. Combined with a stable
     // sort, this ensures we keep the original sorting as much as possible, but
     // also make sure all empty routes are at the end of routes_.

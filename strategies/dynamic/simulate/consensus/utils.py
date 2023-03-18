@@ -98,7 +98,8 @@ def can_postpone_route(instance, route):
     service = instance["service_times"]
 
     # HACK The next epoch time is inferred from the smallest non-zero release
-    # times. We can also infer this from the environment.
+    # times, which is the time that the route can start. It is assumed that
+    # this route only contains current epoch requests.
     release_times = instance["release_times"]
     current_time = np.min(release_times[np.nonzero(release_times)])
 

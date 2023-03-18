@@ -59,9 +59,14 @@ def evaluate_cost(scenarios, sim_solver, time_limit, dispatch=(), postpone=()):
         for req in dispatch:
             inst["latest_dispatch"][req] = 0
 
+        # HACK The next epoch time is inferred from the smallest non-zero release
+        # times.
+        release_times = inst["release_times"]
+        next_epoch_time = np.min(release_times[np.nonzero(release_times)])
+
         for req in postpone:
             # TODO make this environment dependent?
-            inst["release_times"][req] = 3600
+            inst["release_times"][req] = next_epoch_time
 
         candidates = list(dispatch) + list(postpone)
         init = [

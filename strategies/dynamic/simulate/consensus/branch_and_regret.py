@@ -1,10 +1,13 @@
 import numpy as np
 
+import hgspy
+from strategies.static import nearest_neighbour
+from strategies.config import Config
 from .utils import get_dispatch_count
 
 
 def branch_and_regret(
-    cycle_idx, scenarios, old_dispatch, old_postpone, cost_eval_tlim, **kwargs
+    cycle_idx, scenarios, old_dispatch, old_postpone, **kwargs
 ):
     """
     The Branch-and-Regret Heuristic [2] selects in each iteration the most
@@ -21,19 +24,8 @@ def branch_and_regret(
     if candidate == 0:  # stop when the best candidate is the depot
         return old_dispatch, old_postpone
 
-    dispatch_cost = evaluate_cost(
-        scenarios,
-        sim_solver=kwargs["sim_solver"],
-        time_limit=cost_eval_tlim,
-        dispatch=(candidate,),
-    )
-    postpone_cost = evaluate_cost(
-        scenarios,
-        sim_solver=kwargs["sim_solver"],
-        time_limit=cost_eval_tlim,
-        postpone=(candidate,),
-    )
-    print(dispatch_cost, postpone_cost)
+    dispatch_cost = evaluate_cost(scenarios, dispatch=(candidate,))
+    postpone_cost = evaluate_cost(scenarios, postpone=(candidate,))
 
     new_dispatch = old_dispatch.copy()
     new_postpone = old_postpone.copy()
@@ -46,36 +38,40 @@ def branch_and_regret(
         return new_dispatch, new_postpone
 
 
-def evaluate_cost(scenarios, sim_solver, time_limit, dispatch=(), postpone=()):
+def evaluate_cost(scenarios, dispatch=(), postpone=()):
     """
     Resolves the scenario solutions, while forcing the candidate to be fixed
     as dispatch or postponed. # TODO
     """
     total = 0
-    time_limit_per_instance = time_limit / len(scenarios)
 
     for inst, sol in scenarios:
         # Change instance to force dispatch candidate
         for req in dispatch:
             inst["latest_dispatch"][req] = 0
 
-        # HACK The next epoch time is inferred from the smallest non-zero release
-        # times.
+        # HACK The next epoch time is inferred from the smallest non-zero
+        # release times.
         release_times = inst["release_times"]
         next_epoch_time = np.min(release_times[np.nonzero(release_times)])
 
         for req in postpone:
-            # TODO make this environment dependent?
             inst["release_times"][req] = next_epoch_time
 
         candidates = list(dispatch) + list(postpone)
-        init = [
-            [idx for idx in route if idx not in candidates] for route in sol
-        ] + [[cand] for cand in candidates]
+        old = [[idx for idx in rte if idx not in candidates] for rte in sol]
+        init = old + [[cand] for cand in candidates]
 
-        res = sim_solver(
-            inst, time_limit_per_instance, initial_solutions=[init]
+        nn_config_loc = "configs/nearest_neighbour.toml"
+        nn_config = Config.from_file(nn_config_loc).static()
+        nearest_neighbour_alg = nearest_neighbour(
+            inst,
+            config=hgspy.Config(**nn_config.solver_params()),
+            node_ops=nn_config.node_ops(),
+            initial_solution=init,
         )
+
+        res = nearest_neighbour_alg(inst, initial_solutions=[init])
         total += res.get_best_found().cost()
 
         # Undo changes to instance

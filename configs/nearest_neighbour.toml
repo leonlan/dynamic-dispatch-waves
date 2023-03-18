@@ -1,0 +1,28 @@
+[static]
+node_ops = [
+    "Exchange10",
+]
+
+route_ops = [
+]
+
+crossover_ops = [
+    "selective_route_exchange",
+]
+
+
+[static.params]
+seed = 1
+initialTimeWarpPenalty = 100
+nbPenaltyManagement = 1
+feasBooster = 9
+penaltyIncrease = 2
+penaltyDecrease = 0.35
+targetFeasible = 0.2
+repairProbability = 0
+minPopSize = 1
+generationSize = 0
+shouldIntensify = 0
+nbGranular = 1000
+weightWaitTime = 5
+weightTimeWarp = 18

@@ -39,7 +39,7 @@ class Environment:
         epoch_tlim: float,
         num_epochs: int = 8,
         requests_per_epoch: Union[int, List] = 50,
-        time_window_style: str = "fixed_time_windows",
+        time_window_style: str = "variable_time_windows",
         time_window_width: int = 3,
     ):
         self.seed = seed
@@ -59,15 +59,9 @@ class Environment:
         self.rng = np.random.default_rng(self.seed)
 
         tw = self.instance["time_windows"]
+        depot_closed = tw[0, :]
+        self.epoch_duration = depot_closed // (self.num_epochs + 1)
 
-        # The start and end epochs are determined by the earliest and latest
-        # opening moments of time windows, corrected by the dispatch margin.
-        earliest_open = tw[1:, 0].min()
-        latest_open = tw[1:, 0].max()
-
-        self.epoch_duration = (latest_open - earliest_open) // (
-            self.num_epochs + 1  # TODO we need some sort of "buffer" period
-        )
         self.start_epoch = 0
         self.end_epoch = self.num_epochs - 1
         self.current_epoch = self.start_epoch
@@ -197,13 +191,13 @@ class Environment:
         Samples requests from an epoch.
         """
         dist = self.instance["duration_matrix"]
-        dispatch_time = (epoch_idx + 1) * self.epoch_duration  # next epoch
+        dispatch_time = epoch_idx * self.epoch_duration
         n_customers = self.instance["is_depot"].size - 1  # Exclude depot
 
         if rng is None:  # enables solution method to use different rng
             rng = self.rng
 
-        noise = rng.uniform(0.9, 1.1)
+        noise = rng.uniform(0.8, 1.2)
         n_samples = int(self.requests_per_epoch[epoch_idx] * noise)
 
         feas = np.zeros(n_samples, dtype=bool)
@@ -267,9 +261,8 @@ class Environment:
         self, old_tw, style, feas, dispatch_time, epoch_idx, rng
     ):
         n_infeas = np.sum(~feas)
-
         horizon = self.instance["time_windows"][0][1]
-        last_dispatch_time = horizon - self.epoch_duration
+        last_dispatch_time = self.epoch_duration * self.end_epoch
 
         fixed_width = self.epoch_duration * self.time_window_width
         epochs_left = self.num_epochs - epoch_idx

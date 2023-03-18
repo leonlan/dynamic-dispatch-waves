@@ -74,7 +74,7 @@ def solve_dynamic(env, dyn_config, disp_config, sim_config, solver_seed):
 
 
 def make_static_solver(static_config):
-    def static_solver(instance, time_limit):
+    def static_solver(instance, time_limit, initial_solutions=()):
         return hgs(
             instance,
             hgspy.Config(**static_config.solver_params()),
@@ -82,6 +82,7 @@ def make_static_solver(static_config):
             static_config.route_ops(),
             static_config.crossover_ops(),
             hgspy.stop.MaxRuntime(time_limit),
+            initial_solutions=initial_solutions,
         )
 
     return static_solver

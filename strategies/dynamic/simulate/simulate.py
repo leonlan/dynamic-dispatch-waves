@@ -67,6 +67,7 @@ def simulate(
             to_dispatch,
             to_postpone,
             **consensus_params,
+            sim_solver=sim_solver,
         )
 
         # Stop the simulation run early when all requests have been marked

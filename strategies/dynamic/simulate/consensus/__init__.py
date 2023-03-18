@@ -1,4 +1,5 @@
 from .adaptive_threshold import adaptive_threshold
+from .branch_and_regret import branch_and_regret
 from .dynamic_stochastic_hedging_heuristic import (
     dynamic_stochastic_hedging_heuristic,
 )
@@ -20,6 +21,7 @@ from .hamming_distance import hamming_distance
 # to dispatch and which to postpone.
 CONSENSUS = {
     "adaptive_threshold": adaptive_threshold,
+    "branch_and_regret": branch_and_regret,
     "dynamic_stochastic_hedging_heuristic": dynamic_stochastic_hedging_heuristic,
     "fixed_threshold": fixed_threshold,
     "hamming_distance": hamming_distance,

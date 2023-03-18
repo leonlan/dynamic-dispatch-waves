@@ -60,7 +60,7 @@ class Environment:
 
         tw = self.instance["time_windows"]
         depot_closed = tw[0, 1]
-        self.epoch_duration = depot_closed // (self.num_epochs + 1)
+        self.epoch_duration = depot_closed // self.num_epochs
 
         self.start_epoch = 0
         self.end_epoch = self.num_epochs - 1
@@ -267,12 +267,11 @@ class Environment:
     ):
         n_infeas = np.sum(~feas)
         horizon = self.instance["time_windows"][0][1]
-        last_epoch_time = self.epoch_duration * self.end_epoch
 
         fixed_width = self.epoch_duration * self.time_window_width
         epochs_left = self.num_epochs - epoch_idx
-        var_widths = self.epoch_duration * rng.integers(
-            epochs_left, size=n_infeas
+        var_widths = self.epoch_duration * (
+            rng.integers(epochs_left, size=n_infeas) + 1
         )
 
         if style == "fixed_deadlines":
@@ -282,10 +281,10 @@ class Environment:
             early = current_time * np.ones(n_infeas, dtype=int)
             late = np.minimum(horizon, early + var_widths)
         elif style == "fixed_time_windows":
-            early = rng.integers(current_time, last_epoch_time, n_infeas)
+            early = rng.integers(current_time, horizon, n_infeas)
             late = np.minimum(horizon, early + fixed_width)
         elif style == "variable_time_windows":
-            early = rng.integers(current_time, last_epoch_time, n_infeas)
+            early = rng.integers(current_time, horizon, n_infeas)
             late = np.minimum(horizon, early + var_widths)
         else:
             raise ValueError("Time window style unknown.")
@@ -376,7 +375,7 @@ class Environment:
 
         # Release times indicate that a route containing this request cannot
         # dispatch before this time. This includes the margin time for dispatch
-        release_times = self.epoch_duration * (self.req_epoch + 1)
+        release_times = self.epoch_duration * self.req_epoch
         release_times[self.instance["is_depot"][customer_idx]] = 0
 
         return {

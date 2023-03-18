@@ -306,7 +306,7 @@ class Environment:
 
         # Determine which requests are must-dispatch in the next epoch
         if self.current_epoch < self.end_epoch:
-            next_epoch_time = self.current_time + self.epoch_duration
+            next_epoch_time = self.dispatch_time + self.epoch_duration
 
             earliest_arrival = np.maximum(
                 next_epoch_time + dist[0, self.req_customer_idx],
@@ -332,14 +332,14 @@ class Environment:
         ]
         customer_idx = self.req_customer_idx[current_reqs]
 
-        # Normalize TW to current_time, and clip the past
+        # Normalize TW to dispatch_time, and clip the past
         time_windows = np.maximum(
-            self.req_tw[current_reqs] - self.current_time, 0
+            self.req_tw[current_reqs] - self.dispatch_time, 0
         )
 
-        # Normalize release times to current_time, and clip the past
+        # Normalize release times to dispatch_time, and clip the past
         release_times = np.maximum(
-            self.req_release_time[current_reqs] - self.current_time, 0
+            self.req_release_time[current_reqs] - self.dispatch_time, 0
         )
 
         self.ep_inst = {

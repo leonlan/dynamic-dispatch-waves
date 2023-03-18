@@ -4,7 +4,7 @@ postpone_routes = false
 
 
 [dynamic.strategy_params]
-simulate_tlim_factor = 0.80
+strategy_tlim_factor = 0.80
 n_cycles = 5
 n_simulations = 15
 n_lookahead = 1

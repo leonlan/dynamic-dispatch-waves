@@ -45,7 +45,7 @@ def solve_dynamic(env, dyn_config, disp_config, sim_config, solver_seed):
             static_info,
             observation,
             rng,
-            sim_solver,
+            sim_solver=sim_solver,
             **dyn_config.strategy_params()
         )
 
@@ -53,8 +53,8 @@ def solve_dynamic(env, dyn_config, disp_config, sim_config, solver_seed):
 
         # Reduce the solving time limit by the simulation time
         strategy_params = dyn_config.get("strategy_params", {})
-        sim_tlim_factor = strategy_params.get("simulate_tlim_factor", 0)
-        solve_tlim *= 1 - sim_tlim_factor
+        strategy_tlim_factor = strategy_params.get("strategy_tlim_factor", 0)
+        solve_tlim *= 1 - strategy_tlim_factor
 
         res = disp_solver(dispatch_inst, solve_tlim)
         best = res.get_best_found()

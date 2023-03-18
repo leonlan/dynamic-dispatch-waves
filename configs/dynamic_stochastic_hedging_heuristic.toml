@@ -4,9 +4,9 @@ postpone_routes = false
 
 
 [dynamic.strategy_params]
-simulate_tlim_factor = 0.80
+strategy_tlim_factor = 0.80
 n_cycles = -1
-n_simulations = 20
+n_simulations = 30
 n_lookahead = 1
 consensus = "dynamic_stochastic_hedging_heuristic"
 

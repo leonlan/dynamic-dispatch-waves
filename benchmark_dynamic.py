@@ -9,8 +9,7 @@ import numpy as np
 from tqdm.contrib.concurrent import process_map
 
 import tools
-from environment import VRPEnvironment
-from environment_competition import VRPEnvironment as VRPEnvironmentCompetition
+from environments import Environment, EnvironmentCompetition
 from strategies import solve_dynamic, solve_hindsight
 from strategies.config import Config
 
@@ -43,9 +42,12 @@ def parse_args():
     parser.add_argument("--epoch_tlim", type=float, default=60)
     parser.add_argument("--num_epochs", type=int, default=8)
     parser.add_argument(
-        "--requests_per_epoch", type=int, nargs="+", default=100
+        "--requests_per_epoch", type=int, nargs="+", default=50
     )
-
+    parser.add_argument(
+        "--time_window_style", type=str, default="variable_time_windows"
+    )
+    parser.add_argument("--time_window_width", type=int, default=3)
     return parser.parse_args()
 
 
@@ -63,23 +65,27 @@ def solve(
     epoch_tlim: int,
     num_epochs: int,
     requests_per_epoch: Union[int, list],
+    time_window_style: str,
+    time_window_width: int,
     **kwargs,
 ):
     path = Path(loc)
 
     if environment == "competition":
-        env = VRPEnvironmentCompetition(
+        env = EnvironmentCompetition(
             seed=instance_seed,
             instance=tools.io.read_vrplib(path, instance_format),
             epoch_tlim=epoch_tlim,
         )
     else:
-        env = VRPEnvironment(
+        env = Environment(
             seed=instance_seed,
             instance=tools.io.read_vrplib(path, instance_format),
             epoch_tlim=epoch_tlim,
             num_epochs=num_epochs,
             requests_per_epoch=requests_per_epoch,
+            time_window_style=time_window_style,
+            time_window_width=time_window_width,
         )
 
     start = perf_counter()

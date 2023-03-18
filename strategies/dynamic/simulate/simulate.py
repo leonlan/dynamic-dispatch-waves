@@ -12,7 +12,7 @@ def simulate(
     obs,
     rng,
     sim_solver,
-    simulate_tlim_factor: float,
+    strategy_tlim_factor: float,
     n_cycles: int,
     n_simulations: int,
     n_lookahead: int,
@@ -34,7 +34,7 @@ def simulate(
     ep_size = ep_inst["is_depot"].size  # includes depot
     n_cycles = n_cycles if n_cycles > 0 else ep_size  # for DSHH and BRH
 
-    total_sim_tlim = simulate_tlim_factor * info["epoch_tlim"]
+    total_sim_tlim = strategy_tlim_factor * info["epoch_tlim"]
     single_sim_tlim = total_sim_tlim / (n_cycles * n_simulations)
 
     to_dispatch = ep_inst["must_dispatch"].copy()

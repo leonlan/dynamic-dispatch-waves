@@ -66,6 +66,7 @@ class Environment:
         self.end_epoch = self.num_epochs - 1
         self.current_epoch = self.start_epoch
         self.current_time = self.current_epoch * self.epoch_duration
+        self.dispatch_time = self.current_time
 
         if isinstance(self.requests_per_epoch, int):
             self.requests_per_epoch = [
@@ -158,6 +159,10 @@ class Environment:
 
         self.current_epoch += 1
         self.current_time = self.current_epoch * self.epoch_duration
+        # TODO Get rid of dispatch time. This is equal to the current time in
+        # this environment, but the competition has a dispatch time of current
+        # time + self.epoch_duration (dispatch one epoch later due to loading).
+        self.dispatch_time = self.current_time
         self.is_done = self.current_epoch > self.end_epoch
 
         observation = self._next_observation() if not self.is_done else None
@@ -191,7 +196,7 @@ class Environment:
         Samples requests from an epoch.
         """
         dist = self.instance["duration_matrix"]
-        dispatch_time = epoch_idx * self.epoch_duration
+        current_time = epoch_idx * self.epoch_duration
         n_customers = self.instance["is_depot"].size - 1  # Exclude depot
 
         if rng is None:  # enables solution method to use different rng
@@ -230,14 +235,14 @@ class Environment:
                 old_tw,
                 self.time_window_style,
                 feas,
-                dispatch_time,
+                current_time,
                 epoch_idx,
                 rng,
             )
 
             # Filter sampled requests that cannot be served in a round trip
             earliest_arrival = np.maximum(
-                dispatch_time + dist[0, cust_idx], new_tw[:, 0]
+                current_time + dist[0, cust_idx], new_tw[:, 0]
             )
             earliest_return = (
                 earliest_arrival + new_service + dist[cust_idx, 0]
@@ -254,15 +259,15 @@ class Environment:
             "time_windows": new_tw,
             "demands": new_demand,
             "service_times": new_service,
-            "release_times": np.full(n_samples, dispatch_time),
+            "release_times": np.full(n_samples, current_time),
         }
 
     def _sample_time_windows(
-        self, old_tw, style, feas, dispatch_time, epoch_idx, rng
+        self, old_tw, style, feas, current_time, epoch_idx, rng
     ):
         n_infeas = np.sum(~feas)
         horizon = self.instance["time_windows"][0][1]
-        last_dispatch_time = self.epoch_duration * self.end_epoch
+        last_epoch_time = self.epoch_duration * self.end_epoch
 
         fixed_width = self.epoch_duration * self.time_window_width
         epochs_left = self.num_epochs - epoch_idx
@@ -271,16 +276,16 @@ class Environment:
         )
 
         if style == "fixed_deadlines":
-            early = dispatch_time * np.ones(n_infeas, dtype=int)
+            early = current_time * np.ones(n_infeas, dtype=int)
             late = np.minimum(horizon, early + fixed_width)
         elif style == "variable_deadlines":
-            early = dispatch_time * np.ones(n_infeas, dtype=int)
+            early = current_time * np.ones(n_infeas, dtype=int)
             late = np.minimum(horizon, early + var_widths)
         elif style == "fixed_time_windows":
-            early = rng.integers(dispatch_time, last_dispatch_time, n_infeas)
+            early = rng.integers(current_time, last_epoch_time, n_infeas)
             late = np.minimum(horizon, early + fixed_width)
         elif style == "variable_time_windows":
-            early = rng.integers(dispatch_time, last_dispatch_time, n_infeas)
+            early = rng.integers(current_time, last_epoch_time, n_infeas)
             late = np.minimum(horizon, early + var_widths)
         else:
             raise ValueError("Time window style unknown.")
@@ -297,15 +302,14 @@ class Environment:
         # `filter_instance` function with mask to create a new instance.
 
         dist = self.instance["duration_matrix"]
-        dispatch_time = self.current_time + self.epoch_duration
         depot_closed = self.instance["time_windows"][0, 1]
 
         # Determine which requests are must-dispatch in the next epoch
         if self.current_epoch < self.end_epoch:
-            next_dispatch_time = dispatch_time + self.epoch_duration
+            next_epoch_time = self.current_time + self.epoch_duration
 
             earliest_arrival = np.maximum(
-                next_dispatch_time + dist[0, self.req_customer_idx],
+                next_epoch_time + dist[0, self.req_customer_idx],
                 self.req_tw[:, 0],
             )
             earliest_return_at_depot = (
@@ -328,12 +332,14 @@ class Environment:
         ]
         customer_idx = self.req_customer_idx[current_reqs]
 
-        # Normalize TW to dispatch_time, and clip the past
-        time_windows = np.maximum(self.req_tw[current_reqs] - dispatch_time, 0)
+        # Normalize TW to current_time, and clip the past
+        time_windows = np.maximum(
+            self.req_tw[current_reqs] - self.current_time, 0
+        )
 
-        # Normalize release times to dispatch_time, and clip the past
+        # Normalize release times to current_time, and clip the past
         release_times = np.maximum(
-            self.req_release_time[current_reqs] - dispatch_time, 0
+            self.req_release_time[current_reqs] - self.current_time, 0
         )
 
         self.ep_inst = {
@@ -356,7 +362,7 @@ class Environment:
         return {
             "current_epoch": self.current_epoch,
             "current_time": self.current_time,
-            "dispatch_time": dispatch_time,
+            "dispatch_time": self.dispatch_time,
             "epoch_instance": self.ep_inst,
         }
 

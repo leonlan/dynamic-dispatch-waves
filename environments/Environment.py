@@ -59,7 +59,7 @@ class Environment:
         self.rng = np.random.default_rng(self.seed)
 
         tw = self.instance["time_windows"]
-        depot_closed = tw[0, :]
+        depot_closed = tw[0, 1]
         self.epoch_duration = depot_closed // (self.num_epochs + 1)
 
         self.start_epoch = 0

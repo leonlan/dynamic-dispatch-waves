@@ -5,7 +5,7 @@ postpone_routes = false
 
 [dynamic.strategy_params]
 strategy_tlim_factor = 0.80
-n_cycles = 10
-n_simulations = 20
+n_cycles = 1
+n_simulations = 50
 n_lookahead = 1
 consensus = "hamming_distance"

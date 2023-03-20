@@ -25,7 +25,7 @@ class Environment:
     requests_per_epoch
         The expected number of revealed requests per epoch.
     time_window_style
-        The time window style, one of ['fixed_deadline', 'variable_deadline',
+        The time window style, one of ['fixed_deadlines', 'variable_deadlines',
         'fixed_time_window', 'variable_time_window'].
     time_window_width
         The width of the time window in number of epoch durations. Only
@@ -39,8 +39,8 @@ class Environment:
         epoch_tlim: float,
         num_epochs: int = 8,
         requests_per_epoch: Union[int, List] = 50,
-        time_window_style: str = "variable_time_windows",
-        time_window_width: int = 3,
+        time_window_style: str = "fixed_time_windows",
+        time_window_width: int = 2,
     ):
         self.seed = seed
         self.instance = instance
@@ -159,6 +159,7 @@ class Environment:
 
         self.current_epoch += 1
         self.current_time = self.current_epoch * self.epoch_duration
+
         # TODO Get rid of dispatch time. This is equal to the current time in
         # this environment, but the competition has a dispatch time of current
         # time + self.epoch_duration (dispatch one epoch later due to loading).

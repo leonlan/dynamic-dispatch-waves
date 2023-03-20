@@ -45,10 +45,17 @@ def parse_args():
         "--requests_per_epoch", type=int, nargs="+", default=50
     )
     parser.add_argument(
-        "--time_window_style", type=str, default="variable_time_windows"
+        "--time_window_style", type=str, default="fixed_time_windows"
     )
-    parser.add_argument("--time_window_width", type=int, default=3)
+    parser.add_argument("--time_window_width", type=int, default=2)
     return parser.parse_args()
+
+
+def manhattan_distance_matrix(coords):
+    coords_expanded = coords[:, np.newaxis, :]
+    diffs = np.abs(coords_expanded - coords)
+    distance_matrix = np.sum(diffs, axis=-1)
+    return distance_matrix
 
 
 def solve(
@@ -78,9 +85,21 @@ def solve(
             epoch_tlim=epoch_tlim,
         )
     else:
+        instance = tools.io.read_vrplib(path, instance_format)
+
+        # Normalize the distances so that the further customer can be served
+        # in one hour. Service times are also scaled accordingly.
+        factor = instance["duration_matrix"].max() // 60
+        instance["duration_matrix"] = instance["duration_matrix"] // factor
+        instance["service_times"] = instance["service_times"] // factor
+
+        # Normalize the depot time windows to be 60 * ``num_epochs``; customer
+        # time windows are not used for the sampling.
+        instance["time_windows"][0, :] = [0, num_epochs * 60]
+
         env = Environment(
             seed=instance_seed,
-            instance=tools.io.read_vrplib(path, instance_format),
+            instance=instance,
             epoch_tlim=epoch_tlim,
             num_epochs=num_epochs,
             requests_per_epoch=requests_per_epoch,

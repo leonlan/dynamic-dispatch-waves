@@ -237,7 +237,6 @@ class Environment:
                 self.time_window_style,
                 feas,
                 current_time,
-                epoch_idx,
                 rng,
             )
 
@@ -263,16 +262,13 @@ class Environment:
             "release_times": np.full(n_samples, current_time),
         }
 
-    def _sample_time_windows(
-        self, old_tw, style, feas, current_time, epoch_idx, rng
-    ):
+    def _sample_time_windows(self, old_tw, style, feas, current_time, rng):
         n_infeas = np.sum(~feas)
         horizon = self.instance["time_windows"][0][1]
 
         fixed_width = self.epoch_duration * self.time_window_width
-        epochs_left = self.num_epochs - epoch_idx
         var_widths = self.epoch_duration * (
-            rng.integers(epochs_left, size=n_infeas) + 1
+            rng.integers(self.time_window_width, size=n_infeas) + 1
         )
 
         if style == "fixed_deadlines":

@@ -13,7 +13,7 @@ consensus = "fixed_threshold"
 
 [dynamic.strategy_params.consensus_params]
 postpone_thresholds = [
-    0.90,
+    1.01, # no postponement
 ]
 dispatch_thresholds = [
     0.50,

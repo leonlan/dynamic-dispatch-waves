@@ -13,6 +13,7 @@ def simulate(
     rng,
     sim_solver,
     strategy_tlim_factor: float,
+    final_dispatch: str,
     n_cycles: int,
     n_simulations: int,
     n_lookahead: int,
@@ -73,4 +74,12 @@ def simulate(
         if ep_size - 1 == to_dispatch.sum() + to_postpone.sum():
             break
 
-    return filter_instance(ep_inst, ep_inst["is_depot"] | to_dispatch)
+    # Select who to dispatch
+    if final_dispatch == "to_dispatch":
+        selected = to_dispatch
+    elif final_dispatch == "not_to_postpone":
+        selected = ~to_postpone
+    else:
+        raise ValueError("Final dispatch action unknown.")
+
+    return filter_instance(ep_inst, ep_inst["is_depot"] | selected)

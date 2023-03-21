@@ -5,13 +5,17 @@ postpone_routes = false
 
 [dynamic.strategy_params]
 strategy_tlim_factor = 0.80
-n_cycles = -1
+n_cycles = 3
 n_simulations = 30
 n_lookahead = 1
-consensus = "dynamic_stochastic_hedging_heuristic"
-final_dispatch = "to_dispatch"
+consensus = "fixed_threshold"
+final_dispatch = "not_to_postpone"
 
 
 [dynamic.strategy_params.consensus_params]
-min_dispatch_threshold = 0.50
-dispatch_threshold = 0.70
+postpone_thresholds = [
+    0.70,
+]
+dispatch_thresholds = [
+    1.00, # only must dispatch
+]

@@ -203,7 +203,7 @@ class Environment:
         if rng is None:  # enables solution method to use different rng
             rng = self.rng
 
-        noise = rng.uniform(0.8, 1.2)
+        noise = rng.uniform(0.9, 1.1)
         n_samples = int(self.requests_per_epoch[epoch_idx] * noise)
 
         feas = np.zeros(n_samples, dtype=bool)

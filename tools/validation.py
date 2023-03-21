@@ -84,6 +84,7 @@ def validate_static_solution(
             instance["duration_matrix"],
             instance["time_windows"],
             instance["service_times"],
+            instance.get("release_times", None),
         )
 
         if "latest_dispatch" in instance:

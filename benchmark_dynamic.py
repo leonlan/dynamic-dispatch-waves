@@ -86,16 +86,21 @@ def solve(
         )
     else:
         instance = tools.io.read_vrplib(path, instance_format)
+        TIME = 600  # TODO rename this
 
         # Normalize the distances so that the further customer can be served
         # in one hour. Service times are also scaled accordingly.
-        factor = instance["duration_matrix"].max() // 60
-        instance["duration_matrix"] = instance["duration_matrix"] // factor
-        instance["service_times"] = instance["service_times"] // factor
+        factor = instance["duration_matrix"].max() / TIME
+        instance["duration_matrix"] = np.ceil(
+            instance["duration_matrix"] / factor
+        ).astype(int)
+        instance["service_times"] = np.ceil(
+            instance["service_times"] / factor
+        ).astype(int)
 
-        # Normalize the depot time windows to be 60 * ``num_epochs``; customer
+        # Normalize the depot time windows to be TIME * ``num_epochs``; customer
         # time windows are not used for the sampling.
-        instance["time_windows"][0, :] = [0, num_epochs * 60]
+        instance["time_windows"][0, :] = [0, num_epochs * TIME]
 
         env = Environment(
             seed=instance_seed,

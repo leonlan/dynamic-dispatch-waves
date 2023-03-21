@@ -17,5 +17,5 @@ postpone_thresholds = [
     0.70,
 ]
 dispatch_thresholds = [
-    1.00, # only must dispatch
+    1.01, # only must dispatch
 ]

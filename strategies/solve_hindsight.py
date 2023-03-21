@@ -11,14 +11,6 @@ def solve_hindsight(env, config, solver_seed):
     """
     observation, info = env.reset()
     ep_tlim = info["epoch_tlim"]
-    done = False
-
-    # Submit dummy solutions to obtain the hindsight problem
-    while not done:
-        requests = observation["epoch_instance"]["request_idx"][1:]
-        ep_sol = [[request] for request in requests]
-        observation, _, done, _ = env.step(ep_sol)
-
     hindsight_inst = env.get_hindsight_problem()
 
     res = hgs(
@@ -47,7 +39,9 @@ def solve_hindsight(env, config, solver_seed):
             if len(requests.intersection(route)) == len(route)
         ]
 
-        observation, reward, done, info = env.step(ep_sol)
+        observation, _, _, info = env.step(ep_sol)
         assert info["error"] is None, f"{info['error']}"
+
+    assert sum(env.final_costs.values()) == best.cost()
 
     return env.final_costs, env.final_solutions

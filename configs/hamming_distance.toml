@@ -9,3 +9,8 @@ n_cycles = 3
 n_simulations = 30
 n_lookahead = 1
 consensus = "hamming_distance"
+final_dispatch = "to_dispatch"
+
+
+[dynamic.strategy_params.consensus_params]
+postpone_thresholds = [0.8]

@@ -1,9 +1,18 @@
 import numpy as np
-from .utils import get_dispatch_matrix, always_postponed, verify_action
+from .utils import (
+    get_dispatch_matrix,
+    select_postpone_on_threshold,
+    verify_action,
+)
 
 
 def hamming_distance(
-    cycle_idx, scenarios, old_dispatch, old_postpone, **kwargs
+    cycle_idx,
+    scenarios,
+    old_dispatch,
+    old_postpone,
+    postpone_thresholds,
+    **kwargs
 ):
     """
     Selects the solution with the smallest average Hamming distance w.r.t.
@@ -26,7 +35,14 @@ def hamming_distance(
     sol_idx = hamming_distances.argmin()
     new_dispatch = dispatch_matrix[sol_idx].astype(bool)
 
-    new_postpone = always_postponed(scenarios, old_dispatch, old_postpone)
+    # Postpone requests using a fixed threshold, as long as the requests
+    # are not yet dispatched.
+    post_thresh_idx = min(cycle_idx, len(postpone_thresholds) - 1)
+    postpone_threshold = postpone_thresholds[post_thresh_idx]
+    new_postpone = select_postpone_on_threshold(
+        scenarios, old_dispatch, old_postpone, postpone_threshold
+    )
+    new_postpone = new_postpone & ~new_dispatch
 
     verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone)
 

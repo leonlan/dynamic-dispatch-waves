@@ -26,14 +26,14 @@ def fixed_threshold(
     post_thresh_idx = min(cycle_idx, len(postpone_thresholds) - 1)
     postpone_threshold = postpone_thresholds[post_thresh_idx]
 
-    if dispatch_threshold < 1:
+    if dispatch_threshold <= 1:
         new_dispatch = select_dispatch_on_threshold(
             scenarios, old_dispatch, old_postpone, dispatch_threshold
         )
     else:  # dispatch threshold too high, copy old action
         new_dispatch = old_dispatch.copy()
 
-    if postpone_threshold < 1:
+    if postpone_threshold <= 1:
         new_postpone = select_postpone_on_threshold(
             scenarios, old_dispatch, old_postpone, postpone_threshold
         )

@@ -1,28 +1,13 @@
 [tool.poetry]
-name = "euro-neurips-2022"
+name = "dynamic-dispatch-waves"
 version = "0.1.0"
 description = ""
 authors = [
-    "Doorn, Jasper van <j.m.h.van.doorn@vu.nl>",
     "Lan, Leon <l.lan@vu.nl>",
-    "Pentinga, Luuk <l.pentinga@rug.nl>",
-    "Wouda, Niels <n.a.wouda@rug.nl>"]
+    "Doorn, Jasper van <j.m.h.van.doorn@vu.nl>",
+    "Wouda, Niels <n.a.wouda@rug.nl>",
+]
 license = "MIT"
-
-[tool.poetry.dependencies]
-python = "^3.8, <4.0"
-
-# From original requirements.txt
-numpy = "^1.22.2"
-matplotlib = "^3.5.1"
-tomli = "^2.0.1"
-tqdm = "^4.64.0"
-vrplib = "^1.0.1"
-
-[tool.poetry.dev-dependencies]
-black = "^22.6.0"
-flake8 = "^5.0.4"
-flake8-import-order = "^0.18.1"
 
 
 [build-system]
@@ -30,8 +15,43 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 
+[tool.poetry.dependencies]
+python = "^3.9, <4.0"
+numpy = "^1.22.2"
+matplotlib = "^3.5.1"
+tomli = "^2.0.1"
+tqdm = "^4.64.0"
+vrplib = "^1.0.1"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.6.0"
+
+
 [tool.black]
 line-length = 79
 exclude = '''
 hgs_vrptw
 '''
+
+[tool.mypy]
+ignore_missing_imports = true
+
+
+[tool.ruff]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+]
+ignore = [
+    "E501",     # line too long, handled by black
+    "C901",     # too complex
+]
+
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]

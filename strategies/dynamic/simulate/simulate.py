@@ -1,8 +1,9 @@
 import numpy as np
 
 import tools
-from .consensus import CONSENSUS
 from strategies.utils import filter_instance
+
+from .consensus import CONSENSUS
 from .simulate_instance import simulate_instance
 
 
@@ -18,7 +19,7 @@ def simulate(
     n_simulations: int,
     n_lookahead: int,
     consensus: str,
-    consensus_params: dict = {},
+    consensus_params: dict = {},  # noqa: B006
     **kwargs,
 ):
     """
@@ -62,7 +63,8 @@ def simulate(
             scenarios.append((sim_inst, sim_sol))
 
         # Use the consensus function to mark requests dispatched or postponed
-        to_dispatch, to_postpone = CONSENSUS[consensus](
+        consensus_func = CONSENSUS[consensus]
+        to_dispatch, to_postpone = consensus_func(  # type: ignore
             cycle_idx,
             scenarios,
             to_dispatch,

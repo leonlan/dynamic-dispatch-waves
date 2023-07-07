@@ -26,13 +26,13 @@ def plot_instance(ax, instance, routes=()):
     tws_close = instance["time_windows"][is_client, 1]
     depot_coords = instance["coords"][~is_client].T
 
-    kwargs = dict(s=(0.0003 * tws_open) ** 2, zorder=3)
+    kwargs = {"s": (0.0003 * tws_open) ** 2, "zorder": 3}
     ax.scatter(*coords, c="tab:blue", label="TW open", **kwargs)
 
-    kwargs = dict(s=(0.0008 * tws_close) ** 2, alpha=0.1, zorder=3)
+    kwargs = {"s": (0.0008 * tws_close) ** 2, "alpha": 0.1, "zorder": 3}
     ax.scatter(*coords, c="tab:blue", label="TW close", **kwargs)
 
-    kwargs = dict(marker="*", zorder=3, s=750)
+    kwargs = {"marker": "*", "zorder": 3, "s": 750}
     ax.scatter(*depot_coords, c="tab:red", label="Depot", **kwargs)
 
     for route in routes:

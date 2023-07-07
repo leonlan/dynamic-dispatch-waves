@@ -48,8 +48,10 @@ select = [
     "B",  # flake8-bugbear
 ]
 ignore = [
-    "E501",     # line too long, handled by black
-    "C901",     # too complex
+    "E501",  # line too long, handled by black
+    "C901",  # too complex
+    "E741",  # ambiguous variable name
+    "B905",  # zip without explicit ``strict=``
 ]
 
 

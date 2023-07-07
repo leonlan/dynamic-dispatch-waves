@@ -3,6 +3,7 @@ import numpy as np
 import hgspy
 from strategies.dynamic import STRATEGIES
 from strategies.static import hgs
+
 from .utils import sol2ep
 
 

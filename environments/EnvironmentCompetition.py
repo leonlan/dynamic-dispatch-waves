@@ -1,9 +1,9 @@
 import time
-import tools
-from typing import Any, Dict, Optional, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
+import tools
 
 State = Dict[str, Any]
 Action = List[List[int]]

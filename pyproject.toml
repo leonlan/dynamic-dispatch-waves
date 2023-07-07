@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "dynamic-dispatch-waves"
 version = "0.1.0"
-description = ""
+description = "" # TODO
 authors = [
-    "Lan, Leon <l.lan@vu.nl>",
-    "Doorn, Jasper van <j.m.h.van.doorn@vu.nl>",
-    "Wouda, Niels <n.a.wouda@rug.nl>",
+    "Leon Lan <l.lan@vu.nl>",
+    "Jasper van Doorn <j.m.h.van.doorn@vu.nl>",
+    "Niels Wouda <n.a.wouda@rug.nl>",
 ]
 license = "MIT"
 
@@ -22,6 +22,7 @@ matplotlib = "^3.5.1"
 tomli = "^2.0.1"
 tqdm = "^4.64.0"
 vrplib = "^1.0.1"
+pyvrp = {git = "git@github.com:leonlan/PyVRP.git"}
 
 
 [tool.poetry.group.dev.dependencies]

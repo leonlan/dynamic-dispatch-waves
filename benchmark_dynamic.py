@@ -10,8 +10,12 @@ from tqdm.contrib.concurrent import process_map
 
 import tools
 from environments import Environment, EnvironmentCompetition
-from strategies import solve_dynamic, solve_hindsight
-from strategies.config import Config
+
+# TODO fix solve_dynamic, cannot test now because of the import error
+# from strategies import solve_dynamic, solve_hindsight
+from strategies import solve_hindsight
+
+# from strategies.config import Config
 
 
 def parse_args():
@@ -117,8 +121,8 @@ def solve(
     start = perf_counter()
 
     if hindsight:
-        hindsight_config = Config.from_file(hindsight_config_loc).static()
-        costs, routes = solve_hindsight(env, hindsight_config, solver_seed)
+        # hindsight_config = Config.from_file(hindsight_config_loc).static()
+        costs, routes = solve_hindsight(env, solver_seed)
     else:
         dyn_config = Config.from_file(dyn_config_loc).dynamic()
         disp_config = Config.from_file(disp_config_loc).static()
@@ -180,10 +184,6 @@ def main():
         Path(__file__).name,
         " ".join(f"--{key} {value}" for key, value in vars(args).items()),
     )
-
-    dyn_config = Config.from_file(args.dyn_config_loc).dynamic()
-    print("dynamic config:")
-    print(dyn_config)
 
     print("\n", table, "\n", sep="")
     print(f"      Avg. objective: {data['total'].mean():.0f}")

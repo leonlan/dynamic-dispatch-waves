@@ -78,6 +78,8 @@ def solve(
 ):
     path = Path(loc)
 
+    env: Union[Environment, EnvironmentCompetition]
+
     if environment == "competition":
         env = EnvironmentCompetition(
             seed=instance_seed,
@@ -146,7 +148,7 @@ def main():
     func_args = glob(args.instance_pattern)
 
     if args.num_procs > 1:
-        tqdm_kwargs = dict(max_workers=args.num_procs, unit="instance")
+        tqdm_kwargs = {"max_workers": args.num_procs, "unit": "instance"}
         data = process_map(func, func_args, **tqdm_kwargs)
     else:  # process_map cannot be used with interactive debugging
         data = [func(args) for args in func_args]

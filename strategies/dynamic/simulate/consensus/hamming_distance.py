@@ -1,4 +1,5 @@
 import numpy as np
+
 from .utils import (
     get_dispatch_matrix,
     select_postpone_on_threshold,

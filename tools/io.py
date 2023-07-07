@@ -6,7 +6,7 @@ def _readlines(filename):
     try:
         with open(filename, "r") as f:
             return f.readlines()
-    except:
+    except:  # noqa: E722
         with open(filename, "rb") as f:
             return [
                 line.decode("utf-8", errors="ignore").strip()
@@ -42,16 +42,16 @@ def inst_to_vars(inst):
 
     assert len(release_times) == len(latest_dispatch)
 
-    return dict(
-        coords=inst["coords"],
-        demands=inst["demands"],
-        vehicle_cap=inst["capacity"],
-        time_windows=inst["time_windows"],
-        service_durations=inst["service_times"],
-        duration_matrix=inst["duration_matrix"],
-        release_times=release_times,
-        latest_dispatch=latest_dispatch,
-    )
+    return {
+        "coords": inst["coords"],
+        "demands": inst["demands"],
+        "vehicle_cap": inst["capacity"],
+        "time_windows": inst["time_windows"],
+        "service_durations": inst["service_times"],
+        "duration_matrix": inst["duration_matrix"],
+        "release_times": release_times,
+        "latest_dispatch": latest_dispatch,
+    }
 
 
 def read_vrptw_solution(filename, return_extra=False):
@@ -205,7 +205,6 @@ def write_vrplib(
         f.write("-1\n")
 
         if is_vrptw:
-
             service_t = instance["service_times"]
             timewi = instance["time_windows"]
 

@@ -19,13 +19,6 @@ tomli = "^2.0.1"
 tqdm = "^4.64.0"
 vrplib = "^1.0.1"
 
-[tool.poetry.group.tune]
-optional = true
-
-[tool.poetry.group.tune.dependencies]
-tomli-w = "^1.0.0"
-scipy = "^1.9.2"
-
 [tool.poetry.dev-dependencies]
 black = "^22.6.0"
 flake8 = "^5.0.4"

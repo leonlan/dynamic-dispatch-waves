@@ -3,14 +3,14 @@ from pyvrp import Model
 from pyvrp.stop import MaxRuntime
 
 import hgspy
+from instance2data import instance2data
 from strategies.dynamic import STRATEGIES
 from strategies.static import hgs
 
-from .instance2data import instance2data
 from .utils import sol2ep
 
 
-def solve_dynamic(env, dyn_config, disp_config, sim_config, solver_seed):
+def solve_dynamic(env, dyn_config, disp_config, solver_seed):
     """
     Solve the dynamic VRPTW problem using the passed-in dispatching strategy.
     The given seed is used to initialise both the random number stream on the
@@ -24,9 +24,6 @@ def solve_dynamic(env, dyn_config, disp_config, sim_config, solver_seed):
     disp_config : Config
         Configuration object storing parameters for the dispatch instance
         static solver.
-    sim_config : Config
-        Configuration object storing parameters for the simulation instance
-        static solver.
     solver_seed : int
         RNG seed for the dynamic solver.
     """
@@ -39,17 +36,10 @@ def solve_dynamic(env, dyn_config, disp_config, sim_config, solver_seed):
     costs = {}
     done = False
 
-    sim_solver = make_static_solver(sim_config)
-
     while not done:
         strategy = STRATEGIES[dyn_config.strategy()]
         dispatch_inst = strategy(
-            env,
-            static_info,
-            observation,
-            rng,
-            sim_solver=sim_solver,
-            **dyn_config.strategy_params()
+            env, static_info, observation, rng, **dyn_config.strategy_params()
         )
 
         solve_tlim = ep_tlim
@@ -62,8 +52,9 @@ def solve_dynamic(env, dyn_config, disp_config, sim_config, solver_seed):
         if dispatch_inst["request_idx"].size > 1:
             model = Model.from_data(instance2data(dispatch_inst))
             res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
-            best = res.best
-            routes = [route.visits() for route in best.get_routes() if route]
+            routes = [
+                route.visits() for route in res.best.get_routes() if route
+            ]
 
             ep_sol = sol2ep(
                 routes, dispatch_inst, dyn_config["postpone_routes"]

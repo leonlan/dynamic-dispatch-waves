@@ -28,7 +28,6 @@ def parse_args():
         "--dyn_config_loc", default="configs/fixed_threshold.toml"
     )
     parser.add_argument("--disp_config_loc", default="configs/dispatch.toml")
-    parser.add_argument("--sim_config_loc", default="configs/simulation.toml")
     parser.add_argument(
         "--hindsight_config_loc", default="configs/static.toml"
     )
@@ -65,7 +64,6 @@ def solve(
     solver_seed: int,
     dyn_config_loc: str,
     disp_config_loc: str,
-    sim_config_loc: str,
     hindsight_config_loc: str,
     hindsight: bool,
     environment: str,
@@ -122,10 +120,9 @@ def solve(
     else:
         dyn_config = Config.from_file(dyn_config_loc).dynamic()
         disp_config = Config.from_file(disp_config_loc).static()
-        sim_config = Config.from_file(sim_config_loc).static()
 
         costs, routes = solve_dynamic(
-            env, dyn_config, disp_config, sim_config, solver_seed
+            env, dyn_config, disp_config, solver_seed
         )
 
     run_time = round(perf_counter() - start, 2)

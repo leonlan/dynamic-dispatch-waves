@@ -1,7 +1,6 @@
 The MIT License (MIT)
 
 Copyright:
-- Original HGS-CVRP implementation: 2020 Thibaut Vidal
 - DIMACS-related extensions: 2022 ORTEC
 - EURO/NeurIPS extensions and overhaul: 2022 OptiML team members
 

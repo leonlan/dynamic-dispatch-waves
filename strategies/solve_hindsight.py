@@ -1,8 +1,10 @@
-import hgspy
-from strategies.static import hgs
+from pyvrp import CostEvaluator, Model
+from pyvrp.stop import MaxRuntime
+
+from instance2data import instance2data
 
 
-def solve_hindsight(env, config, solver_seed):
+def solve_hindsight(env, solver_seed: int):
     """
     Solve the dynamic VRPTW problem using the oracle strategy, i.e., the
     problem is solved as static VRPTW with release dates using the information
@@ -10,20 +12,13 @@ def solve_hindsight(env, config, solver_seed):
     environment. The given seed is passed to the static solver.
     """
     observation, info = env.reset()
-    ep_tlim = info["epoch_tlim"]
     hindsight_inst = env.get_hindsight_problem()
 
-    res = hgs(
-        hindsight_inst,
-        hgspy.Config(seed=solver_seed, **config.solver_params()),
-        config.node_ops(),
-        config.route_ops(),
-        config.crossover_ops(),
-        hgspy.stop.MaxRuntime(ep_tlim),
-    )
+    model = Model.from_data(instance2data(hindsight_inst))
+    res = model.solve(MaxRuntime(info["epoch_tlim"]), seed=solver_seed)
 
-    best = res.get_best_found()
-    routes = [route for route in best.get_routes() if route]
+    best = res.best
+    routes = [route.visits() for route in best.get_routes() if route]
     observation, _ = env.reset()
 
     # Submit the solution from the hindsight problem
@@ -42,6 +37,9 @@ def solve_hindsight(env, config, solver_seed):
         observation, _, _, info = env.step(ep_sol)
         assert info["error"] is None, f"{info['error']}"
 
-    assert sum(env.final_costs.values()) == best.cost()
+    # Check that the cost of the dynamic problem is equal to the cost of the
+    # hindsight solution.
+    cost_eval = CostEvaluator(0, 0)
+    assert sum(env.final_costs.values()) == cost_eval.cost(best)
 
     return env.final_costs, env.final_solutions

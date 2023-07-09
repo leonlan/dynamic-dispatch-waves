@@ -1,6 +1,8 @@
 import numpy as np
+from pyvrp import Model
+from pyvrp.stop import MaxRuntime
 
-import tools
+from instance2data import instance2data
 from strategies.utils import filter_instance
 
 from .consensus import CONSENSUS
@@ -12,7 +14,6 @@ def simulate(
     info,
     obs,
     rng,
-    sim_solver,
     strategy_tlim_factor: float,
     final_dispatch: str,
     n_cycles: int,
@@ -56,9 +57,10 @@ def simulate(
                 to_postpone,
             )
 
-            res = sim_solver(sim_inst, single_sim_tlim)
-            sim_sol = [r for r in res.get_best_found().get_routes() if r]
-            tools.validation.validate_static_solution(sim_inst, sim_sol)
+            # TODO make this as a custom solver
+            model = Model.from_data(instance2data(sim_inst))
+            res = model.solve(MaxRuntime(single_sim_tlim), seed=42)
+            sim_sol = [rte.visits() for rte in res.best.get_routes() if rte]
 
             scenarios.append((sim_inst, sim_sol))
 

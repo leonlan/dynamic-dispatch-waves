@@ -1,3 +1,0 @@
-#include "TimeWindowSegment.h"
-
-// TODO

@@ -105,8 +105,8 @@ def read_vrplib(filename, instance_format="vrplib"):
         "release_times": instance["release_time"]
         if "release_time" in instance
         else np.zeros(n_locations, dtype=int),
-        "latest_dispatch": instance["latest_dispatch"]
-        if "latest_dispatch" in instance
+        "latest_dispatch": instance["dispatch_time"]
+        if "dispatch_time" in instance
         else np.ones(n_locations, dtype=int) * horizon,
     }
 
@@ -246,7 +246,7 @@ def write_vrplib(
                 f.write("\n")
 
             if "latest_dispatch" in instance:
-                f.write("LATEST_DISPATCH_SECTION\n")
+                f.write("DISPATCH_TIME_SECTION\n")
                 f.write(
                     "\n".join(
                         [

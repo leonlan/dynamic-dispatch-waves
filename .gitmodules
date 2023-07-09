@@ -1,3 +1,0 @@
-[submodule "hgs_vrptw/extern/pybind11"]
-	path = hgs_vrptw/extern/pybind11
-	url = https://github.com/pybind/pybind11/

@@ -31,9 +31,6 @@ black = "^22.6.0"
 
 [tool.black]
 line-length = 79
-exclude = '''
-hgs_vrptw
-'''
 
 [tool.mypy]
 ignore_missing_imports = true

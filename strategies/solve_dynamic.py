@@ -2,15 +2,13 @@ import numpy as np
 from pyvrp import Model
 from pyvrp.stop import MaxRuntime
 
-import hgspy
 from instance2data import instance2data
 from strategies.dynamic import STRATEGIES
-from strategies.static import hgs
 
 from .utils import sol2ep
 
 
-def solve_dynamic(env, dyn_config, disp_config, solver_seed):
+def solve_dynamic(env, dyn_config, solver_seed):
     """
     Solve the dynamic VRPTW problem using the passed-in dispatching strategy.
     The given seed is used to initialise both the random number stream on the
@@ -21,9 +19,6 @@ def solve_dynamic(env, dyn_config, disp_config, solver_seed):
     env : Environment
     dyn_config : Config
         Configuration object storing parameters for the dynamic solver.
-    disp_config : Config
-        Configuration object storing parameters for the dispatch instance
-        static solver.
     solver_seed : int
         RNG seed for the dynamic solver.
     """
@@ -71,17 +66,3 @@ def solve_dynamic(env, dyn_config, disp_config, solver_seed):
         assert info["error"] is None, info["error"]
 
     return costs, solutions
-
-
-def make_static_solver(static_config):
-    def static_solver(instance, time_limit):
-        return hgs(
-            instance,
-            hgspy.Config(**static_config.solver_params()),
-            static_config.node_ops(),
-            static_config.route_ops(),
-            static_config.crossover_ops(),
-            hgspy.stop.MaxRuntime(time_limit),
-        )
-
-    return static_solver

@@ -27,10 +27,6 @@ def parse_args():
     parser.add_argument(
         "--dyn_config_loc", default="configs/fixed_threshold.toml"
     )
-    parser.add_argument("--disp_config_loc", default="configs/dispatch.toml")
-    parser.add_argument(
-        "--hindsight_config_loc", default="configs/static.toml"
-    )
     parser.add_argument("--hindsight", action="store_true")
     parser.add_argument(
         "--environment",
@@ -63,8 +59,6 @@ def solve(
     instance_seed: int,
     solver_seed: int,
     dyn_config_loc: str,
-    disp_config_loc: str,
-    hindsight_config_loc: str,
     hindsight: bool,
     environment: str,
     epoch_tlim: int,
@@ -115,15 +109,10 @@ def solve(
     start = perf_counter()
 
     if hindsight:
-        # hindsight_config = Config.from_file(hindsight_config_loc).static()
         costs, routes = solve_hindsight(env, solver_seed)
     else:
         dyn_config = Config.from_file(dyn_config_loc).dynamic()
-        disp_config = Config.from_file(disp_config_loc).static()
-
-        costs, routes = solve_dynamic(
-            env, dyn_config, disp_config, solver_seed
-        )
+        costs, routes = solve_dynamic(env, dyn_config, solver_seed)
 
     run_time = round(perf_counter() - start, 2)
 

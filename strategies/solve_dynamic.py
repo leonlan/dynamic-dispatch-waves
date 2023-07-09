@@ -1,9 +1,12 @@
 import numpy as np
+from pyvrp import Model
+from pyvrp.stop import MaxRuntime
 
 import hgspy
 from strategies.dynamic import STRATEGIES
 from strategies.static import hgs
 
+from .instance2data import instance2data
 from .utils import sol2ep
 
 
@@ -37,7 +40,6 @@ def solve_dynamic(env, dyn_config, disp_config, sim_config, solver_seed):
     done = False
 
     sim_solver = make_static_solver(sim_config)
-    disp_solver = make_static_solver(disp_config)
 
     while not done:
         strategy = STRATEGIES[dyn_config.strategy()]
@@ -57,11 +59,17 @@ def solve_dynamic(env, dyn_config, disp_config, sim_config, solver_seed):
         strategy_tlim_factor = strategy_params.get("strategy_tlim_factor", 0)
         solve_tlim *= 1 - strategy_tlim_factor
 
-        res = disp_solver(dispatch_inst, solve_tlim)
-        best = res.get_best_found()
-        routes = [route for route in best.get_routes() if route]
+        if dispatch_inst["request_idx"].size > 1:
+            model = Model.from_data(instance2data(dispatch_inst))
+            res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
+            best = res.best
+            routes = [route.visits() for route in best.get_routes() if route]
 
-        ep_sol = sol2ep(routes, dispatch_inst, dyn_config["postpone_routes"])
+            ep_sol = sol2ep(
+                routes, dispatch_inst, dyn_config["postpone_routes"]
+            )
+        else:  # No requests to dispatch
+            ep_sol = []
 
         current_epoch = observation["current_epoch"]
         solutions[current_epoch] = ep_sol

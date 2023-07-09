@@ -10,12 +10,8 @@ from tqdm.contrib.concurrent import process_map
 
 import tools
 from environments import Environment, EnvironmentCompetition
-
-# TODO fix solve_dynamic, cannot test now because of the import error
-# from strategies import solve_dynamic, solve_hindsight
-from strategies import solve_hindsight
-
-# from strategies.config import Config
+from strategies import solve_dynamic, solve_hindsight
+from strategies.config import Config
 
 
 def parse_args():

@@ -60,7 +60,7 @@ def simulate(
             # TODO make this as a custom solver
             model = Model.from_data(instance2data(sim_inst))
             res = model.solve(MaxRuntime(single_sim_tlim), seed=42)
-            sim_sol = [rte.visits() for rte in res.best.get_routes() if rte]
+            sim_sol = [route.visits() for route in res.best.get_routes()]
 
             scenarios.append((sim_inst, sim_sol))
 

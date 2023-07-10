@@ -102,7 +102,7 @@ def solve_dynamic(env, dyn_config, solver_seed):
         else:
             model = Model.from_data(instance2data(dispatch_inst))
             res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
-            routes = [rte.visits() for rte in res.best.get_routes() if rte]
+            routes = [route.visits() for route in res.best.get_routes()]
 
             # Maps solution client indices to request indices of the epoch instance.
             epoch_inst = observation["epoch_instance"]
@@ -127,7 +127,7 @@ def solve_hindsight(env, solver_seed: int):
     # Solve the hindsight instance using PyVRP.
     model = Model.from_data(instance2data(hindsight_inst))
     res = model.solve(MaxRuntime(info["epoch_tlim"]), seed=solver_seed)
-    hindsight_sol = [rte.visits() for rte in res.best.get_routes() if rte]
+    hindsight_sol = [route.visits() for route in res.best.get_routes()]
 
     done = False
     solutions = []

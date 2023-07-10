@@ -1,8 +1,10 @@
+import os
+
 import numpy as np
 import vrplib
 
 
-def read(filename, instance_format="vrplib"):
+def read(filename: os.PathLike | str, instance_format="vrplib"):
     """
     Read a VRPLIB instance from file and return an `instance` dict, containing
     - 'is_depot': boolean np.array. True for depot; False otherwise.
@@ -12,23 +14,30 @@ def read(filename, instance_format="vrplib"):
     - 'time_windows': np.array of [l, u] time windows
     - 'service_times': np.array of service times
     - 'duration_matrix': distance matrix between locations.
+
+    Parameters
+    ----------
+    filename: str
+        Path to the instance file.
+    instance_format: str
+        Format of the instance file. The default is 'vrplib'.
     """
     instance: dict = vrplib.read_instance(
         filename, instance_format=instance_format
     )
-    n_locations: int = instance.get("dimension", instance["demand"].size)
+    num_locs: int = instance.get("dimension", instance["demand"].size)
 
-    release_times = instance.get(
-        "release_time", np.zeros(n_locations, dtype=int)
-    )
+    # Default release time is zero
+    release_times = instance.get("release_time", np.zeros(num_locs, dtype=int))
 
+    # Default dispatch time is planning horizon
     horizon = instance["time_window"][0][1]  # depot latest tw
     dispatch_times = instance.get(
-        "dispatch_time", np.ones(n_locations, dtype=int) * horizon
+        "dispatch_time", np.ones(num_locs, dtype=int) * horizon
     )
 
     return {
-        "is_depot": np.array([1] + [0] * (n_locations - 1), dtype=bool),
+        "is_depot": np.array([1] + [0] * (num_locs - 1), dtype=bool),
         "coords": instance["node_coord"],
         "demands": instance["demand"],
         "capacity": instance["capacity"],

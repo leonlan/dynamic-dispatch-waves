@@ -75,11 +75,11 @@ def solve(
     if environment == "competition":
         env = EnvironmentCompetition(
             seed=instance_seed,
-            instance=tools.io.read(path, instance_format),
+            instance=tools.read(path, instance_format),
             epoch_tlim=epoch_tlim,
         )
     else:
-        instance = tools.io.read(path, instance_format)
+        instance = tools.read(path, instance_format)
         TIME = 600  # TODO rename this
 
         # Normalize the distances so that the further customer can be served

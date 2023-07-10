@@ -1,7 +1,7 @@
 from pyvrp import CostEvaluator, Model
 from pyvrp.stop import MaxRuntime
 
-from tools.instance2data import instance2data
+from tools import instance2data
 
 
 def solve_hindsight(env, solver_seed: int):

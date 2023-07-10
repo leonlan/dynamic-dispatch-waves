@@ -3,7 +3,7 @@ from pyvrp import Model
 from pyvrp.stop import MaxRuntime
 
 from strategies.dynamic import STRATEGIES
-from tools.instance2data import instance2data
+from tools import instance2data
 
 from .utils import sol2ep
 

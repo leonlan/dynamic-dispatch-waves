@@ -75,11 +75,11 @@ def solve(
     if environment == "competition":
         env = EnvironmentCompetition(
             seed=instance_seed,
-            instance=tools.io.read_vrplib(path, instance_format),
+            instance=tools.io.read(path, instance_format),
             epoch_tlim=epoch_tlim,
         )
     else:
-        instance = tools.io.read_vrplib(path, instance_format)
+        instance = tools.io.read(path, instance_format)
         TIME = 600  # TODO rename this
 
         # Normalize the distances so that the further customer can be served
@@ -127,6 +127,27 @@ def solve(
     )
 
 
+def tabulate(headers, rows) -> str:
+    # These lengths are used to space each column properly.
+    lengths = [len(header) for header in headers]
+
+    for row in rows:
+        for idx, cell in enumerate(row):
+            lengths[idx] = max(lengths[idx], len(str(cell)))
+
+    header = [
+        "  ".join(f"{h:<{l}s}" for l, h in zip(lengths, headers)),
+        "  ".join("-" * l for l in lengths),
+    ]
+
+    content = [
+        "  ".join(f"{str(c):>{l}s}" for l, c in zip(lengths, row))
+        for row in rows
+    ]
+
+    return "\n".join(header + content)
+
+
 def main():
     args = parse_args()
 
@@ -160,7 +181,7 @@ def main():
     ]
     data = np.asarray(data, dtype=dtypes)
 
-    table = tools.io.tabulate(headers, data)
+    table = tabulate(headers, data)
 
     print(
         Path(__file__).name,

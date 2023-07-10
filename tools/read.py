@@ -6,7 +6,8 @@ import vrplib
 
 def read(filename: os.PathLike | str, instance_format="vrplib"):
     """
-    Read a VRPLIB instance from file and return an `instance` dict, containing
+    Reads a VRPLIB instance from file and returns an ``instance`` dict,
+    containing
     - 'is_depot': boolean np.array. True for depot; False otherwise.
     - 'coords': np.array of locations
     - 'demands': np.array of location demands
@@ -25,19 +26,21 @@ def read(filename: os.PathLike | str, instance_format="vrplib"):
     instance: dict = vrplib.read_instance(
         filename, instance_format=instance_format
     )
-    num_locs: int = instance.get("dimension", instance["demand"].size)
+    dimension: int = instance.get("dimension", instance["demand"].size)
 
     # Default release time is zero
-    release_times = instance.get("release_time", np.zeros(num_locs, dtype=int))
+    release_times = instance.get(
+        "release_time", np.zeros(dimension, dtype=int)
+    )
 
     # Default dispatch time is planning horizon
     horizon = instance["time_window"][0][1]  # depot latest tw
     dispatch_times = instance.get(
-        "dispatch_time", np.ones(num_locs, dtype=int) * horizon
+        "dispatch_time", np.ones(dimension, dtype=int) * horizon
     )
 
     return {
-        "is_depot": np.array([1] + [0] * (num_locs - 1), dtype=bool),
+        "is_depot": np.array([1] + [0] * (dimension - 1), dtype=bool),
         "coords": instance["node_coord"],
         "demands": instance["demand"],
         "capacity": instance["capacity"],

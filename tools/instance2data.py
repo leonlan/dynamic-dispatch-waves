@@ -1,5 +1,3 @@
-from numbers import Number
-
 import numpy as np
 from pyvrp import Client, ProblemData, VehicleType
 
@@ -8,49 +6,31 @@ _INT_MAX = np.iinfo(np.int32).max
 
 def instance2data(instance) -> ProblemData:
     """
-    Converts an instance to a pyvrp model.
+    Converts an instance to a ``pyvrp.ProblemData`` instance.
     """
-    # A priori checks
-    if "dimension" in instance:
-        dimension: int = instance["dimension"]
-    else:
-        if "demands" not in instance:
-            raise ValueError("File should either contain dimension or demands")
-        dimension = len(instance["demands"])
-
+    dimension = instance["demands"].size
     depots: np.ndarray = instance.get("depot", np.array([0]))
     num_vehicles: int = instance.get("vehicles", dimension - 1)
     capacity: int = instance.get("capacity", _INT_MAX)
-
     distances: np.ndarray = instance["duration_matrix"]
-
     demands: np.ndarray = instance["demands"]
     coords: np.ndarray = instance["coords"]
+    service_times: np.ndarray = instance["service_times"]
     durations = distances
     time_windows: np.ndarray = instance["time_windows"]
 
-    if "service_times" in instance:
-        if isinstance(instance["service_times"], Number):
-            # Some instances describe a uniform service time as a single value
-            # that applies to all clients.
-            service_times = np.full(dimension, instance["service_times"], int)
-            service_times[0] = 0
-        else:
-            service_times = instance["service_times"]
-    else:
-        service_times = np.zeros(dimension, dtype=int)
+    # Default release time is zero
+    release_times = instance.get(
+        "release_times", np.zeros(dimension, dtype=int)
+    )
 
-    if "release_times" in instance:
-        release_times: np.ndarray = instance["release_times"]
-    else:
-        release_times = np.zeros(dimension, dtype=int)
+    # Default dispatch time is planning horizon
+    horizon = instance["time_windows"][0][1]  # depot latest tw
+    dispatch_times = instance.get(
+        "dispatch_times", np.ones(dimension, dtype=int) * horizon
+    )
 
-    if "dispatch_times" in instance:
-        dispatch_times: np.ndarray = instance["dispatch_times"]
-    else:
-        horizon = time_windows.max()
-        dispatch_times = horizon * np.ones(dimension, dtype=int)
-
+    # Default prize is zero
     prizes = instance.get("prizes", np.zeros(dimension, dtype=int))
 
     # Checks

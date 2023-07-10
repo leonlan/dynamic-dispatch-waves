@@ -13,7 +13,6 @@ import tools
 from environments import EnvironmentCompetition
 from strategies.config import Config
 from strategies.dynamic import STRATEGIES
-from strategies.utils import client2req
 from tools import instance2data
 
 
@@ -97,14 +96,17 @@ def solve_dynamic(env, dyn_config, solver_seed):
         strategy_tlim_factor = strategy_params.get("strategy_tlim_factor", 0)
         solve_tlim *= 1 - strategy_tlim_factor
 
-        if dispatch_inst["request_idx"].size > 1:
+        if dispatch_inst["request_idx"].size == 1:
+            # Empty dispatch instance, so no requests to dispatch.
+            ep_sol = []
+        else:
             model = Model.from_data(instance2data(dispatch_inst))
             res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
             routes = [rte.visits() for rte in res.best.get_routes() if rte]
 
-            ep_sol = client2req(routes, dispatch_inst)
-        else:  # Empty dispatch instance, so no requests to dispatch.
-            ep_sol = []
+            # Maps solution client indices to request indices of the epoch instance.
+            epoch_inst = observation["epoch_instance"]
+            ep_sol = [epoch_inst["request_idx"][route] for route in routes]
 
         observation, reward, done, info = env.step(ep_sol)
         assert info["error"] is None, info["error"]

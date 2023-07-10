@@ -4,7 +4,7 @@ import numpy as np
 import vrplib
 
 
-def read(filename: os.PathLike | str, instance_format="vrplib"):
+def read(path: os.PathLike | str, instance_format="vrplib"):
     """
     Reads a VRPLIB instance from file and returns an ``instance`` dict,
     containing
@@ -18,14 +18,12 @@ def read(filename: os.PathLike | str, instance_format="vrplib"):
 
     Parameters
     ----------
-    filename: str
+    path: str
         Path to the instance file.
     instance_format: str
         Format of the instance file. The default is 'vrplib'.
     """
-    instance: dict = vrplib.read_instance(
-        filename, instance_format=instance_format
-    )
+    instance = vrplib.read_instance(path, instance_format=instance_format)
     dimension: int = instance.get("dimension", instance["demand"].size)
 
     # Default release time is zero

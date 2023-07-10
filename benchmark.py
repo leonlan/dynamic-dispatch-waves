@@ -11,8 +11,8 @@ from tqdm.contrib.concurrent import process_map
 
 import utils
 from environments import EnvironmentCompetition
+from strategies import STRATEGIES
 from strategies.config import Config
-from strategies.dynamic import STRATEGIES
 from utils import instance2data
 
 

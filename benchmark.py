@@ -1,17 +1,16 @@
 import argparse
 from functools import partial
-from glob import glob
 from pathlib import Path
 from time import perf_counter
-from typing import Union
 
 import numpy as np
 from pyvrp import CostEvaluator, Model
 from pyvrp.stop import MaxRuntime
+from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 
 import tools
-from environments import Environment, EnvironmentCompetition
+from environments import EnvironmentCompetition
 from strategies.config import Config
 from strategies.dynamic import STRATEGIES
 from strategies.utils import client2req
@@ -21,9 +20,7 @@ from tools import instance2data
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "--instance_pattern", default="instances/ortec/ORTEC-VRPTW-ASYM-*.txt"
-    )
+    parser.add_argument("instances", nargs="+", help="Instance paths.")
     parser.add_argument("--instance_format", default="vrplib")
     parser.add_argument("--instance_seed", type=int, default=1)
     parser.add_argument("--solver_seed", type=int, default=1)
@@ -32,29 +29,10 @@ def parse_args():
         "--dyn_config_loc", default="configs/fixed_threshold.toml"
     )
     parser.add_argument("--hindsight", action="store_true")
-    parser.add_argument(
-        "--environment",
-        type=str,
-        default="paper",
-        choices=["paper", "competition"],
-    )
+    parser.add_argument("--environment", type=str, default="competition")
     parser.add_argument("--epoch_tlim", type=float, default=60)
-    parser.add_argument("--num_epochs", type=int, default=8)
-    parser.add_argument(
-        "--requests_per_epoch", type=int, nargs="+", default=50
-    )
-    parser.add_argument(
-        "--time_window_style", type=str, default="fixed_time_windows"
-    )
-    parser.add_argument("--time_window_width", type=int, default=2)
+
     return parser.parse_args()
-
-
-def manhattan_distance_matrix(coords):
-    coords_expanded = coords[:, np.newaxis, :]
-    diffs = np.abs(coords_expanded - coords)
-    distance_matrix = np.sum(diffs, axis=-1)
-    return distance_matrix
 
 
 def solve(
@@ -66,15 +44,9 @@ def solve(
     hindsight: bool,
     environment: str,
     epoch_tlim: int,
-    num_epochs: int,
-    requests_per_epoch: Union[int, list],
-    time_window_style: str,
-    time_window_width: int,
     **kwargs,
 ):
     path = Path(loc)
-
-    env: Union[Environment, EnvironmentCompetition]
 
     if environment == "competition":
         env = EnvironmentCompetition(
@@ -83,32 +55,7 @@ def solve(
             epoch_tlim=epoch_tlim,
         )
     else:
-        instance = tools.read(path, instance_format)
-        TIME = 600  # TODO rename this
-
-        # Normalize the distances so that the further customer can be served
-        # in one hour. Service times are also scaled accordingly.
-        factor = instance["duration_matrix"].max() / TIME
-        instance["duration_matrix"] = np.ceil(
-            instance["duration_matrix"] / factor
-        ).astype(int)
-        instance["service_times"] = np.ceil(
-            instance["service_times"] / factor
-        ).astype(int)
-
-        # Normalize the depot time windows to be TIME * ``num_epochs``; customer
-        # time windows are not used for the sampling.
-        instance["time_windows"][0, :] = [0, num_epochs * TIME]
-
-        env = Environment(
-            seed=instance_seed,
-            instance=instance,
-            epoch_tlim=epoch_tlim,
-            num_epochs=num_epochs,
-            requests_per_epoch=requests_per_epoch,
-            time_window_style=time_window_style,
-            time_window_width=time_window_width,
-        )
+        raise ValueError(f"Unknown environment: {environment}")
 
     start = perf_counter()
 
@@ -125,8 +72,6 @@ def solve(
         instance_seed,
         sum(costs.values()),
         tuple(costs.values()),
-        tuple([len(rts) for rts in routes.values()]),
-        tuple([sum(len(route) for route in sol) for sol in routes.values()]),
         run_time,
     )
 
@@ -251,49 +196,45 @@ def solve_hindsight(env, solver_seed: int):
     return env.final_costs, env.final_solutions
 
 
-def main():
-    args = parse_args()
+def benchmark_solve(instance: str, **kwargs):
+    return solve(instance, **kwargs)
 
-    func = partial(solve, **vars(args))
-    func_args = glob(args.instance_pattern)
 
-    if args.num_procs > 1:
-        tqdm_kwargs = {"max_workers": args.num_procs, "unit": "instance"}
-        data = process_map(func, func_args, **tqdm_kwargs)
-    else:  # process_map cannot be used with interactive debugging
-        data = [func(args) for args in func_args]
+def benchmark(instances: list[str], num_procs: int = 1, **kwargs):
+    func = partial(benchmark_solve, **kwargs)
+    args = sorted(instances)
 
-    headers = [
-        "Instance",
-        "Seed",
-        "Total",
-        "Costs",
-        "Routes",
-        "Requests",
-        "Time (s)",
-    ]
+    if len(instances) == 1 or num_procs == 1:
+        res = [func(arg) for arg in tqdm(args, unit="instance")]
+    else:
+        res = process_map(func, args, max_workers=num_procs, unit="instance")
 
     dtypes = [
         ("inst", "U37"),
         ("seed", int),
         ("total", int),
         ("costs", tuple),
-        ("routes", tuple),
-        ("requests", tuple),
         ("time", float),
     ]
-    data = np.asarray(data, dtype=dtypes)
+    data = np.asarray(res, dtype=dtypes)
+
+    headers = [
+        "Instance",
+        "Seed",
+        "Total",
+        "Costs",
+        "Time (s)",
+    ]
 
     table = tabulate(headers, data)
-
-    print(
-        Path(__file__).name,
-        " ".join(f"--{key} {value}" for key, value in vars(args).items()),
-    )
 
     print("\n", table, "\n", sep="")
     print(f"      Avg. objective: {data['total'].mean():.0f}")
     print(f"   Avg. run-time (s): {data['time'].mean():.2f}")
+
+
+def main():
+    benchmark(**vars(parse_args()))
 
 
 if __name__ == "__main__":

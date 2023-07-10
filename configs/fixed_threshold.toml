@@ -1,6 +1,5 @@
 [dynamic]
 strategy = "simulate"
-postpone_routes = false
 
 
 [dynamic.strategy_params]

@@ -1,6 +1,5 @@
 [dynamic]
 strategy = "greedy"
-postpone_routes = false
 
 
 [dynamic.strategy_params]

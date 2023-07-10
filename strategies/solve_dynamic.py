@@ -5,7 +5,7 @@ from pyvrp.stop import MaxRuntime
 from strategies.dynamic import STRATEGIES
 from tools import instance2data
 
-from .utils import sol2ep
+from .utils import client2req
 
 
 def solve_dynamic(env, dyn_config, solver_seed):
@@ -16,10 +16,10 @@ def solve_dynamic(env, dyn_config, solver_seed):
 
     Parameters
     ----------
-    env : Environment
-    dyn_config : Config
+    env: Environment
+    dyn_config: Config
         Configuration object storing parameters for the dynamic solver.
-    solver_seed : int
+    solver_seed: int
         RNG seed for the dynamic solver.
     """
     rng = np.random.default_rng(solver_seed)
@@ -51,9 +51,7 @@ def solve_dynamic(env, dyn_config, solver_seed):
                 route.visits() for route in res.best.get_routes() if route
             ]
 
-            ep_sol = sol2ep(
-                routes, dispatch_inst, dyn_config["postpone_routes"]
-            )
+            ep_sol = client2req(routes, dispatch_inst)
         else:  # No requests to dispatch
             ep_sol = []
 

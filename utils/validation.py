@@ -1,5 +1,7 @@
 import numpy as np
 
+# TODO Rewrite this
+
 
 def _validate_all_customers_visited(solution, num_customers):
     flat_solution = np.array([stop for route in solution for stop in route])

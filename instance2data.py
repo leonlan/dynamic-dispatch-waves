@@ -51,13 +51,6 @@ def instance2data(instance) -> ProblemData:
         horizon = time_windows.max()
         dispatch_times = horizon * np.ones(dimension, dtype=int)
 
-    # TODO remove this
-    if "latest_dispatch" in instance and "dispatch_times" not in instance:
-        dispatch_times: np.ndarray = instance["latest_dispatch"]
-    else:
-        horizon = time_windows.max()
-        dispatch_times = horizon * np.ones(dimension, dtype=int)
-
     prizes = instance.get("prizes", np.zeros(dimension, dtype=int))
 
     # Checks

@@ -46,7 +46,7 @@ def simulate_instance(
     # Conditional dispatching
     horizon = req_tw[0][1]
     req_release = to_postpone * env.epoch_duration
-    req_latest_dispatch = np.where(to_dispatch, 0, horizon)
+    req_dispatch_times = np.where(to_dispatch, 0, horizon)
 
     for epoch_idx in range(next_epoch, next_epoch + max_lookahead):
         new = env.sample_epoch_requests(epoch_idx, rng)
@@ -76,8 +76,8 @@ def simulate_instance(
         req_release = np.concatenate((req_release, new["release_times"]))
 
         # Default latest dispatch is the time horizon.
-        req_latest_dispatch = np.concatenate(
-            (req_latest_dispatch, np.full(n_new_reqs, horizon))
+        req_dispatch_times = np.concatenate(
+            (req_dispatch_times, np.full(n_new_reqs, horizon))
         )
 
     return {
@@ -91,5 +91,5 @@ def simulate_instance(
         "service_times": req_service,
         "duration_matrix": dist[req_customer_idx][:, req_customer_idx],
         "release_times": req_release,
-        "latest_dispatch": req_latest_dispatch,
+        "dispatch_times": req_dispatch_times,
     }

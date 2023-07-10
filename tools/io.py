@@ -40,7 +40,7 @@ def read_vrplib(filename, instance_format="vrplib"):
         "release_times": instance["release_time"]
         if "release_time" in instance
         else np.zeros(n_locations, dtype=int),
-        "latest_dispatch": instance["dispatch_time"]
+        "dispatch_times": instance["dispatch_time"]
         if "dispatch_time" in instance
         else np.ones(n_locations, dtype=int) * horizon,
     }

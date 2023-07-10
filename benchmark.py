@@ -207,7 +207,7 @@ def benchmark(instances: list[str], num_procs: int = 1, **kwargs):
     table = tabulate(headers, data)
 
     print("\n", table, "\n", sep="")
-    print(f"      Avg. objective: {data['total'].mean():.0f}")
+    print(f"      Avg. objective: {data['cost'].mean():.0f}")
     print(f"   Avg. run-time (s): {data['time'].mean():.2f}")
 
 

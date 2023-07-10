@@ -104,9 +104,8 @@ def solve_dynamic(env, dyn_config, solver_seed):
             res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
             routes = [route.visits() for route in res.best.get_routes()]
 
-            # Maps solution client indices to request indices of the epoch instance.
-            epoch_inst = observation["epoch_instance"]
-            ep_sol = [epoch_inst["request_idx"][route] for route in routes]
+            # Map solution client indices to request indices.
+            ep_sol = [dispatch_inst["request_idx"][route] for route in routes]
 
         observation, reward, done, info = env.step(ep_sol)
         assert info["error"] is None, info["error"]

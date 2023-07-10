@@ -29,7 +29,6 @@ def parse_args():
         "--dyn_config_loc", default="configs/fixed_threshold.toml"
     )
     parser.add_argument("--hindsight", action="store_true")
-    parser.add_argument("--environment", type=str, default="competition")
     parser.add_argument("--epoch_tlim", type=float, default=60)
 
     return parser.parse_args()
@@ -42,38 +41,128 @@ def solve(
     solver_seed: int,
     dyn_config_loc: str,
     hindsight: bool,
-    environment: str,
     epoch_tlim: int,
     **kwargs,
 ):
     path = Path(loc)
 
-    if environment == "competition":
-        env = EnvironmentCompetition(
-            seed=instance_seed,
-            instance=tools.read(path, instance_format),
-            epoch_tlim=epoch_tlim,
-        )
-    else:
-        raise ValueError(f"Unknown environment: {environment}")
+    env = EnvironmentCompetition(
+        seed=instance_seed,
+        instance=tools.read(path, instance_format),
+        epoch_tlim=epoch_tlim,
+    )
 
     start = perf_counter()
 
     if hindsight:
-        costs, routes = solve_hindsight(env, solver_seed)
+        costs, _ = solve_hindsight(env, solver_seed)
     else:
         dyn_config = Config.from_file(dyn_config_loc).dynamic()
-        costs, routes = solve_dynamic(env, dyn_config, solver_seed)
-
-    run_time = round(perf_counter() - start, 2)
+        costs, _ = solve_dynamic(env, dyn_config, solver_seed)
 
     return (
         path.stem,
         instance_seed,
-        sum(costs.values()),
-        tuple(costs.values()),
-        run_time,
+        sum(costs),
+        round(perf_counter() - start, 2),
     )
+
+
+def solve_dynamic(env, dyn_config, solver_seed):
+    """
+    Solves the dynamic problem using the passed-in dynamic strategy
+    configuration.
+
+    Parameters
+    ----------
+    env: Environment
+        Environment of the dynamic problem.
+    dyn_config: Config
+        Configuration object storing parameters for the dynamic solver.
+    solver_seed: int
+        RNG seed for the dynamic solver.
+    """
+    rng = np.random.default_rng(solver_seed)
+
+    done = False
+    solutions = []
+    costs = []
+    observation, static_info = env.reset()
+    ep_tlim = static_info["epoch_tlim"]
+
+    while not done:
+        strategy = STRATEGIES[dyn_config.strategy()]
+        dispatch_inst = strategy(
+            env, static_info, observation, rng, **dyn_config.strategy_params()
+        )
+
+        solve_tlim = ep_tlim
+
+        # Reduce the solving time limit by the simulation time
+        strategy_params = dyn_config.get("strategy_params", {})
+        strategy_tlim_factor = strategy_params.get("strategy_tlim_factor", 0)
+        solve_tlim *= 1 - strategy_tlim_factor
+
+        if dispatch_inst["request_idx"].size > 1:
+            model = Model.from_data(instance2data(dispatch_inst))
+            res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
+            routes = [rte.visits() for rte in res.best.get_routes() if rte]
+
+            ep_sol = client2req(routes, dispatch_inst)
+        else:  # Empty dispatch instance, so no requests to dispatch.
+            ep_sol = []
+
+        observation, reward, done, info = env.step(ep_sol)
+        assert info["error"] is None, info["error"]
+
+        solutions.append(ep_sol)
+        costs.append(abs(reward))
+
+    return costs, solutions
+
+
+def solve_hindsight(env, solver_seed: int):
+    """
+    Solves the dynamic problem in hindsight.
+    """
+    observation, info = env.reset()
+    hindsight_inst = env.get_hindsight_problem()
+
+    # Solve the hindsight instance using PyVRP.
+    model = Model.from_data(instance2data(hindsight_inst))
+    res = model.solve(MaxRuntime(info["epoch_tlim"]), seed=solver_seed)
+    hindsight_sol = [rte.visits() for rte in res.best.get_routes() if rte]
+
+    done = False
+    solutions = []
+    costs = []
+    observation, _ = env.reset()
+
+    # Submit the solution from the hindsight instance to the environment to
+    # verify feasibility of the solution.
+    while not done:
+        # Routes with a maximum release time of the dispatch time, i.e., the
+        # moment that the routes will be dispatched if they are submitted as
+        # the current epoch solution.
+        dispatch_time = observation["dispatch_time"]
+        ep_sol = [
+            route
+            for route in hindsight_sol
+            if hindsight_inst["release_times"][route].max() == dispatch_time
+        ]
+
+        observation, reward, done, info = env.step(ep_sol)
+        assert info["error"] is None, f"{info['error']}"
+
+        solutions.append(ep_sol)
+        costs.append(abs(reward))
+
+    # Check that the cost of the dynamic problem is equal to the cost of the
+    # hindsight solution.
+    cost_eval = CostEvaluator(0, 0)
+    assert sum(costs) == cost_eval.cost(res.best)
+
+    return costs, solutions
 
 
 def tabulate(headers, rows) -> str:
@@ -97,111 +186,8 @@ def tabulate(headers, rows) -> str:
     return "\n".join(header + content)
 
 
-def solve_dynamic(env, dyn_config, solver_seed):
-    """
-    Solve the dynamic VRPTW problem using the passed-in dispatching strategy.
-    The given seed is used to initialise both the random number stream on the
-    Python side, and for the static solver on the C++ side.
-
-    Parameters
-    ----------
-    env: Environment
-    dyn_config: Config
-        Configuration object storing parameters for the dynamic solver.
-    solver_seed: int
-        RNG seed for the dynamic solver.
-    """
-    rng = np.random.default_rng(solver_seed)
-
-    observation, static_info = env.reset()
-    ep_tlim = static_info["epoch_tlim"]
-
-    solutions = {}
-    costs = {}
-    done = False
-
-    while not done:
-        strategy = STRATEGIES[dyn_config.strategy()]
-        dispatch_inst = strategy(
-            env, static_info, observation, rng, **dyn_config.strategy_params()
-        )
-
-        solve_tlim = ep_tlim
-
-        # Reduce the solving time limit by the simulation time
-        strategy_params = dyn_config.get("strategy_params", {})
-        strategy_tlim_factor = strategy_params.get("strategy_tlim_factor", 0)
-        solve_tlim *= 1 - strategy_tlim_factor
-
-        if dispatch_inst["request_idx"].size > 1:
-            model = Model.from_data(instance2data(dispatch_inst))
-            res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
-            routes = [
-                route.visits() for route in res.best.get_routes() if route
-            ]
-
-            ep_sol = client2req(routes, dispatch_inst)
-        else:  # No requests to dispatch
-            ep_sol = []
-
-        current_epoch = observation["current_epoch"]
-        solutions[current_epoch] = ep_sol
-
-        observation, reward, done, info = env.step(ep_sol)
-        costs[current_epoch] = abs(reward)
-
-        assert info["error"] is None, info["error"]
-
-    return costs, solutions
-
-
-def solve_hindsight(env, solver_seed: int):
-    """
-    Solve the dynamic VRPTW problem using the oracle strategy, i.e., the
-    problem is solved as static VRPTW with release dates using the information
-    that is known in hindsight. The found solution is then submitted to the
-    environment. The given seed is passed to the static solver.
-    """
-    observation, info = env.reset()
-    hindsight_inst = env.get_hindsight_problem()
-
-    model = Model.from_data(instance2data(hindsight_inst))
-    res = model.solve(MaxRuntime(info["epoch_tlim"]), seed=solver_seed)
-
-    best = res.best
-    routes = [route.visits() for route in best.get_routes() if route]
-    observation, _ = env.reset()
-
-    # Submit the solution from the hindsight problem
-    while not env.is_done:
-        ep_inst = observation["epoch_instance"]
-        requests = set(ep_inst["request_idx"])
-
-        # This is a proxy to extract the routes from the hindsight
-        # solution that are dispatched in the current epoch.
-        ep_sol = [
-            route
-            for route in routes
-            if len(requests.intersection(route)) == len(route)
-        ]
-
-        observation, _, _, info = env.step(ep_sol)
-        assert info["error"] is None, f"{info['error']}"
-
-    # Check that the cost of the dynamic problem is equal to the cost of the
-    # hindsight solution.
-    cost_eval = CostEvaluator(0, 0)
-    assert sum(env.final_costs.values()) == cost_eval.cost(best)
-
-    return env.final_costs, env.final_solutions
-
-
-def benchmark_solve(instance: str, **kwargs):
-    return solve(instance, **kwargs)
-
-
 def benchmark(instances: list[str], num_procs: int = 1, **kwargs):
-    func = partial(benchmark_solve, **kwargs)
+    func = partial(solve, **kwargs)
     args = sorted(instances)
 
     if len(instances) == 1 or num_procs == 1:
@@ -212,8 +198,7 @@ def benchmark(instances: list[str], num_procs: int = 1, **kwargs):
     dtypes = [
         ("inst", "U37"),
         ("seed", int),
-        ("total", int),
-        ("costs", tuple),
+        ("cost", int),
         ("time", float),
     ]
     data = np.asarray(res, dtype=dtypes)
@@ -221,8 +206,7 @@ def benchmark(instances: list[str], num_procs: int = 1, **kwargs):
     headers = [
         "Instance",
         "Seed",
-        "Total",
-        "Costs",
+        "Cost",
         "Time (s)",
     ]
 

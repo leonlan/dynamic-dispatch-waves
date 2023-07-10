@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-import tools
+import utils
 
 State = Dict[str, Any]
 Action = List[List[int]]
@@ -144,7 +144,7 @@ class EnvironmentCompetition:
             self.is_done = True
             return (None, float("inf"), self.is_done, {"error": str(error)})
 
-        cost = tools.validation.validate_dynamic_epoch_solution(
+        cost = utils.validation.validate_dynamic_epoch_solution(
             self.ep_inst, solution
         )
 
@@ -169,7 +169,7 @@ class EnvironmentCompetition:
         assert not self.is_done, "Environment is finished"
 
         # Check if solution is valid
-        tools.validation.validate_dynamic_epoch_solution(
+        utils.validation.validate_dynamic_epoch_solution(
             self.ep_inst, solution
         )
 

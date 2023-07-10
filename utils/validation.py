@@ -1,5 +1,7 @@
 import numpy as np
 
+# TODO Rewrite this
+
 
 def _validate_all_customers_visited(solution, num_customers):
     flat_solution = np.array([stop for route in solution for stop in route])
@@ -15,9 +17,9 @@ def _validate_route_capacity(route, demands, capacity):
     ), f"Capacity validated for route, {sum(demands[route])} > {capacity}"
 
 
-def _validate_route_dispatch_windows(route, release_times, latest_dispatch):
+def _validate_route_dispatch_windows(route, release_times, dispatch_times):
     if route:
-        assert max(release_times[route]) <= min(latest_dispatch[route])
+        assert max(release_times[route]) <= min(dispatch_times[route])
 
 
 def _validate_route_time_windows(
@@ -86,9 +88,9 @@ def validate_static_solution(
             instance.get("release_times", None),
         )
 
-        if "latest_dispatch" in instance:
+        if "dispatch_times" in instance:
             _validate_route_dispatch_windows(
-                route, instance["release_times"], instance["latest_dispatch"]
+                route, instance["release_times"], instance["dispatch_times"]
             )
 
     return compute_solution_driving_time(instance, solution)

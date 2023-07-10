@@ -9,11 +9,11 @@ from pyvrp.stop import MaxRuntime
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 
-import tools
+import utils
 from environments import EnvironmentCompetition
 from strategies.config import Config
 from strategies.dynamic import STRATEGIES
-from tools import instance2data
+from utils import instance2data
 
 
 def parse_args():
@@ -42,7 +42,7 @@ def solve(
     **kwargs,
 ):
     path = Path(loc)
-    static_instance = tools.read(path)
+    static_instance = utils.read(path)
     env = EnvironmentCompetition(env_seed, static_instance, epoch_tlim)
 
     start = perf_counter()

@@ -1,6 +1,6 @@
 from functools import partial
 
-from tools.filter_instance import filter_instance
+from utils.filter_instance import filter_instance
 
 
 def _random_dispatch(env, info, obs, rng, prob, **kwargs):

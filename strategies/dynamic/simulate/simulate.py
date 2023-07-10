@@ -2,8 +2,8 @@ import numpy as np
 from pyvrp import Model
 from pyvrp.stop import MaxRuntime
 
-from tools import instance2data
-from tools.filter_instance import filter_instance
+from utils import instance2data
+from utils.filter_instance import filter_instance
 
 from .consensus import CONSENSUS
 from .simulate_instance import simulate_instance

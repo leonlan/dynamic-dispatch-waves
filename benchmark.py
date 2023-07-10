@@ -21,8 +21,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("instances", nargs="+", help="Instance paths.")
-    parser.add_argument("--instance_format", default="vrplib")
-    parser.add_argument("--instance_seed", type=int, default=1)
+    parser.add_argument("--env_seed", type=int, default=1)
     parser.add_argument("--solver_seed", type=int, default=1)
     parser.add_argument("--num_procs", type=int, default=4)
     parser.add_argument(
@@ -36,8 +35,7 @@ def parse_args():
 
 def solve(
     loc: str,
-    instance_format: str,
-    instance_seed: int,
+    env_seed: int,
     solver_seed: int,
     dyn_config_loc: str,
     hindsight: bool,
@@ -45,12 +43,8 @@ def solve(
     **kwargs,
 ):
     path = Path(loc)
-
-    env = EnvironmentCompetition(
-        seed=instance_seed,
-        instance=tools.read(path, instance_format),
-        epoch_tlim=epoch_tlim,
-    )
+    static_instance = tools.read(path)
+    env = EnvironmentCompetition(env_seed, static_instance, epoch_tlim)
 
     start = perf_counter()
 
@@ -62,7 +56,7 @@ def solve(
 
     return (
         path.stem,
-        instance_seed,
+        env_seed,
         sum(costs),
         round(perf_counter() - start, 2),
     )

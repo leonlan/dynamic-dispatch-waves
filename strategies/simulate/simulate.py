@@ -10,7 +10,6 @@ from .simulate_instance import simulate_instance
 
 
 def simulate(
-    env,
     info,
     obs,
     rng,
@@ -48,7 +47,6 @@ def simulate(
 
         for _ in range(n_simulations):
             sim_inst = simulate_instance(
-                env,
                 info,
                 obs,
                 rng,

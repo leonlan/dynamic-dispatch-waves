@@ -11,6 +11,7 @@ from tqdm.contrib.concurrent import process_map
 
 import utils
 from environments import EnvironmentCompetition
+from sampling import sample_epoch_requests
 from strategies import STRATEGIES
 from strategies.Config import Config
 from utils import instance2data
@@ -43,7 +44,9 @@ def solve(
 ):
     path = Path(loc)
     static_instance = utils.read(path)
-    env = EnvironmentCompetition(env_seed, static_instance, epoch_tlim)
+    env = EnvironmentCompetition(
+        env_seed, static_instance, epoch_tlim, sample_epoch_requests
+    )
 
     start = perf_counter()
 
@@ -86,7 +89,7 @@ def solve_dynamic(env, dyn_config, solver_seed):
     while not done:
         strategy = STRATEGIES[dyn_config.strategy()]
         dispatch_inst = strategy(
-            env, static_info, observation, rng, **dyn_config.strategy_params()
+            static_info, observation, rng, **dyn_config.strategy_params()
         )
 
         solve_tlim = ep_tlim

@@ -1,5 +1,5 @@
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -20,6 +20,8 @@ class EnvironmentCompetition:
         The static VRP instance from which requests are sampled.
     epoch_tlim
         The epoch time limit.
+    instance_sampler
+        The instance sampler to use.
     max_requests_per_epoch
         The maximum number of revealed requests per epoch.
     dispatch_margin
@@ -35,6 +37,7 @@ class EnvironmentCompetition:
         seed: int,
         instance: Dict,
         epoch_tlim: float,
+        instance_sampler: Callable,
         max_requests_per_epoch: int = 100,
         dispatch_margin: int = 3600,
         epoch_duration: int = 3600,
@@ -42,6 +45,7 @@ class EnvironmentCompetition:
         self.seed = seed
         self.instance = instance
         self.epoch_tlim = epoch_tlim
+        self.instance_sampler = instance_sampler
         self.max_requests_per_epoch = max_requests_per_epoch
         self.dispatch_margin = dispatch_margin
         self.epoch_duration = epoch_duration
@@ -66,25 +70,25 @@ class EnvironmentCompetition:
         self.current_epoch = self.start_epoch
         self.current_time = self.current_epoch * self.epoch_duration
 
-        self.sample_complete_dynamic_instance()
-
         self.is_done = False
-        obs = self._next_observation()
-
         self.final_solutions: Dict[int, Optional[List]] = {}
         self.final_costs: Dict[int, Optional[float]] = {}
 
-        self.start_time_epoch = time.time()
+        self.sample_complete_dynamic_instance()
 
-        info = {
+        observation = self._next_observation()
+        static_info = {
             "dynamic_context": self.instance,
             "start_epoch": self.start_epoch,
             "end_epoch": self.end_epoch,
             "num_epochs": self.end_epoch - self.start_epoch + 1,
             "epoch_tlim": self.epoch_tlim,
+            "epoch_duration": self.epoch_duration,
+            "max_requests_per_epoch": self.max_requests_per_epoch,
         }
 
-        return obs, info
+        self.start_time_epoch = time.time()
+        return observation, static_info
 
     def sample_complete_dynamic_instance(self):
         """
@@ -102,7 +106,15 @@ class EnvironmentCompetition:
         self.req_must_dispatch = np.array([False])
 
         for epoch_idx in range(self.current_epoch, self.end_epoch + 1):
-            epoch_reqs = self.sample_epoch_requests(epoch_idx)
+            current_time = epoch_idx * self.epoch_duration
+            dispatch_time = current_time + self.dispatch_margin
+            epoch_reqs = self.instance_sampler(
+                self.rng,
+                self.instance,
+                current_time,
+                dispatch_time,
+                self.max_requests_per_epoch,
+            )
             n_ep_reqs = epoch_reqs["customer_idx"].size
 
             self.req_idx = np.concatenate(
@@ -181,51 +193,6 @@ class EnvironmentCompetition:
         # We must not have any undispatched orders that must be dispatched
         undispatched = (self.req_must_dispatch & ~self.req_is_dispatched).any()
         assert not undispatched, "Must dispatch requests not dispatched."
-
-    def sample_epoch_requests(self, epoch_idx, rng=None):
-        """
-        Samples requests from an epoch.
-        """
-        dist = self.instance["duration_matrix"]
-        n_customers = self.instance["is_depot"].size - 1  # Exclude depot
-        n_samples = self.max_requests_per_epoch
-
-        current_time = epoch_idx * self.epoch_duration
-        dispatch_time = current_time + self.dispatch_margin
-
-        if rng is None:  # enables solution method to use different rng
-            rng = self.rng
-
-        # Sample data uniformly from customers (1 to num_customers)
-        cust_idx = rng.integers(n_customers, size=n_samples) + 1
-        tw_idx = rng.integers(n_customers, size=n_samples) + 1
-        demand_idx = rng.integers(n_customers, size=n_samples) + 1
-        service_idx = rng.integers(n_customers, size=n_samples) + 1
-
-        new_tw = self.instance["time_windows"][tw_idx]
-        new_demand = self.instance["demands"][demand_idx]
-        new_service = self.instance["service_times"][service_idx]
-
-        # Filter sampled requests that cannot be served in a round trip
-        earliest_arrival = np.maximum(
-            dispatch_time + dist[0, cust_idx], new_tw[:, 0]
-        )
-        earliest_return = earliest_arrival + new_service + dist[cust_idx, 0]
-        depot_closed = self.instance["time_windows"][0, 1]
-
-        feas = (earliest_arrival <= new_tw[:, 1]) & (
-            earliest_return <= depot_closed
-        )
-        n_new_requests = feas.sum()
-        new_release = np.full(n_new_requests, dispatch_time)
-
-        return {
-            "customer_idx": cust_idx[feas],
-            "time_windows": new_tw[feas],
-            "demands": new_demand[feas],
-            "service_times": new_service[feas],
-            "release_times": new_release,
-        }
 
     def _next_observation(self) -> State:
         """

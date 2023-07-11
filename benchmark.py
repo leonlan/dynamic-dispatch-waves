@@ -12,21 +12,19 @@ from tqdm.contrib.concurrent import process_map
 import utils
 from environments import EnvironmentCompetition
 from sampling import sample_epoch_requests
-from strategies import STRATEGIES
-from strategies.Config import Config
-from utils import instance2data
+from strategies import AGENTS, Agent
+from utils import filter_instance, instance2data
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("instances", nargs="+", help="Instance paths.")
+    parser.add_argument("--agent_type", type=str, default="greedy")
     parser.add_argument("--env_seed", type=int, default=1)
+    parser.add_argument("--agent_seed", type=int, default=1)
     parser.add_argument("--solver_seed", type=int, default=1)
     parser.add_argument("--num_procs", type=int, default=4)
-    parser.add_argument(
-        "--dyn_config_loc", default="configs/fixed_threshold.toml"
-    )
     parser.add_argument("--hindsight", action="store_true")
     parser.add_argument("--epoch_tlim", type=float, default=60)
 
@@ -35,9 +33,10 @@ def parse_args():
 
 def solve(
     loc: str,
+    agent_type: str,
     env_seed: int,
+    agent_seed: int,
     solver_seed: int,
-    dyn_config_loc: str,
     hindsight: bool,
     epoch_tlim: int,
     **kwargs,
@@ -47,14 +46,14 @@ def solve(
     env = EnvironmentCompetition(
         env_seed, static_instance, epoch_tlim, sample_epoch_requests
     )
+    agent = AGENTS[agent_type](agent_seed)
 
     start = perf_counter()
 
     if hindsight:
         costs, _ = solve_hindsight(env, solver_seed)
     else:
-        dyn_config = Config.from_file(dyn_config_loc).dynamic()
-        costs, _ = solve_dynamic(env, dyn_config, solver_seed)
+        costs, _ = solve_dynamic(env, agent, solver_seed)
 
     return (
         path.stem,
@@ -64,22 +63,19 @@ def solve(
     )
 
 
-def solve_dynamic(env, dyn_config, solver_seed):
+def solve_dynamic(env, agent: Agent, solver_seed: int):
     """
-    Solves the dynamic problem using the passed-in dynamic strategy
-    configuration.
+    Solves the dynamic problem.
 
     Parameters
     ----------
     env: Environment
         Environment of the dynamic problem.
-    dyn_config: Config
-        Configuration object storing parameters for the dynamic solver.
+    agent: Agent
+        Agent that selects the dispatch action.
     solver_seed: int
-        RNG seed for the dynamic solver.
+        RNG seed used to solve the dispatch instances.
     """
-    rng = np.random.default_rng(solver_seed)
-
     done = False
     solutions = []
     costs = []
@@ -87,23 +83,21 @@ def solve_dynamic(env, dyn_config, solver_seed):
     ep_tlim = static_info["epoch_tlim"]
 
     while not done:
-        strategy = STRATEGIES[dyn_config.strategy()]
-        dispatch_inst = strategy(
-            static_info, observation, rng, **dyn_config.strategy_params()
-        )
+        dispatch_action = agent.act(observation)
 
-        solve_tlim = ep_tlim
+        epoch_instance = observation["epoch_instance"]
+        dispatch_inst = filter_instance(epoch_instance, dispatch_action)
 
         # Reduce the solving time limit by the simulation time
-        strategy_params = dyn_config.get("strategy_params", {})
-        strategy_tlim_factor = strategy_params.get("strategy_tlim_factor", 0)
-        solve_tlim *= 1 - strategy_tlim_factor
+        solve_tlim = ep_tlim  # TODO what to do with this?
 
-        if dispatch_inst["request_idx"].size == 1:
-            # Empty dispatch instance, so no requests to dispatch.
-            ep_sol = []
+        if dispatch_inst["request_idx"].size <= 2:
+            # Empty or single client dispatch instance. PyVRP cannot handle
+            # this, so we manually build such a solution.
+            ep_sol = [[req] for req in dispatch_inst["request_idx"] if req]
         else:
-            model = Model.from_data(instance2data(dispatch_inst))
+            data = instance2data(dispatch_inst)
+            model = Model.from_data(data)
             res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
             routes = [route.visits() for route in res.best.get_routes()]
 

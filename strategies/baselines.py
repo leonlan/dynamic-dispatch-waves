@@ -3,7 +3,7 @@ from functools import partial
 from utils.filter_instance import filter_instance
 
 
-def _random_dispatch(env, info, obs, rng, prob, **kwargs):
+def _random_dispatch(info, obs, rng, prob, **kwargs):
     """
     Decide which requests to dispatch in the current epoch. Requests that are
     not "must dispatch" are dispatched with probability ``prob``.

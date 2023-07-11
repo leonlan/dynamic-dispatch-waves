@@ -4,7 +4,7 @@ from sampling import sample_epoch_requests
 
 
 def simulate_instance(
-    info,  # TODO make this part of obs?
+    info,
     obs,
     rng,
     n_lookahead: int,

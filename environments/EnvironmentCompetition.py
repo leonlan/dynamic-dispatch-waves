@@ -70,17 +70,14 @@ class EnvironmentCompetition:
         self.current_epoch = self.start_epoch
         self.current_time = self.current_epoch * self.epoch_duration
 
-        self.sample_complete_dynamic_instance()
-
         self.is_done = False
-        obs = self._next_observation()
-
         self.final_solutions: Dict[int, Optional[List]] = {}
         self.final_costs: Dict[int, Optional[float]] = {}
 
-        self.start_time_epoch = time.time()
+        self.sample_complete_dynamic_instance()
 
-        info = {
+        observation = self._next_observation()
+        static_info = {
             "dynamic_context": self.instance,
             "start_epoch": self.start_epoch,
             "end_epoch": self.end_epoch,
@@ -90,7 +87,8 @@ class EnvironmentCompetition:
             "max_requests_per_epoch": self.max_requests_per_epoch,
         }
 
-        return obs, info
+        self.start_time_epoch = time.time()
+        return observation, static_info
 
     def sample_complete_dynamic_instance(self):
         """

@@ -95,9 +95,10 @@ def solve_dynamic(env, dyn_config, solver_seed: int, solve_tlim: float):
             static_info, observation, rng, **dyn_config.strategy_params()
         )
 
-        if dispatch_inst["request_idx"].size == 1:
-            # Empty dispatch instance, so no requests to dispatch.
-            ep_sol = []
+        if dispatch_inst["request_idx"].size <= 2:
+            # Empty or single client dispatch instance. PyVRP cannot handle
+            # this, so we manually build such a solution.
+            ep_sol = [[req] for req in dispatch_inst["request_idx"] if req]
         else:
             model = Model.from_data(instance2data(dispatch_inst))
             res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
@@ -118,11 +119,20 @@ def solve_dynamic(env, dyn_config, solver_seed: int, solve_tlim: float):
 def solve_hindsight(env, solver_seed: int, solve_tlim: float):
     """
     Solves the dynamic problem in hindsight.
+
+    Parameters
+    ----------
+    env: Environment
+        Environment of the dynamic problem.
+    solver_seed: int
+        RNG seed for the solver.
+    solve_tlim: float
+        Time limit for solving the hindsight instance.
+
     """
     observation, info = env.reset()
     hindsight_inst = env.get_hindsight_problem()
 
-    # Solve the hindsight instance using PyVRP.
     model = Model.from_data(instance2data(hindsight_inst))
     res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
     hindsight_sol = [route.visits() for route in res.best.get_routes()]

@@ -13,6 +13,7 @@ import utils
 from environments import EnvironmentCompetition
 from sampling import sample_epoch_requests
 from strategies import AGENTS, Agent
+from strategies.consensus import fixed_threshold
 from utils import filter_instance, instance2data
 
 
@@ -46,7 +47,19 @@ def solve(
     env = EnvironmentCompetition(
         env_seed, static_instance, epoch_tlim, sample_epoch_requests
     )
-    agent = AGENTS[agent_type](agent_seed)
+
+    # TODO customize this
+    agent_params = {
+        "consensus": partial(
+            fixed_threshold,
+            dispatch_thresholds=[0.5],
+            postpone_thresholds=[0.9],
+        ),
+        "num_iterations": 3,
+        "num_lookahead": 1,
+        "num_scenarios": 10,
+    }
+    agent = make_agent(agent_type, agent_seed, agent_params)
 
     start = perf_counter()
 
@@ -61,6 +74,13 @@ def solve(
         sum(costs),
         round(perf_counter() - start, 2),
     )
+
+
+def make_agent(agent_type: str, agent_seed: int, agent_params: dict) -> Agent:
+    """
+    Creates an agent of the specified type.
+    """
+    return AGENTS[agent_type](agent_seed, **agent_params)
 
 
 def solve_dynamic(env, agent: Agent, solver_seed: int):
@@ -83,7 +103,7 @@ def solve_dynamic(env, agent: Agent, solver_seed: int):
     ep_tlim = static_info["epoch_tlim"]
 
     while not done:
-        dispatch_action = agent.act(observation)
+        dispatch_action = agent.act(observation, static_info)
 
         epoch_instance = observation["epoch_instance"]
         dispatch_inst = filter_instance(epoch_instance, dispatch_action)

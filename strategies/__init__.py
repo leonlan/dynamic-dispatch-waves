@@ -1,3 +1,5 @@
+from typing import Callable
+
 from .baselines import greedy, lazy, random
 from .simulate import simulate
 
@@ -13,7 +15,7 @@ from .simulate import simulate
 #
 # Using these arguments, the strategy should return which requests to dispatch
 # in the current epoch.
-STRATEGIES = {
+STRATEGIES: dict[str, Callable] = {
     "greedy": greedy,
     "lazy": lazy,
     "random": random,

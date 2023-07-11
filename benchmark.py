@@ -28,6 +28,7 @@ def parse_args():
     parser.add_argument("--num_procs", type=int, default=4)
     parser.add_argument("--hindsight", action="store_true")
     parser.add_argument("--epoch_tlim", type=float, default=60)
+    parser.add_argument("--solve_tlim", type=float, default=10)
 
     return parser.parse_args()
 
@@ -39,7 +40,8 @@ def solve(
     agent_seed: int,
     solver_seed: int,
     hindsight: bool,
-    epoch_tlim: int,
+    epoch_tlim: float,
+    solve_tlim: float,
     **kwargs,
 ):
     path = Path(loc)
@@ -64,9 +66,9 @@ def solve(
     start = perf_counter()
 
     if hindsight:
-        costs, _ = solve_hindsight(env, solver_seed)
+        costs, _ = solve_hindsight(env, solver_seed, solve_tlim)
     else:
-        costs, _ = solve_dynamic(env, agent, solver_seed)
+        costs, _ = solve_dynamic(env, agent, solver_seed, solve_tlim)
 
     return (
         path.stem,
@@ -83,7 +85,7 @@ def make_agent(agent_type: str, agent_seed: int, agent_params: dict) -> Agent:
     return AGENTS[agent_type](agent_seed, **agent_params)
 
 
-def solve_dynamic(env, agent: Agent, solver_seed: int):
+def solve_dynamic(env, agent: Agent, solver_seed: int, solve_tlim: float):
     """
     Solves the dynamic problem.
 
@@ -95,21 +97,19 @@ def solve_dynamic(env, agent: Agent, solver_seed: int):
         Agent that selects the dispatch action.
     solver_seed: int
         RNG seed used to solve the dispatch instances.
+    solve_tlim: float
+        Time limit for solving the dispatch instances.
     """
     done = False
     solutions = []
     costs = []
     observation, static_info = env.reset()
-    ep_tlim = static_info["epoch_tlim"]
 
     while not done:
         dispatch_action = agent.act(observation, static_info)
 
         epoch_instance = observation["epoch_instance"]
         dispatch_inst = filter_instance(epoch_instance, dispatch_action)
-
-        # Reduce the solving time limit by the simulation time
-        solve_tlim = ep_tlim  # TODO what to do with this?
 
         if dispatch_inst["request_idx"].size <= 2:
             # Empty or single client dispatch instance. PyVRP cannot handle
@@ -133,16 +133,25 @@ def solve_dynamic(env, agent: Agent, solver_seed: int):
     return costs, solutions
 
 
-def solve_hindsight(env, solver_seed: int):
+def solve_hindsight(env, solver_seed: int, solve_tlim: float):
     """
     Solves the dynamic problem in hindsight.
+
+    Parameters
+    ----------
+    env: Environment
+        Environment of the dynamic problem.
+    solver_seed: int
+        RNG seed used to solve the dispatch instances.
+    solve_tlim: float
+        Time limit for solving the dispatch instances.
     """
     observation, info = env.reset()
     hindsight_inst = env.get_hindsight_problem()
 
     # Solve the hindsight instance using PyVRP.
     model = Model.from_data(instance2data(hindsight_inst))
-    res = model.solve(MaxRuntime(info["epoch_tlim"]), seed=solver_seed)
+    res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
     hindsight_sol = [route.visits() for route in res.best.get_routes()]
 
     done = False

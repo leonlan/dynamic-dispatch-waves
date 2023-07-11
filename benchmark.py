@@ -29,6 +29,7 @@ def parse_args():
     )
     parser.add_argument("--hindsight", action="store_true")
     parser.add_argument("--epoch_tlim", type=float, default=60)
+    parser.add_argument("--solve_tlim", type=float, default=10)
 
     return parser.parse_args()
 
@@ -39,7 +40,8 @@ def solve(
     solver_seed: int,
     dyn_config_loc: str,
     hindsight: bool,
-    epoch_tlim: int,
+    epoch_tlim: float,
+    solve_tlim: float,
     **kwargs,
 ):
     path = Path(loc)
@@ -51,10 +53,10 @@ def solve(
     start = perf_counter()
 
     if hindsight:
-        costs, _ = solve_hindsight(env, solver_seed)
+        costs, _ = solve_hindsight(env, solver_seed, solve_tlim)
     else:
         dyn_config = Config.from_file(dyn_config_loc).dynamic()
-        costs, _ = solve_dynamic(env, dyn_config, solver_seed)
+        costs, _ = solve_dynamic(env, dyn_config, solver_seed, solve_tlim)
 
     return (
         path.stem,
@@ -64,7 +66,7 @@ def solve(
     )
 
 
-def solve_dynamic(env, dyn_config, solver_seed):
+def solve_dynamic(env, dyn_config, solver_seed: int, solve_tlim: float):
     """
     Solves the dynamic problem using the passed-in dynamic strategy
     configuration.
@@ -76,7 +78,9 @@ def solve_dynamic(env, dyn_config, solver_seed):
     dyn_config: Config
         Configuration object storing parameters for the dynamic solver.
     solver_seed: int
-        RNG seed for the dynamic solver.
+        RNG seed for the dispatch instance solver.
+    solve_tlim: float
+        Time limit for the dispatch instance solver.
     """
     rng = np.random.default_rng(solver_seed)
 
@@ -84,20 +88,12 @@ def solve_dynamic(env, dyn_config, solver_seed):
     solutions = []
     costs = []
     observation, static_info = env.reset()
-    ep_tlim = static_info["epoch_tlim"]
 
     while not done:
         strategy = STRATEGIES[dyn_config.strategy()]
         dispatch_inst = strategy(
             static_info, observation, rng, **dyn_config.strategy_params()
         )
-
-        solve_tlim = ep_tlim
-
-        # Reduce the solving time limit by the simulation time
-        strategy_params = dyn_config.get("strategy_params", {})
-        strategy_tlim_factor = strategy_params.get("strategy_tlim_factor", 0)
-        solve_tlim *= 1 - strategy_tlim_factor
 
         if dispatch_inst["request_idx"].size == 1:
             # Empty dispatch instance, so no requests to dispatch.
@@ -119,7 +115,7 @@ def solve_dynamic(env, dyn_config, solver_seed):
     return costs, solutions
 
 
-def solve_hindsight(env, solver_seed: int):
+def solve_hindsight(env, solver_seed: int, solve_tlim: float):
     """
     Solves the dynamic problem in hindsight.
     """
@@ -128,7 +124,7 @@ def solve_hindsight(env, solver_seed: int):
 
     # Solve the hindsight instance using PyVRP.
     model = Model.from_data(instance2data(hindsight_inst))
-    res = model.solve(MaxRuntime(info["epoch_tlim"]), seed=solver_seed)
+    res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
     hindsight_sol = [route.visits() for route in res.best.get_routes()]
 
     done = False

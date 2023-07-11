@@ -10,10 +10,10 @@ from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 
 import utils
+from agents import AGENTS, Agent
+from agents.consensus import fixed_threshold
 from environments import EnvironmentCompetition
 from sampling import sample_epoch_requests
-from strategies import AGENTS, Agent
-from strategies.consensus import fixed_threshold
 from utils import filter_instance, instance2data
 
 
@@ -52,10 +52,10 @@ def solve(
     agent_params = {
         "consensus": partial(
             fixed_threshold,
-            dispatch_thresholds=[0.5],
-            postpone_thresholds=[0.9],
+            dispatch_thresholds=[0.6],
+            postpone_thresholds=[0.8],
         ),
-        "num_iterations": 3,
+        "num_iterations": 2,
         "num_lookahead": 1,
         "num_scenarios": 10,
     }

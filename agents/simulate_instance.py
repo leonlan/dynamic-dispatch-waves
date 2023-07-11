@@ -34,9 +34,9 @@ def simulate_instance(
     static_inst = info["dynamic_context"]
     epoch_duration = info["epoch_duration"]
     ep_inst = obs["epoch_instance"]
+    dispatch_time = obs["dispatch_time"]
     dist = static_inst["duration_matrix"]
     max_requests_per_epoch = info["max_requests_per_epoch"]
-    current_time = current_epoch * epoch_duration
 
     # Simulation instance
     req_customer_idx = ep_inst["customer_idx"]
@@ -51,12 +51,11 @@ def simulate_instance(
     req_dispatch = np.where(to_dispatch, 0, horizon)
 
     for epoch_idx in range(next_epoch, next_epoch + max_lookahead):
-        dispatch_time = epoch_idx * epoch_duration
         new = sample_epoch_requests(
             rng,
             static_inst,
-            current_time,
-            dispatch_time,
+            epoch_idx * epoch_duration,  # next epoch start time
+            (epoch_idx + 1) * epoch_duration,  # next epoch dispatch time
             max_requests_per_epoch,
         )
         n_new_reqs = new["customer_idx"].size
@@ -73,12 +72,14 @@ def simulate_instance(
         req_demand = np.concatenate((req_demand, new["demands"]))
         req_service = np.concatenate((req_service, new["service_times"]))
 
-        # Normalize TW and release to start_time, and clip the past
-        new["time_windows"] = np.maximum(new["time_windows"] - current_time, 0)
+        # Normalize TW and release to dispatch time, and clip the past
+        new["time_windows"] = np.maximum(
+            new["time_windows"] - dispatch_time, 0
+        )
         req_tw = np.concatenate((req_tw, new["time_windows"]))
 
         new["release_times"] = np.maximum(
-            new["release_times"] - current_time, 0
+            new["release_times"] - dispatch_time, 0
         )
         req_release = np.concatenate((req_release, new["release_times"]))
 

@@ -2,15 +2,13 @@ import numpy as np
 from pyvrp import Model
 from pyvrp.stop import MaxRuntime
 
-from utils import instance2data
-from utils.filter_instance import filter_instance
+from utils import filter_instance, instance2data
 
 from .consensus import CONSENSUS
 from .simulate_instance import simulate_instance
 
 
 def simulate(
-    env,
     info,
     obs,
     rng,
@@ -48,7 +46,6 @@ def simulate(
 
         for _ in range(n_simulations):
             sim_inst = simulate_instance(
-                env,
                 info,
                 obs,
                 rng,

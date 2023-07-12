@@ -62,7 +62,6 @@ def solve(
         "num_scenarios": 10,
     }
     agent = make_agent(agent_type, agent_seed, agent_params)
-
     start = perf_counter()
 
     if hindsight:
@@ -96,9 +95,9 @@ def solve_dynamic(env, agent: Agent, solver_seed: int, solve_tlim: float):
     agent: Agent
         Agent that selects the dispatch action.
     solver_seed: int
-        RNG seed used to solve the dispatch instances.
+        RNG seed for the dispatch instance solver.
     solve_tlim: float
-        Time limit for solving the dispatch instances.
+        Time limit for the dispatch instance solver.
     """
     done = False
     solutions = []
@@ -144,12 +143,12 @@ def solve_hindsight(env, solver_seed: int, solve_tlim: float):
     solver_seed: int
         RNG seed used to solve the dispatch instances.
     solve_tlim: float
-        Time limit for solving the dispatch instances.
+        Time limit for solving the hindsight instance.
+
     """
     observation, info = env.reset()
     hindsight_inst = env.get_hindsight_problem()
 
-    # Solve the hindsight instance using PyVRP.
     model = Model.from_data(instance2data(hindsight_inst))
     res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
     hindsight_sol = [route.visits() for route in res.best.get_routes()]

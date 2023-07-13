@@ -5,8 +5,7 @@ from time import perf_counter
 
 import numpy as np
 import tomli
-from pyvrp import CostEvaluator, Model
-from pyvrp.stop import MaxRuntime
+from pyvrp import CostEvaluator
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 
@@ -14,7 +13,8 @@ import utils
 from agents import AGENTS, Agent
 from environments import EnvironmentCompetition
 from sampling import sample_epoch_requests
-from utils import filter_instance, instance2data
+from static_solvers import default_solver
+from utils import filter_instance
 
 
 def parse_args():
@@ -105,9 +105,7 @@ def solve_dynamic(env, agent: Agent, solver_seed: int, solve_tlim: float):
             # this, so we manually build such a solution.
             ep_sol = [[req] for req in dispatch_instance["request_idx"] if req]
         else:
-            data = instance2data(dispatch_instance)
-            model = Model.from_data(data)
-            res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
+            res = default_solver(dispatch_instance, solver_seed, solve_tlim)
             routes = [route.visits() for route in res.best.get_routes()]
 
             # Map solution client indices to request indices.
@@ -139,8 +137,7 @@ def solve_hindsight(env, solver_seed: int, solve_tlim: float):
     observation, info = env.reset()
     hindsight_inst = env.get_hindsight_problem()
 
-    model = Model.from_data(instance2data(hindsight_inst))
-    res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
+    res = default_solver(hindsight_inst, solver_seed, solve_tlim)
     hindsight_sol = [route.visits() for route in res.best.get_routes()]
 
     done = False

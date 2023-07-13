@@ -26,7 +26,7 @@ from pyvrp.search import (
 from pyvrp.stop import MaxRuntime
 
 from sampling import sample_epoch_requests
-from utils import instance2data
+from static_solvers.instance2data import instance2data
 
 from .consensus import CONSENSUS
 

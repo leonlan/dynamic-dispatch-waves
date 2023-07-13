@@ -4,7 +4,7 @@ from pyvrp import Client, ProblemData, VehicleType
 _INT_MAX = np.iinfo(np.int32).max
 
 
-def instance2data(instance) -> ProblemData:
+def instance2data(instance: dict) -> ProblemData:
     """
     Converts an instance to a ``pyvrp.ProblemData`` instance.
     """

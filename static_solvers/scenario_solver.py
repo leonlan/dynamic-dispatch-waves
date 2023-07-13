@@ -25,6 +25,24 @@ from .instance2data import instance2data
 
 
 def scenario_solver(instance: dict, seed: int, time_limit: float) -> Result:
+    """
+    Solves the given instance using a customised hybrid genetic search solver
+    opimised for small time limits.
+
+    Parameters
+    ----------
+    instance: dict
+        The instance to solve.
+    seed: int
+        The seed to use for the random number generator.
+    time_limit: float
+        The time limit in seconds.
+
+    Returns
+    -------
+    Result
+        An `pyvrp.Result` instance.
+    """
     gen_params = GeneticAlgorithmParams(
         repair_probability=0, intensify_probability=0, intensify_on_best=False
     )

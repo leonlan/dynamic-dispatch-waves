@@ -56,7 +56,8 @@ def solve(
 
     with open(agent_config_loc, "rb") as fh:
         config = tomli.load(fh)
-        agent = AGENTS[config["agent"]](agent_seed, **config["agent_params"])
+        agent_params = config.get("agent_params", {})
+        agent = AGENTS[config["agent"]](agent_seed, **agent_params)
 
     start = perf_counter()
 

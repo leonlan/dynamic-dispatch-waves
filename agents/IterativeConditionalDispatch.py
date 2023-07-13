@@ -26,10 +26,8 @@ from pyvrp.stop import MaxRuntime
 from sampling import sample_epoch_requests
 from utils import instance2data
 
-from .Agent import Agent
 
-
-class IterativeConditionalDispatch(Agent):
+class IterativeConditionalDispatch:
     def __init__(
         self,
         seed: int,

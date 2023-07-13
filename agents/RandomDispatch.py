@@ -1,9 +1,7 @@
 import numpy as np
 
-from .Agent import Agent
 
-
-class _RandomDispatch(Agent):
+class _RandomDispatch:
     def __init__(self, seed: int, prob: float):
         if not 0 <= prob <= 1:
             raise ValueError(f"prob must be in [0, 1], got {prob}.")

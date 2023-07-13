@@ -60,8 +60,8 @@ def solve(
         "num_iterations": 2,
         "num_lookahead": 1,
         "num_scenarios": 10,
-    }
-    agent = make_agent(agent_type, agent_seed, agent_params)
+    }  # replace agent_type with agent_config
+    agent = AGENTS[agent_type](agent_seed, **agent_params)
     start = perf_counter()
 
     if hindsight:
@@ -75,13 +75,6 @@ def solve(
         sum(costs),
         round(perf_counter() - start, 2),
     )
-
-
-def make_agent(agent_type: str, agent_seed: int, agent_params: dict) -> Agent:
-    """
-    Creates an agent of the specified type.
-    """
-    return AGENTS[agent_type](agent_seed, **agent_params)
 
 
 def solve_dynamic(env, agent: Agent, solver_seed: int, solve_tlim: float):

@@ -98,20 +98,20 @@ def solve_dynamic(env, agent: Agent, solver_seed: int, solve_tlim: float):
         dispatch_action = agent.act(observation, static_info)
 
         epoch_instance = observation["epoch_instance"]
-        dispatch_inst = filter_instance(epoch_instance, dispatch_action)
+        dispatch_instance = filter_instance(epoch_instance, dispatch_action)
 
-        if dispatch_inst["request_idx"].size <= 2:
+        if dispatch_instance["request_idx"].size <= 2:
             # Empty or single client dispatch instance. PyVRP cannot handle
             # this, so we manually build such a solution.
-            ep_sol = [[req] for req in dispatch_inst["request_idx"] if req]
+            ep_sol = [[req] for req in dispatch_instance["request_idx"] if req]
         else:
-            data = instance2data(dispatch_inst)
+            data = instance2data(dispatch_instance)
             model = Model.from_data(data)
             res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
             routes = [route.visits() for route in res.best.get_routes()]
 
             # Map solution client indices to request indices.
-            ep_sol = [dispatch_inst["request_idx"][route] for route in routes]
+            ep_sol = [dispatch_instance["request_idx"][rte] for rte in routes]
 
         observation, reward, done, info = env.step(ep_sol)
         assert info["error"] is None, info["error"]

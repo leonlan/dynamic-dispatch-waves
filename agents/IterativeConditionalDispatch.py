@@ -1,3 +1,5 @@
+from functools import partial
+
 import numpy as np
 import pyvrp
 import pyvrp.search
@@ -26,19 +28,48 @@ from pyvrp.stop import MaxRuntime
 from sampling import sample_epoch_requests
 from utils import instance2data
 
+from .consensus import CONSENSUS
+
 
 class IterativeConditionalDispatch:
+    """
+    The iterative conditional dispatch strategy repeatedly solves sample
+    scenarios and uses a consensus function to determine which requests to
+    dispatch or postpone. Subsequent iterations of the sample scenario
+    resolutions are conditioned on the previous iterations' actions.
+
+    Parameters
+    ----------
+    seed
+        The random seed.
+    num_iterations
+        The number of iterations to run.
+    num_lookahead
+        The number of future (i.e., lookahead) epochs to consider per scenario.
+    num_scenarios
+        The number of scenarios to sample in each iteration.
+    consensus
+        The consensus function to use.
+    consensus_params
+        The parameters to pass to the consensus function.
+    strategy_tlim_factor
+        The factor to multiply the strategy's time limit with. The strategy's
+        time limit is the time limit for the entire strategy, i.e., all
+        iterations and scenarios. # TODO replace with stopping criterion
+    """
+
     def __init__(
         self,
         seed: int,
-        consensus,
         num_iterations: int,
         num_lookahead: int,
         num_scenarios: int,
+        consensus: str,
+        consensus_params: dict,
         strategy_tlim_factor: float = 1,
     ):
         self.rng = np.random.default_rng(seed)
-        self.consensus = consensus
+        self.consensus_func = partial(CONSENSUS[consensus], **consensus_params)
         self.num_iterations = num_iterations
         self.num_lookahead = num_lookahead
         self.num_scenarios = num_scenarios
@@ -80,7 +111,7 @@ class IterativeConditionalDispatch:
 
                 scenarios.append((sim_inst, sim_sol))
 
-            to_dispatch, to_postpone = self.consensus(
+            to_dispatch, to_postpone = self.consensus_func(
                 iter_idx, scenarios, to_dispatch, to_postpone
             )
 

@@ -1,0 +1,15 @@
+agent = "icd"
+
+[agent_params]
+num_iterations = 3
+num_lookahead = 1
+num_scenarios = 30
+consensus = "fixed_threshold"
+
+[agent_params.consensus_params]
+postpone_thresholds = [
+    0.90,
+]
+dispatch_thresholds = [
+    0.50,
+]

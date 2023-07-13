@@ -4,6 +4,7 @@ from pathlib import Path
 from time import perf_counter
 
 import numpy as np
+import tomli
 from pyvrp import CostEvaluator, Model
 from pyvrp.stop import MaxRuntime
 from tqdm import tqdm
@@ -11,7 +12,6 @@ from tqdm.contrib.concurrent import process_map
 
 import utils
 from agents import AGENTS, Agent
-from agents.consensus import fixed_threshold
 from environments import EnvironmentCompetition
 from sampling import sample_epoch_requests
 from utils import filter_instance, instance2data
@@ -21,10 +21,14 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("instances", nargs="+", help="Instance paths.")
-    parser.add_argument("--agent_type", type=str, default="greedy")
     parser.add_argument("--env_seed", type=int, default=1)
     parser.add_argument("--agent_seed", type=int, default=1)
     parser.add_argument("--solver_seed", type=int, default=1)
+    parser.add_argument(
+        "--agent_config_loc",
+        type=str,
+        default="configs/icd-double-threshold.toml",
+    )
     parser.add_argument("--num_procs", type=int, default=4)
     parser.add_argument("--hindsight", action="store_true")
     parser.add_argument("--epoch_tlim", type=float, default=60)
@@ -35,7 +39,7 @@ def parse_args():
 
 def solve(
     loc: str,
-    agent_type: str,
+    agent_config_loc: str,
     env_seed: int,
     agent_seed: int,
     solver_seed: int,
@@ -50,18 +54,10 @@ def solve(
         env_seed, static_instance, epoch_tlim, sample_epoch_requests
     )
 
-    # TODO customize this
-    agent_params = {
-        "consensus": partial(
-            fixed_threshold,
-            dispatch_thresholds=[0.6],
-            postpone_thresholds=[0.8],
-        ),
-        "num_iterations": 2,
-        "num_lookahead": 1,
-        "num_scenarios": 10,
-    }  # replace agent_type with agent_config
-    agent = AGENTS[agent_type](agent_seed, **agent_params)
+    with open(agent_config_loc, "rb") as fh:
+        config = tomli.load(fh)
+        agent = AGENTS[config["agent"]](agent_seed, **config["agent_params"])
+
     start = perf_counter()
 
     if hindsight:

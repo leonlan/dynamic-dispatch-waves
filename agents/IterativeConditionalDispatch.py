@@ -10,10 +10,9 @@ from .consensus import CONSENSUS
 
 class IterativeConditionalDispatch:
     """
-    The iterative conditional dispatch strategy repeatedly solves sample
-    scenarios and uses a consensus function to determine which requests to
-    dispatch or postpone. Subsequent iterations of the sample scenario
-    resolutions are conditioned on the previous iterations' actions.
+    The iterative conditional dispatch strategy repeatedly solves a set of
+    sample scenarios and uses a consensus function to determine based on
+    the sample scenario solutions which requests to dispatch or postpone.
 
     Parameters
     ----------
@@ -45,6 +44,7 @@ class IterativeConditionalDispatch:
         consensus_params: dict,
         strategy_tlim_factor: float = 1,
     ):
+        self.seed = seed
         self.rng = np.random.default_rng(seed)
         self.consensus_func = partial(CONSENSUS[consensus], **consensus_params)
         self.num_iterations = num_iterations
@@ -52,11 +52,12 @@ class IterativeConditionalDispatch:
         self.num_scenarios = num_scenarios
         self.strategy_tlim_factor = strategy_tlim_factor
 
-    def act(self, observation, info) -> np.ndarray:
+    def act(self, info, observation) -> np.ndarray:
         # Parameters
         ep_inst = observation["epoch_instance"]
         ep_size = ep_inst["is_depot"].size  # includes depot
 
+        # TODO remove this
         total_sim_tlim = self.strategy_tlim_factor * info["epoch_tlim"]
         single_sim_tlim = total_sim_tlim / (
             self.num_iterations * self.num_scenarios
@@ -82,9 +83,7 @@ class IterativeConditionalDispatch:
                     to_postpone,
                 )
 
-                res = scenario_solver(
-                    sim_inst, seed=42, time_limit=single_sim_tlim
-                )
+                res = scenario_solver(sim_inst, self.seed, single_sim_tlim)
                 sim_sol = [route.visits() for route in res.best.get_routes()]
 
                 scenarios.append((sim_inst, sim_sol))

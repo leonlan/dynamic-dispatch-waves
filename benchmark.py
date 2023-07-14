@@ -95,7 +95,7 @@ def solve_dynamic(env, agent: Agent, solver_seed: int, solve_tlim: float):
     observation, static_info = env.reset()
 
     while not done:
-        dispatch_action = agent.act(observation, static_info)
+        dispatch_action = agent.act(static_info, observation)
 
         epoch_instance = observation["epoch_instance"]
         dispatch_instance = filter_instance(epoch_instance, dispatch_action)

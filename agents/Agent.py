@@ -7,7 +7,7 @@ class Agent(Protocol):
     def __init__(self, seed, **kwargs):
         ...
 
-    def act(self, observation: dict, static_info: dict) -> np.ndarray:
+    def act(self, static_info: dict, observation: dict) -> np.ndarray:
         """
-        Returns a dispatch action for a given observation and static info.
+        Returns a dispatch action for the given static info and observation.
         """

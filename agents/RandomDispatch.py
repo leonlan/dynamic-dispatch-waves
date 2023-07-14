@@ -9,7 +9,7 @@ class _RandomDispatch:
         self.rng = np.random.default_rng(seed)
         self.prob = prob
 
-    def act(self, obs, info) -> np.ndarray:
+    def act(self, info, obs) -> np.ndarray:
         """
         Randomly dispatches not "must dispatch" requests with probability ``prob``.
         """

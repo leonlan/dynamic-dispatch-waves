@@ -8,5 +8,5 @@ consensus = "adaptive_threshold"
 
 [agent_params.consensus_params]
 postpone_thresholds = [
-    0.98,
+    0.80,
 ]

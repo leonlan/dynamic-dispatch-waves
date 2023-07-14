@@ -77,8 +77,8 @@ class Environment:
         self.is_done = False
         obs = self._next_observation()
 
-        self.final_solutions: Dict[int, Optional[List]] = {}
-        self.final_costs: Dict[int, Optional[float]] = {}
+        self.final_solutions: Dict[int, List] = {}
+        self.final_costs: Dict[int, float] = {}
 
         info = {
             "dynamic_context": self.instance,

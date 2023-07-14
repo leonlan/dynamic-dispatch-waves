@@ -57,14 +57,14 @@ class IterativeConditionalDispatch:
         ep_inst = observation["epoch_instance"]
         ep_size = ep_inst["is_depot"].size  # includes depot
 
-        # TODO remove this
+        to_dispatch = ep_inst["must_dispatch"].copy()
+        to_postpone = np.zeros(ep_size, dtype=bool)
+
+        # TODO replace this with stoppping criterion in constructor
         total_sim_tlim = self.strategy_tlim_factor * info["epoch_tlim"]
         single_sim_tlim = total_sim_tlim / (
             self.num_iterations * self.num_scenarios
         )
-
-        to_dispatch = ep_inst["must_dispatch"].copy()
-        to_postpone = np.zeros(ep_size, dtype=bool)
 
         # Dispatch everything in the last iteration
         if observation["current_epoch"] == info["end_epoch"]:
@@ -74,19 +74,14 @@ class IterativeConditionalDispatch:
             scenarios = []
 
             for _ in range(self.num_scenarios):
-                sim_inst = _simulate_instance(
+                inst, sol = self._sample_and_solve_scenario(
                     info,
                     observation,
-                    self.rng,
-                    self.num_lookahead,
                     to_dispatch,
                     to_postpone,
+                    single_sim_tlim,
                 )
-
-                res = scenario_solver(sim_inst, self.seed, single_sim_tlim)
-                sim_sol = [route.visits() for route in res.best.get_routes()]
-
-                scenarios.append((sim_inst, sim_sol))
+                scenarios.append((inst, sol))
 
             to_dispatch, to_postpone = self.consensus_func(
                 iter_idx, scenarios, to_dispatch, to_postpone
@@ -97,6 +92,27 @@ class IterativeConditionalDispatch:
                 break
 
         return to_dispatch | ep_inst["is_depot"]  # include depot
+
+    def _sample_and_solve_scenario(
+        self, info, observation, to_dispatch, to_postpone, single_sim_tlim
+    ):
+        """
+        Samples and solves a single scenario instance, returning both the
+        instance and resulting solution.
+        """
+        sim_inst = _simulate_instance(
+            info,
+            observation,
+            self.rng,
+            self.num_lookahead,
+            to_dispatch,
+            to_postpone,
+        )
+
+        res = scenario_solver(sim_inst, self.seed, single_sim_tlim)
+        sim_sol = [route.visits() for route in res.best.get_routes()]
+
+        return (sim_inst, sim_sol)
 
 
 def _simulate_instance(

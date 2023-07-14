@@ -30,6 +30,7 @@ def parse_args():
         default="configs/icd-double-threshold.toml",
     )
     parser.add_argument("--num_procs", type=int, default=4)
+    parser.add_argument("--num_procs_scenarios", type=int, default=1)
     parser.add_argument("--hindsight", action="store_true")
     parser.add_argument("--epoch_tlim", type=float, default=60)
     parser.add_argument("--solve_tlim", type=float, default=10)
@@ -43,6 +44,7 @@ def solve(
     env_seed: int,
     agent_seed: int,
     solver_seed: int,
+    num_procs_scenarios: int,
     hindsight: bool,
     epoch_tlim: float,
     solve_tlim: float,
@@ -59,6 +61,9 @@ def solve(
         params = config.get("agent_params", {})
 
         if config["agent"] == "icd":
+            # Include the number of parallel scenarios.
+            params["num_parallel_solve"] = num_procs_scenarios
+
             # Set the scenario solving time limit based on the epoch time limit
             # and the total number of scenarios to be solved.
             total = params["num_iterations"] * params["num_scenarios"]

@@ -66,18 +66,19 @@ class IterativeConditionalDispatch:
         to_dispatch = ep_inst["must_dispatch"].copy()
         to_postpone = np.zeros(ep_size, dtype=bool)
 
-        # Dispatch everything in the last iteration
-        if observation["current_epoch"] == info["end_epoch"]:
-            return np.ones(ep_size, dtype=bool)
-
         for iter_idx in range(self.num_iterations):
-            scenarios = []
+            instances = [
+                self._sample_scenario(info, obs, to_dispatch, to_postpone)
+                for _ in range(self.num_scenarios)
+            ]
 
-            for _ in range(self.num_scenarios):
-                instance, solution = self._sample_and_solve_scenario(
-                    info, observation, to_dispatch, to_postpone
-                )
-                scenarios.append((instance, solution))
+            if self.num_parallel_solve == 1:
+                solutions = list(map(self._solve_scenario, instances))
+            else:
+                with Pool(self.num_parallel_solve) as pool:
+                    solutions = pool.map(self._solve_scenario, instances)
+
+            scenarios = list(zip(instances, solutions))
 
             to_dispatch, to_postpone = self.consensus_func(
                 iter_idx, scenarios, to_dispatch, to_postpone
@@ -89,23 +90,12 @@ class IterativeConditionalDispatch:
 
         return to_dispatch | ep_inst["is_depot"]  # include depot
 
-    def _sample_and_solve_scenario(
-        self,
-        info: dict,
-        obs: dict,
-        to_dispatch: np.ndarray,
-        to_postpone: np.ndarray,
-    ) -> tuple[dict, list[list[int]]]:
+    def _solve_scenario(self, instance: dict) -> list[list[int]]:
         """
-        Samples and solves a single scenario instance, returning both the
-        instance and resulting solution.
+        Solves a single scenario instance, returning the solution.
         """
-        instance = self._sample_scenario(info, obs, to_dispatch, to_postpone)
-
         result = scenario_solver(instance, self.seed, self.scenario_time_limit)
-        solution = [route.visits() for route in result.best.get_routes()]
-
-        return (instance, solution)
+        return [route.visits() for route in result.best.get_routes()]
 
     def _sample_scenario(
         self,
@@ -120,6 +110,10 @@ class IterativeConditionalDispatch:
 
         Parameters
         ----------
+        info
+            The static problem information.
+        obs
+            The current epcoh observation.
         to_dispatch
             A boolean array where True means that the corresponding request must be
             dispatched.

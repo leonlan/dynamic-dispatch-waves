@@ -1,6 +1,1 @@
-[dynamic]
-strategy = "greedy"
-
-
-[dynamic.strategy_params]
-strategy_tlim_factor = 0.0
+agent = "greedy"

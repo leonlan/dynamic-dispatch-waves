@@ -1,0 +1,11 @@
+agent = "icd"
+
+[agent_params]
+num_iterations = 3
+num_lookahead = 1
+num_scenarios = 30
+consensus = "dynamic_stochastic_hedging_heuristic"
+
+[dynamic.strategy_params.consensus_params]
+min_dispatch_threshold = 0.50
+dispatch_threshold = 0.70

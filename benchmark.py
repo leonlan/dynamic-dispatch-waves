@@ -4,17 +4,17 @@ from pathlib import Path
 from time import perf_counter
 
 import numpy as np
-from pyvrp import CostEvaluator, Model
-from pyvrp.stop import MaxRuntime
+import tomli
+from pyvrp import CostEvaluator
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 
 import utils
+from agents import AGENTS, Agent
 from environments import EnvironmentCompetition
 from sampling import sample_epoch_requests
-from strategies import STRATEGIES
-from strategies.Config import Config
-from utils import instance2data
+from static_solvers import default_solver
+from utils import filter_instance
 
 
 def parse_args():
@@ -22,11 +22,14 @@ def parse_args():
 
     parser.add_argument("instances", nargs="+", help="Instance paths.")
     parser.add_argument("--env_seed", type=int, default=1)
+    parser.add_argument("--agent_seed", type=int, default=1)
     parser.add_argument("--solver_seed", type=int, default=1)
-    parser.add_argument("--num_procs", type=int, default=4)
     parser.add_argument(
-        "--dyn_config_loc", default="configs/fixed_threshold.toml"
+        "--agent_config_loc",
+        type=str,
+        default="configs/icd-double-threshold.toml",
     )
+    parser.add_argument("--num_procs", type=int, default=4)
     parser.add_argument("--hindsight", action="store_true")
     parser.add_argument("--epoch_tlim", type=float, default=60)
     parser.add_argument("--solve_tlim", type=float, default=10)
@@ -36,9 +39,10 @@ def parse_args():
 
 def solve(
     loc: str,
+    agent_config_loc: str,
     env_seed: int,
+    agent_seed: int,
     solver_seed: int,
-    dyn_config_loc: str,
     hindsight: bool,
     epoch_tlim: float,
     solve_tlim: float,
@@ -50,13 +54,17 @@ def solve(
         env_seed, static_instance, epoch_tlim, sample_epoch_requests
     )
 
+    with open(agent_config_loc, "rb") as fh:
+        config = tomli.load(fh)
+        agent_params = config.get("agent_params", {})
+        agent = AGENTS[config["agent"]](agent_seed, **agent_params)
+
     start = perf_counter()
 
     if hindsight:
         costs, _ = solve_hindsight(env, solver_seed, solve_tlim)
     else:
-        dyn_config = Config.from_file(dyn_config_loc).dynamic()
-        costs, _ = solve_dynamic(env, dyn_config, solver_seed, solve_tlim)
+        costs, _ = solve_dynamic(env, agent, solver_seed, solve_tlim)
 
     return (
         path.stem,
@@ -66,46 +74,41 @@ def solve(
     )
 
 
-def solve_dynamic(env, dyn_config, solver_seed: int, solve_tlim: float):
+def solve_dynamic(env, agent: Agent, solver_seed: int, solve_tlim: float):
     """
-    Solves the dynamic problem using the passed-in dynamic strategy
-    configuration.
+    Solves the dynamic problem.
 
     Parameters
     ----------
     env: Environment
         Environment of the dynamic problem.
-    dyn_config: Config
-        Configuration object storing parameters for the dynamic solver.
+    agent: Agent
+        Agent that selects the dispatch action.
     solver_seed: int
         RNG seed for the dispatch instance solver.
     solve_tlim: float
         Time limit for the dispatch instance solver.
     """
-    rng = np.random.default_rng(solver_seed)
-
     done = False
     solutions = []
     costs = []
     observation, static_info = env.reset()
 
     while not done:
-        strategy = STRATEGIES[dyn_config.strategy()]
-        dispatch_inst = strategy(
-            static_info, observation, rng, **dyn_config.strategy_params()
-        )
+        epoch_instance = observation["epoch_instance"]
+        dispatch_action = agent.act(static_info, observation)
+        dispatch_instance = filter_instance(epoch_instance, dispatch_action)
 
-        if dispatch_inst["request_idx"].size <= 2:
-            # Empty or single client dispatch instance. PyVRP cannot handle
-            # this, so we manually build such a solution.
-            ep_sol = [[req] for req in dispatch_inst["request_idx"] if req]
+        if dispatch_instance["request_idx"].size <= 2:
+            # BUG Empty or single client dispatch instance, PyVRP cannot handle
+            # this (see https://github.com/PyVRP/PyVRP/issues/272).
+            ep_sol = [[req] for req in dispatch_instance["request_idx"] if req]
         else:
-            model = Model.from_data(instance2data(dispatch_inst))
-            res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
+            res = default_solver(dispatch_instance, solver_seed, solve_tlim)
             routes = [route.visits() for route in res.best.get_routes()]
 
             # Map solution client indices to request indices.
-            ep_sol = [dispatch_inst["request_idx"][route] for route in routes]
+            ep_sol = [dispatch_instance["request_idx"][rte] for rte in routes]
 
         observation, reward, done, info = env.step(ep_sol)
         assert info["error"] is None, info["error"]
@@ -125,7 +128,7 @@ def solve_hindsight(env, solver_seed: int, solve_tlim: float):
     env: Environment
         Environment of the dynamic problem.
     solver_seed: int
-        RNG seed for the solver.
+        RNG seed used to solve the dispatch instances.
     solve_tlim: float
         Time limit for solving the hindsight instance.
 
@@ -133,8 +136,7 @@ def solve_hindsight(env, solver_seed: int, solve_tlim: float):
     observation, info = env.reset()
     hindsight_inst = env.get_hindsight_problem()
 
-    model = Model.from_data(instance2data(hindsight_inst))
-    res = model.solve(MaxRuntime(solve_tlim), seed=solver_seed)
+    res = default_solver(hindsight_inst, solver_seed, solve_tlim)
     hindsight_sol = [route.visits() for route in res.best.get_routes()]
 
     done = False

@@ -24,14 +24,12 @@ class IterativeConditionalDispatch:
         The number of future (i.e., lookahead) epochs to consider per scenario.
     num_scenarios
         The number of scenarios to sample in each iteration.
+    scenario_time_limit
+        The time limit for solving a single scenario instance.
     consensus
         The consensus function to use.
     consensus_params
         The parameters to pass to the consensus function.
-    strategy_tlim_factor
-        The factor to multiply the strategy's time limit with. The strategy's
-        time limit is the time limit for the entire strategy, i.e., all
-        iterations and scenarios. # TODO replace with time limit per scenario
     """
 
     def __init__(
@@ -40,17 +38,17 @@ class IterativeConditionalDispatch:
         num_iterations: int,
         num_lookahead: int,
         num_scenarios: int,
+        scenario_time_limit: float,
         consensus: str,
         consensus_params: dict,
-        strategy_tlim_factor: float = 1,
     ):
         self.seed = seed
         self.rng = np.random.default_rng(seed)
-        self.consensus_func = partial(CONSENSUS[consensus], **consensus_params)
         self.num_iterations = num_iterations
         self.num_lookahead = num_lookahead
         self.num_scenarios = num_scenarios
-        self.strategy_tlim_factor = strategy_tlim_factor
+        self.scenario_time_limit = scenario_time_limit
+        self.consensus_func = partial(CONSENSUS[consensus], **consensus_params)
 
     def act(self, info, observation) -> np.ndarray:
         # Parameters
@@ -59,12 +57,6 @@ class IterativeConditionalDispatch:
 
         to_dispatch = ep_inst["must_dispatch"].copy()
         to_postpone = np.zeros(ep_size, dtype=bool)
-
-        # TODO replace this with stoppping criterion in constructor
-        total_sim_tlim = self.strategy_tlim_factor * info["epoch_tlim"]
-        single_sim_tlim = total_sim_tlim / (
-            self.num_iterations * self.num_scenarios
-        )
 
         # Dispatch everything in the last iteration
         if observation["current_epoch"] == info["end_epoch"]:
@@ -75,11 +67,7 @@ class IterativeConditionalDispatch:
 
             for _ in range(self.num_scenarios):
                 instance, solution = self._sample_and_solve_scenario(
-                    info,
-                    observation,
-                    to_dispatch,
-                    to_postpone,
-                    single_sim_tlim,
+                    info, observation, to_dispatch, to_postpone
                 )
                 scenarios.append((instance, solution))
 
@@ -94,18 +82,22 @@ class IterativeConditionalDispatch:
         return to_dispatch | ep_inst["is_depot"]  # include depot
 
     def _sample_and_solve_scenario(
-        self, info: dict, obs: dict, to_dispatch, to_postpone, single_sim_tlim
+        self,
+        info: dict,
+        obs: dict,
+        to_dispatch: np.ndarray,
+        to_postpone: np.ndarray,
     ) -> tuple[dict, list[list[int]]]:
         """
         Samples and solves a single scenario instance, returning both the
         instance and resulting solution.
         """
-        sim_inst = self._sample_scenario(info, obs, to_dispatch, to_postpone)
+        instance = self._sample_scenario(info, obs, to_dispatch, to_postpone)
 
-        res = scenario_solver(sim_inst, self.seed, single_sim_tlim)
-        sim_sol = [route.visits() for route in res.best.get_routes()]
+        result = scenario_solver(instance, self.seed, self.scenario_time_limit)
+        solution = [route.visits() for route in result.best.get_routes()]
 
-        return (sim_inst, sim_sol)
+        return (instance, solution)
 
     def _sample_scenario(
         self,

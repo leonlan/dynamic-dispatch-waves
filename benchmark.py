@@ -56,8 +56,15 @@ def solve(
 
     with open(agent_config_loc, "rb") as fh:
         config = tomli.load(fh)
-        agent_params = config.get("agent_params", {})
-        agent = AGENTS[config["agent"]](agent_seed, **agent_params)
+        params = config.get("agent_params", {})
+
+        if config["agent"] == "icd":
+            # Set the scenario solving time limit based on the epoch time limit
+            # and the total number of scenarios to be solved.
+            total = params["num_iterations"] * params["num_scenarios"]
+            params["scenario_time_limit"] = epoch_tlim / total
+
+        agent = AGENTS[config["agent"]](agent_seed, **params)
 
     start = perf_counter()
 

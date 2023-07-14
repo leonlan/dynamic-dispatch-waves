@@ -1,4 +1,5 @@
 from functools import partial
+from multiprocessing import Pool
 
 import numpy as np
 
@@ -24,14 +25,14 @@ class IterativeConditionalDispatch:
         The number of future (i.e., lookahead) epochs to consider per scenario.
     num_scenarios
         The number of scenarios to sample in each iteration.
+    scenario_time_limit
+        The time limit for solving a single scenario instance.
     consensus
         The consensus function to use.
     consensus_params
         The parameters to pass to the consensus function.
-    strategy_tlim_factor
-        The factor to multiply the strategy's time limit with. The strategy's
-        time limit is the time limit for the entire strategy, i.e., all
-        iterations and scenarios. # TODO replace with time limit per scenario
+    num_parallel_solve
+        The number of scenarios to solve in parallel.
     """
 
     def __init__(
@@ -40,48 +41,44 @@ class IterativeConditionalDispatch:
         num_iterations: int,
         num_lookahead: int,
         num_scenarios: int,
+        scenario_time_limit: float,
         consensus: str,
         consensus_params: dict,
-        strategy_tlim_factor: float = 1,
+        num_parallel_solve: int = 1,
     ):
         self.seed = seed
         self.rng = np.random.default_rng(seed)
-        self.consensus_func = partial(CONSENSUS[consensus], **consensus_params)
         self.num_iterations = num_iterations
         self.num_lookahead = num_lookahead
         self.num_scenarios = num_scenarios
-        self.strategy_tlim_factor = strategy_tlim_factor
+        self.scenario_time_limit = scenario_time_limit
+        self.consensus_func = partial(CONSENSUS[consensus], **consensus_params)
+        self.num_parallel_solve = num_parallel_solve
 
-    def act(self, info, observation) -> np.ndarray:
-        # Parameters
-        ep_inst = observation["epoch_instance"]
-        ep_size = ep_inst["is_depot"].size  # includes depot
+    def act(self, info, obs) -> np.ndarray:
+        ep_inst = obs["epoch_instance"]
+        ep_size = ep_inst["is_depot"].size
+
+        # In the last epoch, all requests must be dispatched.
+        if obs["current_epoch"] == info["end_epoch"]:
+            return np.ones(ep_size, dtype=bool)
 
         to_dispatch = ep_inst["must_dispatch"].copy()
         to_postpone = np.zeros(ep_size, dtype=bool)
 
-        # TODO replace this with stoppping criterion in constructor
-        total_sim_tlim = self.strategy_tlim_factor * info["epoch_tlim"]
-        single_sim_tlim = total_sim_tlim / (
-            self.num_iterations * self.num_scenarios
-        )
-
-        # Dispatch everything in the last iteration
-        if observation["current_epoch"] == info["end_epoch"]:
-            return np.ones(ep_size, dtype=bool)
-
         for iter_idx in range(self.num_iterations):
-            scenarios = []
+            instances = [
+                self._sample_scenario(info, obs, to_dispatch, to_postpone)
+                for _ in range(self.num_scenarios)
+            ]
 
-            for _ in range(self.num_scenarios):
-                inst, sol = self._sample_and_solve_scenario(
-                    info,
-                    observation,
-                    to_dispatch,
-                    to_postpone,
-                    single_sim_tlim,
-                )
-                scenarios.append((inst, sol))
+            if self.num_parallel_solve == 1:
+                solutions = list(map(self._solve_scenario, instances))
+            else:
+                with Pool(self.num_parallel_solve) as pool:
+                    solutions = pool.map(self._solve_scenario, instances)
+
+            scenarios = list(zip(instances, solutions))
 
             to_dispatch, to_postpone = self.consensus_func(
                 iter_idx, scenarios, to_dispatch, to_postpone
@@ -93,123 +90,114 @@ class IterativeConditionalDispatch:
 
         return to_dispatch | ep_inst["is_depot"]  # include depot
 
-    def _sample_and_solve_scenario(
-        self, info, observation, to_dispatch, to_postpone, single_sim_tlim
-    ):
+    def _solve_scenario(self, instance: dict) -> list[list[int]]:
         """
-        Samples and solves a single scenario instance, returning both the
-        instance and resulting solution.
+        Solves a single scenario instance, returning the solution.
         """
-        sim_inst = _simulate_instance(
-            info,
-            observation,
-            self.rng,
-            self.num_lookahead,
-            to_dispatch,
-            to_postpone,
-        )
+        result = scenario_solver(instance, self.seed, self.scenario_time_limit)
+        return [route.visits() for route in result.best.get_routes()]
 
-        res = scenario_solver(sim_inst, self.seed, single_sim_tlim)
-        sim_sol = [route.visits() for route in res.best.get_routes()]
+    def _sample_scenario(
+        self,
+        info: dict,
+        obs: dict,
+        to_dispatch: np.ndarray,
+        to_postpone: np.ndarray,
+    ) -> dict:
+        """
+        Samples a VRPTW scenario instance. The scenario instance is created by
+        appending the sampled requests to the current epoch instance.
 
-        return (sim_inst, sim_sol)
+        Parameters
+        ----------
+        info
+            The static problem information.
+        obs
+            The current epcoh observation.
+        to_dispatch
+            A boolean array where True means that the corresponding request must be
+            dispatched.
+        to_postpone
+            A boolean array where True mean that the corresponding request must be
+            postponed.
+        """
+        # Parameters
+        current_epoch = obs["current_epoch"]
+        next_epoch = current_epoch + 1
+        epochs_left = info["end_epoch"] - current_epoch
+        max_lookahead = min(self.num_lookahead, epochs_left)
+        max_requests_per_epoch = info["max_requests_per_epoch"]
 
+        static_inst = info["dynamic_context"]
+        epoch_duration = info["epoch_duration"]
+        ep_inst = obs["epoch_instance"]
+        dispatch_time = obs["dispatch_time"]
 
-def _simulate_instance(
-    info,
-    obs,
-    rng,
-    n_lookahead: int,
-    to_dispatch: np.ndarray,
-    to_postpone: np.ndarray,
-):
-    """
-    Simulates a VRPTW scenario instance with ``n_lookahead`` epochs. The
-    scenario instance is created by appending the sampled requests to the
-    current epoch instance.
+        # Scenario instance fields
+        req_customer_idx = ep_inst["customer_idx"]
+        req_idx = ep_inst["request_idx"]
+        req_demand = ep_inst["demands"]
+        req_service = ep_inst["service_times"]
+        req_tw = ep_inst["time_windows"]
 
-    Parameters
-    ----------
-    to_dispatch
-        A boolean array where True means that the corresponding request must be
-        dispatched.
-    to_postpone
-        A boolean array where True mean that the corresponding request must be
-        postponed.
-    """
-    current_epoch = obs["current_epoch"]
-    next_epoch = current_epoch + 1
-    epochs_left = info["end_epoch"] - current_epoch
-    max_lookahead = min(n_lookahead, epochs_left)
+        # Conditional dispatching: alter release and dispatch times of requests
+        # that have already been marked in previous iterations.
+        horizon = req_tw[0][1]
+        req_dispatch = np.where(to_dispatch, 0, horizon)
+        req_release = to_postpone * epoch_duration
 
-    # Parameters
-    static_inst = info["dynamic_context"]
-    epoch_duration = info["epoch_duration"]
-    ep_inst = obs["epoch_instance"]
-    dispatch_time = obs["dispatch_time"]
-    dist = static_inst["duration_matrix"]
-    max_requests_per_epoch = info["max_requests_per_epoch"]
+        for epoch_idx in range(next_epoch, next_epoch + max_lookahead):
+            # Samples new requests for the next epoch. The sampled requests
+            # attributes are sampled from the static instance. Time-sensitive
+            # attributes will be normalized later.
+            new = sample_epoch_requests(
+                self.rng,
+                static_inst,
+                epoch_idx * epoch_duration,  # next epoch start time
+                (epoch_idx + 1) * epoch_duration,  # next epoch dispatch time
+                max_requests_per_epoch,
+            )
+            num_new_reqs = new["customer_idx"].size
 
-    # Simulation instance
-    req_customer_idx = ep_inst["customer_idx"]
-    req_idx = ep_inst["request_idx"]
-    req_demand = ep_inst["demands"]
-    req_service = ep_inst["service_times"]
-    req_tw = ep_inst["time_windows"]
+            # Concatenate the new requests to the current instance requests
+            req_customer_idx = np.concatenate(
+                (req_customer_idx, new["customer_idx"])
+            )
 
-    # Conditional dispatching
-    horizon = req_tw[0][1]
-    req_release = to_postpone * epoch_duration
-    req_dispatch = np.where(to_dispatch, 0, horizon)
+            # Sampled request indices are negative so we can identify them
+            new_req_idx = -(np.arange(num_new_reqs) + 1) - len(req_idx)
+            req_idx = np.concatenate((ep_inst["request_idx"], new_req_idx))
 
-    for epoch_idx in range(next_epoch, next_epoch + max_lookahead):
-        new = sample_epoch_requests(
-            rng,
-            static_inst,
-            epoch_idx * epoch_duration,  # next epoch start time
-            (epoch_idx + 1) * epoch_duration,  # next epoch dispatch time
-            max_requests_per_epoch,
-        )
-        n_new_reqs = new["customer_idx"].size
+            req_demand = np.concatenate((req_demand, new["demands"]))
+            req_service = np.concatenate((req_service, new["service_times"]))
 
-        # Concatenate the new feasible requests to the epoch instance
-        req_customer_idx = np.concatenate(
-            (req_customer_idx, new["customer_idx"])
-        )
+            # Normalize TW to start at dispatch time, and clip the past
+            new["time_windows"] -= dispatch_time
+            new["time_windows"] = np.maximum(new["time_windows"], 0)
+            req_tw = np.concatenate((req_tw, new["time_windows"]))
 
-        # Simulated request indices are always negative (so we can identify them)
-        sim_req_idx = -(np.arange(n_new_reqs) + 1) - len(req_idx)
-        req_idx = np.concatenate((ep_inst["request_idx"], sim_req_idx))
+            # Also normalize release time and clip the past
+            new["release_times"] -= dispatch_time
+            new["release_times"] = np.maximum(new["release_times"], 0)
+            req_release = np.concatenate((req_release, new["release_times"]))
 
-        req_demand = np.concatenate((req_demand, new["demands"]))
-        req_service = np.concatenate((req_service, new["service_times"]))
+            # Default dispatch time is the time horizon.
+            req_dispatch = np.concatenate(
+                (req_dispatch, np.full(num_new_reqs, horizon))
+            )
 
-        # Normalize TW and release to dispatch time, and clip the past
-        new["time_windows"] = np.maximum(
-            new["time_windows"] - dispatch_time, 0
-        )
-        req_tw = np.concatenate((req_tw, new["time_windows"]))
+        dist = static_inst["duration_matrix"]
 
-        new["release_times"] = np.maximum(
-            new["release_times"] - dispatch_time, 0
-        )
-        req_release = np.concatenate((req_release, new["release_times"]))
-
-        # Default dispatch time is the time horizon.
-        req_dispatch = np.concatenate(
-            (req_dispatch, np.full(n_new_reqs, horizon))
-        )
-
-    return {
-        "is_depot": static_inst["is_depot"][req_customer_idx],
-        "customer_idx": req_customer_idx,
-        "request_idx": req_idx,
-        "coords": static_inst["coords"][req_customer_idx],
-        "demands": req_demand,
-        "capacity": static_inst["capacity"],
-        "time_windows": req_tw,
-        "service_times": req_service,
-        "duration_matrix": dist[req_customer_idx][:, req_customer_idx],
-        "release_times": req_release,
-        "dispatch_times": req_dispatch,
-    }
+        return {
+            "is_depot": static_inst["is_depot"][req_customer_idx],
+            "customer_idx": req_customer_idx,
+            "request_idx": req_idx,
+            "coords": static_inst["coords"][req_customer_idx],
+            "demands": req_demand,
+            "capacity": static_inst["capacity"],
+            "time_windows": req_tw,
+            "service_times": req_service,
+            "duration_matrix": dist[req_customer_idx][:, req_customer_idx],
+            "release_times": req_release,
+            "dispatch_times": req_dispatch,
+        }

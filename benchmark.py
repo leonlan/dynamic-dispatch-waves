@@ -61,7 +61,7 @@ def solve(
         params = config.get("agent_params", {})
 
         if config["agent"] == "icd":
-            # Include the number of parallel scenarios.
+            # Include the number of scenarios to solve in parallel.
             params["num_parallel_solve"] = num_procs_scenarios
 
             # Set the scenario solving time limit based on the epoch time limit

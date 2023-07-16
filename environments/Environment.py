@@ -10,7 +10,7 @@ Action = List[List[int]]
 Info = Dict[str, Any]
 
 
-class EnvironmentCompetition:
+class Environment:
     """
     Parameters
     ----------

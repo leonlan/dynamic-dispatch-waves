@@ -11,7 +11,7 @@ from tqdm.contrib.concurrent import process_map
 
 import utils
 from agents import AGENTS, Agent
-from environments import EnvironmentCompetition
+from environments import Environment
 from sampling import sample_epoch_requests
 from static_solvers import default_solver
 from utils import filter_instance
@@ -53,7 +53,7 @@ def solve(
 ):
     path = Path(loc)
     static_instance = utils.read(path)
-    env = EnvironmentCompetition(
+    env = Environment(
         env_seed, static_instance, epoch_tlim, sample_epoch_requests
     )
 

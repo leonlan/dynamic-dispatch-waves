@@ -59,11 +59,11 @@ class Environment:
         self.rng = np.random.default_rng(self.seed)
         tw = self.instance["time_windows"]
 
-        # The start and end epochs are determined by the earliest and latest
-        # opening moments of time windows, corrected by the dispatch margin.
         earliest_open = tw[1:, 0].min() - self.dispatch_margin
         latest_open = tw[1:, 0].max() - self.dispatch_margin
 
+        # The start and end epochs are determined by the earliest and latest
+        # time windows of all clients, corrected by the dispatch margin.
         self.start_epoch = int(max(earliest_open // self.epoch_duration, 0))
         self.end_epoch = int(max(latest_open // self.epoch_duration, 0))
 

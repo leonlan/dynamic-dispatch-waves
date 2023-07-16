@@ -135,10 +135,11 @@ class IterativeConditionalDispatch:
 
         static_inst = info["dynamic_context"]
         epoch_duration = info["epoch_duration"]
+        dispatch_margin = info["dispatch_margin"]
         ep_inst = obs["epoch_instance"]
 
         # Scenario instance fields
-        req_customer_idx = ep_inst["customer_idx"]
+        req_cust_idx = ep_inst["customer_idx"]
         req_idx = ep_inst["request_idx"]
         req_demand = ep_inst["demands"]
         req_service = ep_inst["service_times"]
@@ -151,26 +152,27 @@ class IterativeConditionalDispatch:
         req_release = to_postpone * epoch_duration
 
         for epoch_idx in range(next_epoch, next_epoch + max_lookahead):
+            next_epoch_start = epoch_idx * epoch_duration
+            next_epoch_depart = next_epoch_start + dispatch_margin
+
             # Samples new requests for the next epoch. The sampled requests
             # attributes are sampled from the static instance. Time-sensitive
             # attributes will be normalized later.
             new = sample_epoch_requests(
                 self.rng,
                 static_inst,
-                epoch_idx * epoch_duration,  # next epoch start time
-                (epoch_idx + 1) * epoch_duration,  # next epoch dispatch time
+                next_epoch_start,
+                next_epoch_depart,
                 max_requests_per_epoch,
             )
             num_new_reqs = new["customer_idx"].size
 
-            # Concatenate the new requests to the current instance requests
-            req_customer_idx = np.concatenate(
-                (req_customer_idx, new["customer_idx"])
-            )
-
             # Sampled request indices are negative so we can distinguish them
             new_req_idx = -(np.arange(num_new_reqs) + 1) - len(req_idx)
+
+            # Concatenate the new requests to the current instance requests
             req_idx = np.concatenate((ep_inst["request_idx"], new_req_idx))
+            req_cust_idx = np.concatenate((req_cust_idx, new["customer_idx"]))
             req_demand = np.concatenate((req_demand, new["demands"]))
             req_service = np.concatenate((req_service, new["service_times"]))
             req_tw = np.concatenate((req_tw, new["time_windows"]))
@@ -184,15 +186,15 @@ class IterativeConditionalDispatch:
         dist = static_inst["duration_matrix"]
 
         return {
-            "is_depot": static_inst["is_depot"][req_customer_idx],
-            "customer_idx": req_customer_idx,
+            "is_depot": static_inst["is_depot"][req_cust_idx],
+            "customer_idx": req_cust_idx,
             "request_idx": req_idx,
-            "coords": static_inst["coords"][req_customer_idx],
+            "coords": static_inst["coords"][req_cust_idx],
             "demands": req_demand,
             "capacity": static_inst["capacity"],
             "time_windows": req_tw,
             "service_times": req_service,
-            "duration_matrix": dist[req_customer_idx][:, req_customer_idx],
+            "duration_matrix": dist[req_cust_idx][:, req_cust_idx],
             "release_times": req_release,
             "dispatch_times": req_dispatch,
         }

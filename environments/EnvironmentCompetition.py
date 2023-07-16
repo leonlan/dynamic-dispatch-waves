@@ -84,6 +84,7 @@ class EnvironmentCompetition:
             "num_epochs": self.end_epoch - self.start_epoch + 1,
             "epoch_tlim": self.epoch_tlim,
             "epoch_duration": self.epoch_duration,
+            "dispatch_margin": self.dispatch_margin,
             "max_requests_per_epoch": self.max_requests_per_epoch,
         }
 
@@ -107,12 +108,12 @@ class EnvironmentCompetition:
 
         for epoch_idx in range(self.current_epoch, self.end_epoch + 1):
             current_time = epoch_idx * self.epoch_duration
-            dispatch_time = current_time + self.dispatch_margin
+            departure_time = current_time + self.dispatch_margin
             epoch_reqs = self.instance_sampler(
                 self.rng,
                 self.instance,
                 current_time,
-                dispatch_time,
+                departure_time,
                 self.max_requests_per_epoch,
             )
             n_ep_reqs = epoch_reqs["customer_idx"].size
@@ -203,15 +204,15 @@ class EnvironmentCompetition:
         # `filter_instance` function with mask to create a new instance.
 
         dist = self.instance["duration_matrix"]
-        dispatch_time = self.current_time + self.dispatch_margin
+        departure_time = self.current_time + self.dispatch_margin
         depot_closed = self.instance["time_windows"][0, 1]
 
         # Determine which requests are must-dispatch in the next epoch
         if self.current_epoch < self.end_epoch:
-            next_dispatch_time = dispatch_time + self.epoch_duration
+            next_departure_time = departure_time + self.epoch_duration
 
             earliest_arrival = np.maximum(
-                next_dispatch_time + dist[0, self.req_customer_idx],
+                next_departure_time + dist[0, self.req_customer_idx],
                 self.req_tw[:, 0],
             )
             earliest_return_at_depot = (
@@ -236,7 +237,7 @@ class EnvironmentCompetition:
 
         # Set depot time window to be at least the dispatch time
         time_windows = self.req_tw[current_reqs]
-        time_windows[0, 0] = dispatch_time
+        time_windows[0, 0] = departure_time
 
         self.ep_inst = {
             "is_depot": self.instance["is_depot"][customer_idx],
@@ -258,7 +259,7 @@ class EnvironmentCompetition:
         return {
             "current_epoch": self.current_epoch,
             "current_time": self.current_time,
-            "dispatch_time": dispatch_time,
+            "departure_time": departure_time,
             "epoch_instance": self.ep_inst,
         }
 

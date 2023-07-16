@@ -34,6 +34,7 @@ def parse_args():
     parser.add_argument("--hindsight", action="store_true")
     parser.add_argument("--epoch_tlim", type=float, default=60)
     parser.add_argument("--solve_tlim", type=float, default=10)
+    parser.add_argument("--sol_dir", type=str)
 
     return parser.parse_args()
 
@@ -43,11 +44,11 @@ def solve(
     agent_config_loc: str,
     env_seed: int,
     agent_seed: int,
-    solver_seed: int,
     num_procs_scenarios: int,
     hindsight: bool,
     epoch_tlim: float,
     solve_tlim: float,
+    sol_dir: str,
     **kwargs,
 ):
     path = Path(loc)
@@ -74,19 +75,27 @@ def solve(
     start = perf_counter()
 
     if hindsight:
-        costs, _ = solve_hindsight(env, solver_seed, solve_tlim)
+        costs, routes = solve_hindsight(env, agent_seed, solve_tlim)
     else:
-        costs, _ = solve_dynamic(env, agent, solver_seed, solve_tlim)
+        costs, routes = solve_dynamic(env, agent, agent_seed, solve_tlim)
+
+    if sol_dir:
+        instance_name = Path(loc).stem
+        where = Path(sol_dir) / (instance_name + ".txt")
+
+        with open(where, "w") as fh:
+            fh.write(str(routes))
 
     return (
         path.stem,
         env_seed,
-        sum(costs),
+        agent_seed,
+        sum(costs.values()),
         round(perf_counter() - start, 2),
     )
 
 
-def solve_dynamic(env, agent: Agent, solver_seed: int, solve_tlim: float):
+def solve_dynamic(env, agent: Agent, seed: int, solve_tlim: float):
     """
     Solves the dynamic problem.
 
@@ -96,14 +105,12 @@ def solve_dynamic(env, agent: Agent, solver_seed: int, solve_tlim: float):
         Environment of the dynamic problem.
     agent: Agent
         Agent that selects the dispatch action.
-    solver_seed: int
-        RNG seed for the dispatch instance solver.
+    seed: int
+        RNG seed used to solve the dispatch instances.
     solve_tlim: float
         Time limit for the dispatch instance solver.
     """
     done = False
-    solutions = []
-    costs = []
     observation, static_info = env.reset()
 
     while not done:
@@ -116,22 +123,20 @@ def solve_dynamic(env, agent: Agent, solver_seed: int, solve_tlim: float):
             # this (see https://github.com/PyVRP/PyVRP/issues/272).
             ep_sol = [[req] for req in dispatch_instance["request_idx"] if req]
         else:
-            res = default_solver(dispatch_instance, solver_seed, solve_tlim)
+            res = default_solver(dispatch_instance, seed, solve_tlim)
             routes = [route.visits() for route in res.best.get_routes()]
+            ep_sol = [
+                dispatch_instance["request_idx"][route].tolist()
+                for route in routes
+            ]
 
-            # Map solution client indices to request indices.
-            ep_sol = [dispatch_instance["request_idx"][rte] for rte in routes]
-
-        observation, reward, done, info = env.step(ep_sol)
+        observation, _, done, info = env.step(ep_sol)
         assert info["error"] is None, info["error"]
 
-        solutions.append(ep_sol)
-        costs.append(abs(reward))
-
-    return costs, solutions
+    return env.final_costs, env.final_solutions
 
 
-def solve_hindsight(env, solver_seed: int, solve_tlim: float):
+def solve_hindsight(env, seed: int, solve_tlim: float):
     """
     Solves the dynamic problem in hindsight.
 
@@ -139,8 +144,8 @@ def solve_hindsight(env, solver_seed: int, solve_tlim: float):
     ----------
     env: Environment
         Environment of the dynamic problem.
-    solver_seed: int
-        RNG seed used to solve the dispatch instances.
+    seed: int
+        RNG seed used to solve the hindsight instances.
     solve_tlim: float
         Time limit for solving the hindsight instance.
 
@@ -148,12 +153,10 @@ def solve_hindsight(env, solver_seed: int, solve_tlim: float):
     observation, info = env.reset()
     hindsight_inst = env.get_hindsight_problem()
 
-    res = default_solver(hindsight_inst, solver_seed, solve_tlim)
+    res = default_solver(hindsight_inst, seed, solve_tlim)
     hindsight_sol = [route.visits() for route in res.best.get_routes()]
 
     done = False
-    solutions = []
-    costs = []
     observation, _ = env.reset()
 
     # Submit the solution from the hindsight instance to the environment to
@@ -169,18 +172,23 @@ def solve_hindsight(env, solver_seed: int, solve_tlim: float):
             if hindsight_inst["release_times"][route].max() == dispatch_time
         ]
 
-        observation, reward, done, info = env.step(ep_sol)
+        observation, _, done, info = env.step(ep_sol)
         assert info["error"] is None, f"{info['error']}"
 
-        solutions.append(ep_sol)
-        costs.append(abs(reward))
+    costs = env.final_costs
+    solutions = env.final_solutions
 
     # Check that the cost of the dynamic problem is equal to the cost of the
     # hindsight solution.
-    cost_eval = CostEvaluator(0, 0)
-    assert sum(costs) == cost_eval.cost(res.best)
+    assert sum(costs.values()) == CostEvaluator(0, 0).cost(res.best)
 
     return costs, solutions
+
+
+def maybe_mkdir(where: str):
+    if where:
+        stats_dir = Path(where)
+        stats_dir.mkdir(parents=True, exist_ok=True)
 
 
 def tabulate(headers, rows) -> str:
@@ -205,6 +213,8 @@ def tabulate(headers, rows) -> str:
 
 
 def benchmark(instances: list[str], num_procs: int = 1, **kwargs):
+    maybe_mkdir(kwargs.get("sol_dir", ""))
+
     func = partial(solve, **kwargs)
     args = sorted(instances)
 
@@ -215,7 +225,8 @@ def benchmark(instances: list[str], num_procs: int = 1, **kwargs):
 
     dtypes = [
         ("inst", "U37"),
-        ("seed", int),
+        ("Env. seed", int),
+        ("Agent seed", int),
         ("cost", int),
         ("time", float),
     ]
@@ -223,7 +234,8 @@ def benchmark(instances: list[str], num_procs: int = 1, **kwargs):
 
     headers = [
         "Instance",
-        "Seed",
+        "Env. seed",
+        "Agent seed",
         "Cost",
         "Time (s)",
     ]

@@ -7,4 +7,4 @@ num_scenarios = 30
 consensus = "hamming_distance"
 
 [agent_params.consensus_params]
-postpone_thresholds = [1.01] # don't postpone
+postpone_thresholds = [1.00]

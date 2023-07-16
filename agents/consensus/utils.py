@@ -1,87 +1,92 @@
 import numpy as np
 
-
-def always_postponed(scenarios, to_dispatch, to_postpone):
-    return select_postpone_on_threshold(scenarios, to_dispatch, to_postpone, 1)
+Scenario = tuple[dict, list[list[int]]]
 
 
 def select_postpone_on_threshold(
-    scenarios, to_dispatch, to_postpone, postpone_threshold
+    scenarios: list[Scenario],
+    old_dispatch: np.ndarray,
+    old_postpone: np.ndarray,
+    postpone_threshold: float,
 ):
-    dispatch_count = get_dispatch_count(scenarios, to_dispatch, to_postpone)
+    """
+    Returns a boolean array indicating which requests should be postponed:
+    a request is postponed if it is postponed in at least `postpone_threshold`
+    fraction of the scenarios.
+    """
+    dispatch_count = get_dispatch_count(scenarios, old_dispatch, old_postpone)
     postpone_count = len(scenarios) - dispatch_count
-    postpone_count[0] = 0  # depot is never postponed
+    postpone_count[0] = 0  # do not postpone depot
 
     return postpone_count >= postpone_threshold * len(scenarios)
 
 
 def select_dispatch_on_threshold(
-    scenarios, to_dispatch, to_postpone, dispatch_threshold
-):
-    dispatch_count = get_dispatch_count(scenarios, to_dispatch, to_postpone)
+    scenarios: list[Scenario],
+    old_dispatch: np.ndarray,
+    old_postpone: np.ndarray,
+    dispatch_threshold: float,
+) -> np.ndarray:
+    """
+    Returns a boolean array indicating which requests should be dispatched:
+    a request is dispatched if it is dispatched in at least `dispatch_threshold`
+    fraction of the scenarios.
+    """
+    dispatch_count = get_dispatch_count(scenarios, old_dispatch, old_postpone)
     return dispatch_count >= dispatch_threshold * len(scenarios)
 
 
-def get_dispatch_count(scenarios, to_dispatch, to_postpone):
+def get_dispatch_count(
+    scenarios: list[Scenario], old_dispatch, old_postpone
+) -> np.ndarray:
     """
-    Computes the dispatch counts for the given solved scenarios.
+    Returns a vector containing the number of scenarios in which each request
+    was dispatched.
     """
-    dispatch_matrix = get_dispatch_matrix(scenarios, to_dispatch, to_postpone)
-    return dispatch_matrix.sum(axis=0)
+    mat = get_dispatch_matrix(scenarios, old_dispatch, old_postpone)
+    return np.sum(mat, axis=0)
 
 
-def verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone):
+def get_dispatch_matrix(
+    scenarios: list[Scenario], to_dispatch: np.ndarray, to_postpone: np.ndarray
+) -> np.ndarray:
     """
-    Checks that (1) the old actions are a subset of the new actions, (2) the
-    depot is never part of any action, and (3) a request is not dispatch and
-    postpone at the same time.
+    Returns the dispatch matrix. Each row in this matrix corresponds to the
+    dispatch action for a given scenario, where 1 means that the request was
+    dispatched in this scenario, and 0 means it was postponed.
     """
-    assert np.all(old_dispatch <= new_dispatch)
-    assert np.all(old_postpone <= new_postpone)
+    num_reqs = to_dispatch.size  # including depot
+    dispatch_matrix = np.zeros((len(scenarios), num_reqs), dtype=int)
 
-    assert not new_dispatch[0]
-    assert not new_postpone[0]
-
-    assert not np.any(new_dispatch & new_postpone)
-
-
-def get_dispatch_matrix(scenarios, to_dispatch, to_postpone):
-    """
-    Returns a matrix, where each row corresponds to the scenario action. The
-    scenario action is a binary vector, where 1 means that the request was
-    dispatched in this scenario, and 0 means it is postponed.
-    """
-    n_reqs = to_dispatch.size  # including depot
-    dispatch_matrix = np.zeros((len(scenarios), n_reqs), dtype=int)
-
-    for scenario_idx, (inst, sol) in enumerate(scenarios):
-        for route in sol:
-            if is_dispatched(inst, route, to_dispatch, to_postpone):
+    for scenario_idx, (instance, solution) in enumerate(scenarios):
+        for route in solution:
+            if is_dispatched_route(instance, route, to_dispatch, to_postpone):
                 dispatch_matrix[scenario_idx, route] += 1
 
     return dispatch_matrix
 
 
-def is_dispatched(instance, route, to_dispatch, to_postpone):
+def is_dispatched_route(instance, route, to_dispatch, to_postpone):
     """
-    Determines whether the passed-in route was a dispatched route in the
-    simulations or not. A route is considered dispatched w.r.t. the current
-    instance if:
-    - at least one the requests is marked dispatched, or
-    - the route does not contain postponed or simulated requests and the route
+    Determines whether or not the passed route was dispatched in the scenario
+    instance. A route is considered dispatched if:
+    * at least one the requests on the route is already marked dispatched, or
+    * the route does not contain postponed or sampled requests and the route
       cannot be postponed to the next epoch without violating feasibility.
+      In other words, the "route latest start" is less than the next epoch
+      start time.
     """
     n_reqs = to_dispatch.size
 
-    has_to_dispatch = any(to_dispatch[idx] for idx in route if idx < n_reqs)
-
-    if has_to_dispatch:
+    if any(to_dispatch[idx] for idx in route if idx < n_reqs):
+        # At least one request on the route was already dispatched
         return True
 
+    # Sampled request indices are larger than the number of requests
+    has_sampled_reqs = any(idx >= n_reqs for idx in route)
     has_postponed_reqs = any(to_postpone[idx] for idx in route if idx < n_reqs)
-    has_simulated_reqs = any(idx >= n_reqs for idx in route)
 
-    if has_postponed_reqs or has_simulated_reqs:
+    if has_sampled_reqs or has_postponed_reqs:
         return False
 
     return not can_postpone_route(instance, route)
@@ -91,6 +96,9 @@ def can_postpone_route(instance, route):
     """
     Checks if the route can be postponed to the next epoch, i.e., the route
     remains feasible if it starts one epoch duration later.
+
+    # TODO Replace this with route.earliest_start() and route.slack() in PyVRP.
+    See https://github.com/PyVRP/PyVRP/pull/241.
     """
     tour = [0] + route + [0]
     tws = instance["time_windows"]
@@ -98,9 +106,16 @@ def can_postpone_route(instance, route):
     service = instance["service_times"]
 
     # HACK The next epoch time is inferred from the smallest non-zero release
-    # times. We can also infer this from the environment.
+    # times. If all release times are zero, then this scenario contains no
+    # sampled requests, and we assume that the route must be dispatched.
     release_times = instance["release_times"]
-    current_time = np.min(release_times[np.nonzero(release_times)])
+    non_zero_release = np.flatnonzero(release_times)
+
+    if non_zero_release.size == 0:
+        return False
+
+    next_epoch_time = np.min(release_times[non_zero_release])
+    current_time = next_epoch_time
 
     for idx in range(len(tour) - 1):
         pred, succ = tour[idx], tour[idx + 1]
@@ -115,3 +130,21 @@ def can_postpone_route(instance, route):
         current_time += service[succ]
 
     return True
+
+
+def verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone):
+    """
+    Checks that (1) the old actions are a subset of the new actions, (2) the
+    depot is never part of any action, and (3) a request is not dispatch and
+    postpone at the same time.
+    """
+    # Preserve old actions
+    assert np.all(old_dispatch <= new_dispatch)
+    assert np.all(old_postpone <= new_postpone)
+
+    # Depot is never part of any action
+    assert not new_dispatch[0]
+    assert not new_postpone[0]
+
+    # A request cannot be dispatched and postponed at the same time
+    assert not np.any(new_dispatch & new_postpone)

@@ -94,6 +94,11 @@ class IterativeConditionalDispatch:
         """
         Solves a single scenario instance, returning the solution.
         """
+        if instance["request_idx"].size <= 2:
+            # BUG Empty or single client dispatch instance, PyVRP cannot handle
+            # this (see https://github.com/PyVRP/PyVRP/issues/272).
+            return [[req] for req in instance["request_idx"] if req]
+
         result = scenario_solver(instance, self.seed, self.scenario_time_limit)
         return [route.visits() for route in result.best.get_routes()]
 

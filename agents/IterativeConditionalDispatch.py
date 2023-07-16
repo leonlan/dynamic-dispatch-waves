@@ -78,10 +78,12 @@ class IterativeConditionalDispatch:
                 with Pool(self.num_parallel_solve) as pool:
                     solutions = pool.map(self._solve_scenario, instances)
 
-            scenarios = list(zip(instances, solutions))
-
             to_dispatch, to_postpone = self.consensus_func(
-                iter_idx, scenarios, to_dispatch, to_postpone
+                iter_idx,
+                ep_inst,
+                list(zip(instances, solutions)),
+                to_dispatch,
+                to_postpone,
             )
 
             # Stop the run early when all requests have been marked

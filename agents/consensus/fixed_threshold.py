@@ -10,6 +10,7 @@ from .utils import (
 def fixed_threshold(
     iteration_idx: int,
     scenarios: list[tuple[dict, list[list[int]]]],
+    instance,
     old_dispatch: np.ndarray,
     old_postpone: np.ndarray,
     dispatch_thresholds: list[float],

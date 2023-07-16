@@ -2,6 +2,7 @@ from typing import Callable
 
 from .fixed_threshold import fixed_threshold
 from .hamming_distance import hamming_distance
+from .prize_collecting import prize_collecting
 
 # This dict stores consensus functions that can be used to determine which
 # requests to dispatch or to postpone during the scenario iterations. A
@@ -19,4 +20,5 @@ from .hamming_distance import hamming_distance
 CONSENSUS: dict[str, Callable] = {
     "fixed_threshold": fixed_threshold,
     "hamming_distance": hamming_distance,
+    "prize_collecting": prize_collecting,
 }

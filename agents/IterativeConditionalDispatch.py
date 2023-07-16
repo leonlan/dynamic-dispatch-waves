@@ -174,7 +174,7 @@ class IterativeConditionalDispatch:
             new_req_idx = -(np.arange(num_new_reqs) + 1) - len(req_idx)
 
             # Concatenate the new requests to the current instance requests
-            req_idx = np.concatenate((ep_inst["request_idx"], new_req_idx))
+            req_idx = np.concatenate((req_idx, new_req_idx))
             req_cust_idx = np.concatenate((req_cust_idx, new["customer_idx"]))
             req_demand = np.concatenate((req_demand, new["demands"]))
             req_service = np.concatenate((req_service, new["service_times"]))

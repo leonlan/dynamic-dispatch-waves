@@ -136,7 +136,6 @@ class IterativeConditionalDispatch:
         static_inst = info["dynamic_context"]
         epoch_duration = info["epoch_duration"]
         ep_inst = obs["epoch_instance"]
-        dispatch_time = obs["dispatch_time"]
 
         # Scenario instance fields
         req_customer_idx = ep_inst["customer_idx"]
@@ -169,21 +168,12 @@ class IterativeConditionalDispatch:
                 (req_customer_idx, new["customer_idx"])
             )
 
-            # Sampled request indices are negative so we can identify them
+            # Sampled request indices are negative so we can distinguish them
             new_req_idx = -(np.arange(num_new_reqs) + 1) - len(req_idx)
             req_idx = np.concatenate((ep_inst["request_idx"], new_req_idx))
-
             req_demand = np.concatenate((req_demand, new["demands"]))
             req_service = np.concatenate((req_service, new["service_times"]))
-
-            # Normalize TW to start at dispatch time, and clip the past
-            new["time_windows"] -= dispatch_time
-            new["time_windows"] = np.maximum(new["time_windows"], 0)
             req_tw = np.concatenate((req_tw, new["time_windows"]))
-
-            # Also normalize release time and clip the past
-            new["release_times"] -= dispatch_time
-            new["release_times"] = np.maximum(new["release_times"], 0)
             req_release = np.concatenate((req_release, new["release_times"]))
 
             # Default dispatch time is the time horizon.

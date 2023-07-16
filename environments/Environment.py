@@ -234,13 +234,9 @@ class Environment:
         ]
         customer_idx = self.req_customer_idx[current_reqs]
 
-        # Normalize TW to dispatch_time, and clip the past
-        time_windows = np.maximum(self.req_tw[current_reqs] - dispatch_time, 0)
-
-        # Normalize release times to dispatch_time, and clip the past
-        release_times = np.maximum(
-            self.req_release_time[current_reqs] - dispatch_time, 0
-        )
+        # Set depot time window to be at least the dispatch time
+        time_windows = self.req_tw[current_reqs]
+        time_windows[0, 0] = dispatch_time
 
         self.ep_inst = {
             "is_depot": self.instance["is_depot"][customer_idx],
@@ -256,7 +252,7 @@ class Environment:
             ],
             "must_dispatch": self.req_must_dispatch[current_reqs],
             "epoch": self.req_epoch[current_reqs],
-            "release_time": release_times,
+            "release_time": self.req_release_time[current_reqs],
         }
 
         return {

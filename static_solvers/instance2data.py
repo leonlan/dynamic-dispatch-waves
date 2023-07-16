@@ -43,9 +43,6 @@ def instance2data(instance: dict) -> ProblemData:
     if demands[0] != 0:
         raise ValueError("Demand of depot must be 0")
 
-    if time_windows[0, 0] != 0:
-        raise ValueError("Depot start of time window must be 0")
-
     if service_times[0] != 0:
         raise ValueError("Depot service duration must be 0")
 

@@ -162,14 +162,13 @@ def solve_hindsight(env, seed: int, solve_tlim: float):
     # Submit the solution from the hindsight instance to the environment to
     # verify feasibility of the solution.
     while not done:
-        # Routes with a maximum release time of the dispatch time, i.e., the
-        # moment that the routes will be dispatched if they are submitted as
-        # the current epoch solution.
-        dispatch_time = observation["dispatch_time"]
+        # Routes that have a maximum release time equal to the epoch departure
+        # time are to be dispatched in the current epoch.
+        departure_time = observation["departure_time"]
         ep_sol = [
             route
             for route in hindsight_sol
-            if hindsight_inst["release_times"][route].max() == dispatch_time
+            if hindsight_inst["release_times"][route].max() == departure_time
         ]
 
         observation, _, done, info = env.step(ep_sol)

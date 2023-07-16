@@ -155,9 +155,6 @@ class IterativeConditionalDispatch:
             next_epoch_start = epoch_idx * epoch_duration
             next_epoch_depart = next_epoch_start + dispatch_margin
 
-            # Samples new requests for the next epoch. The sampled requests
-            # attributes are sampled from the static instance. Time-sensitive
-            # attributes will be normalized later.
             new = sample_epoch_requests(
                 self.rng,
                 static_inst,
@@ -178,7 +175,7 @@ class IterativeConditionalDispatch:
             req_tw = np.concatenate((req_tw, new["time_windows"]))
             req_release = np.concatenate((req_release, new["release_times"]))
 
-            # Default dispatch time is the time horizon.
+            # Default earliest dispatch time is the time horizon.
             req_dispatch = np.concatenate(
                 (req_dispatch, np.full(num_new_reqs, horizon))
             )

@@ -1,0 +1,13 @@
+agent = "icd"
+
+[agent_params]
+num_iterations = 1
+num_lookahead = 2
+num_scenarios = 30
+consensus = "prize_collecting"
+
+[agent_params.consensus_params]
+fix_threshold = 0.1
+lamda = 5
+seed = 42
+time_limit = 10

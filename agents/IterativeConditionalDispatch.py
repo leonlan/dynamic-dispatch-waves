@@ -80,8 +80,8 @@ class IterativeConditionalDispatch:
 
             to_dispatch, to_postpone = self.consensus_func(
                 iter_idx,
-                ep_inst,
                 list(zip(instances, solutions)),
+                ep_inst,
                 to_dispatch,
                 to_postpone,
             )

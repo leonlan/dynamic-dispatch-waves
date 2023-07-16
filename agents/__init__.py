@@ -6,5 +6,5 @@ AGENTS = {
     "greedy": GreedyDispatch,
     "lazy": LazyDispatch,
     "uniform": UniformDispatch,
-    "icd": IterativeConditionalDispatch
+    "icd": IterativeConditionalDispatch,
 }

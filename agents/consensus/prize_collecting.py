@@ -2,12 +2,7 @@ import numpy as np
 
 from static_solvers import default_solver
 
-from .utils import (
-    select_dispatch_on_threshold,
-    select_postpone_on_threshold,
-    get_dispatch_count,
-    verify_action,
-)
+from .utils import get_dispatch_count, verify_action
 
 
 def prize_collecting(
@@ -37,33 +32,31 @@ def prize_collecting(
     postpone_count[0] = 0  # do not postpone depot
     new_postpone = postpone_count >= (1 - fix_threshold) * len(scenarios)
 
-    # TODO
-
-    pc_inst = {
-        "is_depot": instance["is_depot"][req_customer_idx],
-        "customer_idx": req_customer_idx,
-        "request_idx": req_idx,
-        "coords": static_inst["coords"][req_customer_idx],
-        "demands": req_demand,
-        "capacity": static_inst["capacity"],
-        "time_windows": req_tw,
-        "service_times": req_service,
-        "duration_matrix": dist[req_customer_idx][:, req_customer_idx],
-        "release_times": req_release,
-        "dispatch_times": req_dispatch,
+    pc_inst: dict[str, list] = {
+        "is_depot": [],
+        "customer_idx": [],
+        "request_idx": [],
+        "coords": [],
+        "demands": [],
+        "capacity": [],
+        "time_windows": [],
+        "service_times": [],
+        "duration_matrix": [],
+        "release_times": [],
+        "dispatch_times": [],
         "prizes": [],
     }
 
-    if instance["request_idx"].size <= 2:
+    if len(pc_inst["request_idx"]) <= 2:
         # BUG Empty or single client dispatch instance, PyVRP cannot handle
         # this (see https://github.com/PyVRP/PyVRP/issues/272).
         # We don't know for sure if we want to dispatch these, but it's just
         # one client so it cannot be all that bad either way.
-        new_dispatch[instance["request_idx"]] = True
+        new_dispatch[pc_inst["request_idx"]] = True
     else:
-        res = default_solver(instance, seed, time_limit)
+        res = default_solver(pc_inst, seed, time_limit)
         for route in res.best.get_routes():
-            new_dispatch[instance["request_idx"][route]] = True
+            new_dispatch[pc_inst["request_idx"][route]] = True
 
     verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone)
     return new_dispatch, new_postpone

@@ -28,14 +28,12 @@ def prize_collecting(
     dispatch_count = get_dispatch_count(scenarios, old_dispatch, old_postpone)
     normalized_dispatch = dispatch_count / len(scenarios)
 
-    new_dispatch = normalized_dispatch > (1 - fix_threshold)
-    new_postpone = normalized_dispatch < fix_threshold
+    new_dispatch = old_dispatch | (normalized_dispatch > (1 - fix_threshold))
+    new_postpone = old_postpone | (normalized_dispatch < fix_threshold)
     new_postpone[0] = False  # do not postpone depot
 
     not_postponed = instance["request_idx"][~new_postpone]
-
-    grid = np.ix_(not_postponed, not_postponed)
-    duration_mat = instance["duration_matrix"][grid]
+    duration_mat = instance["duration_matrix"][not_postponed][:, not_postponed]
 
     # Prize vector. We compute this as a parameter lambda multiplied by the
     # average arc duration scaled by the dispatch percentage (more scenario

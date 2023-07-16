@@ -137,6 +137,7 @@ class IterativeConditionalDispatch:
         epoch_duration = info["epoch_duration"]
         dispatch_margin = info["dispatch_margin"]
         ep_inst = obs["epoch_instance"]
+        departure_time = obs["departure_time"]
 
         # Scenario instance fields
         req_cust_idx = ep_inst["customer_idx"]
@@ -144,12 +145,17 @@ class IterativeConditionalDispatch:
         req_demand = ep_inst["demands"]
         req_service = ep_inst["service_times"]
         req_tw = ep_inst["time_windows"]
+        req_release = ep_inst["release_times"]
 
-        # Conditional dispatching: alter release and dispatch times of requests
-        # that have already been marked in previous iterations.
+        # Modify the release time of postponed requests: they should start
+        # at the next departure time.
+        next_departure_time = departure_time + epoch_duration
+        req_release[to_postpone] = next_departure_time
+
+        # Modify the dispatch time of dispatched requests: they should start
+        # at the current departure time (and at time horizon otherwise).
         horizon = req_tw[0][1]
-        req_dispatch = np.where(to_dispatch, 0, horizon)
-        req_release = to_postpone * epoch_duration
+        req_dispatch = np.where(to_dispatch, departure_time, horizon)
 
         for epoch_idx in range(next_epoch, next_epoch + max_lookahead):
             next_epoch_start = epoch_idx * epoch_duration

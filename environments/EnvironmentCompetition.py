@@ -253,7 +253,7 @@ class EnvironmentCompetition:
             ],
             "must_dispatch": self.req_must_dispatch[current_reqs],
             "epoch": self.req_epoch[current_reqs],
-            "release_time": self.req_release_time[current_reqs],
+            "release_times": self.req_release_time[current_reqs],
         }
 
         return {

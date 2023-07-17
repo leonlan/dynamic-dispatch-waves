@@ -36,6 +36,7 @@ def prize_collecting(
 
     # Prize vector. We compute this as the average arc duration scaled by the
     # dispatch percentage (more scenario dispatch == higher prize).
+    # TODO perhaps only look at durations from/to granular neighbourhood?
     prizes = pc_inst["duration_matrix"].mean() * normalized_dispatch
     prizes[new_dispatch] = 0  # marks these as required
     pc_inst["prizes"] = prizes[not_postponed].astype(int)

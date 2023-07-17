@@ -13,7 +13,6 @@ def prize_collecting(
     old_dispatch: np.ndarray,
     old_postpone: np.ndarray,
     fix_threshold: float,
-    lamda: float,
     seed: int,
     time_limit: float,
     **kwargs
@@ -24,7 +23,6 @@ def prize_collecting(
     determine the dispatch/postpone decisions for all other clients.
     """
     assert 0 <= fix_threshold < 0.5
-    assert lamda >= 0
 
     dispatch_count = get_dispatch_count(scenarios, old_dispatch, old_postpone)
     normalized_dispatch = dispatch_count / len(scenarios)
@@ -36,10 +34,9 @@ def prize_collecting(
     not_postponed = ~new_postpone
     pc_inst = filter_instance(instance, not_postponed)
 
-    # Prize vector. We compute this as a parameter lambda multiplied by the
-    # average arc duration scaled by the dispatch percentage (more scenario
-    # dispatch == higher prize).
-    prizes = lamda * pc_inst["duration_matrix"].mean() * normalized_dispatch
+    # Prize vector. We compute this as the average arc duration scaled by the
+    # dispatch percentage (more scenario dispatch == higher prize).
+    prizes = pc_inst["duration_matrix"].mean() * normalized_dispatch
     prizes[new_dispatch] = 0  # marks these as required
     pc_inst["prizes"] = prizes[not_postponed].astype(int)
 

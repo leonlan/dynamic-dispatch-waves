@@ -8,6 +8,5 @@ consensus = "prize_collecting"
 
 [agent_params.consensus_params]
 fix_threshold = 0.1
-lamda = 5
 seed = 42
 time_limit = 10

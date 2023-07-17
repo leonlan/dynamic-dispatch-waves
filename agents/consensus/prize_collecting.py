@@ -1,6 +1,7 @@
 import numpy as np
 
 from static_solvers import default_solver
+from utils import filter_instance
 
 from .utils import get_dispatch_count, verify_action
 
@@ -32,37 +33,28 @@ def prize_collecting(
     new_postpone = normalized_dispatch < fix_threshold
     new_postpone[0] = False  # do not postpone depot
 
-    not_postponed = instance["request_idx"][~new_postpone]
-    duration_mat = instance["duration_matrix"][not_postponed][:, not_postponed]
+    not_postponed = ~new_postpone
+    pc_inst = filter_instance(instance, not_postponed)
 
     # Prize vector. We compute this as a parameter lambda multiplied by the
     # average arc duration scaled by the dispatch percentage (more scenario
     # dispatch == higher prize).
-    prize_coeff = lamda * duration_mat.mean()
-    prizes = (prize_coeff * normalized_dispatch[not_postponed]).astype(int)
+    prizes = lamda * pc_inst["duration_matrix"].mean() * normalized_dispatch
+    prizes[new_dispatch] = 0  # marks these as required
+    pc_inst["prizes"] = prizes[not_postponed].astype(int)
 
-    pc_inst: dict[str, np.ndarray] = {
-        "coords": instance["coords"][not_postponed],
-        "demands": instance["demands"][not_postponed],
-        "capacity": instance["capacity"],
-        "time_windows": instance["time_windows"][not_postponed],
-        "service_times": instance["service_times"][not_postponed],
-        "duration_matrix": duration_mat,
-        "release_times": instance["release_times"][not_postponed],
-        "prizes": prizes,
-    }
-
-    if len(not_postponed) <= 2:
+    if not_postponed.sum() <= 2:
         # BUG Empty or single client dispatch instance, PyVRP cannot handle
         # this (see https://github.com/PyVRP/PyVRP/issues/272).
         # We don't know for sure if we want to dispatch these, but it's just
         # one client so it cannot be all that bad either way.
         new_dispatch[not_postponed] = True
-        new_dispatch[0] = False
+        new_dispatch[0] = False  # do not dispatch depot
     else:
+        sol2ep = np.flatnonzero(not_postponed)
         res = default_solver(pc_inst, seed, time_limit)
         for route in res.best.get_routes():
-            new_dispatch[not_postponed[route]] = True
+            new_dispatch[sol2ep[route]] = True
 
     verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone)
     return new_dispatch, new_postpone

@@ -1,10 +1,11 @@
 import os
+from typing import Union
 
 import numpy as np
 import vrplib
 
 
-def read(path: os.PathLike | str, instance_format="vrplib"):
+def read(path: Union[os.PathLike, str], instance_format="vrplib"):
     """
     Reads a VRPLIB instance from file and returns an ``instance`` dict,
     containing

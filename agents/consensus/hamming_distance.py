@@ -10,6 +10,7 @@ from .utils import (
 def hamming_distance(
     iteration_idx: int,
     scenarios: list[tuple[dict, list[list[int]]]],
+    instance,
     old_dispatch: np.ndarray,
     old_postpone: np.ndarray,
     postpone_thresholds: list[float],

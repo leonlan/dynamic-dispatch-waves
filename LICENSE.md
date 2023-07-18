@@ -1,8 +1,6 @@
 The MIT License (MIT)
 
-Copyright:
-- DIMACS-related extensions: 2022 ORTEC
-- EURO/NeurIPS extensions and overhaul: 2022 OptiML team members
+Copyright (c) 2023 Leon Lan and contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

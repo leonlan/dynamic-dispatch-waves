@@ -55,6 +55,7 @@ def solve(
 ):
     path = Path(loc)
     static_instance = utils.read(path)
+    static_instance["capacity"] = 80  # Smaller capacity to make shorter routes
     env = EnvironmentCompetition(
         env_seed,
         static_instance,

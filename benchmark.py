@@ -12,6 +12,7 @@ from tqdm.contrib.concurrent import process_map
 import utils
 from agents import AGENTS, Agent
 from environments import EnvironmentCompetition
+from plotting.plot_dynamic_instance import save_fig
 from sampling import sample_epoch_requests
 from static_solvers import default_solver
 from utils import filter_instance
@@ -56,6 +57,18 @@ def solve(
     path = Path(loc)
     static_instance = utils.read(path)
     static_instance["capacity"] = 80  # Smaller capacity to make shorter routes
+
+    # Filter out requests that are outside the plotting grid size.
+    xlim = (0, 8000)
+    ylim = (0, 3500)
+    mask = [
+        True
+        if (xlim[0] <= x <= xlim[1] and ylim[0] <= y <= ylim[1])
+        else False
+        for (x, y) in static_instance["coords"]
+    ]
+    static_instance = filter_instance(static_instance, mask)
+
     env = EnvironmentCompetition(
         env_seed,
         static_instance,
@@ -137,10 +150,30 @@ def solve_dynamic(env, agent: Agent, seed: int, solve_tlim: float):
                 for route in routes
             ]
 
+        if observation["current_epoch"] == 2:
+            plot(dispatch_instance, routes)
+
         observation, _, done, info = env.step(ep_sol)
         assert info["error"] is None, info["error"]
 
     return env.final_costs, env.final_solutions
+
+
+def plot(instance, routes):
+    # Plot the dispatch instance.
+    save_fig(
+        "figs/dispatch_instance.png",
+        "Dispatch instance",
+        instance,
+    )
+
+    # Plot the dispatch instance with solution, aka epoch solution
+    save_fig(
+        "figs/dispatch_solution.png",
+        "Dispatch instance with solution",
+        instance,
+        routes=routes,
+    )
 
 
 def solve_hindsight(env, seed: int, solve_tlim: float):

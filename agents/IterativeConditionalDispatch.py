@@ -3,10 +3,11 @@ from multiprocessing import Pool
 
 import numpy as np
 
+from plotting.plot_dynamic_instance import save_fig
 from sampling import sample_epoch_requests
 from static_solvers import scenario_solver
 
-from .consensus import CONSENSUS
+from .consensus import CONSENSUS, utils
 
 
 class IterativeConditionalDispatch:
@@ -78,6 +79,17 @@ class IterativeConditionalDispatch:
                 with Pool(self.num_parallel_solve) as pool:
                     solutions = pool.map(self._solve_scenario, instances)
 
+            if obs["current_epoch"] == 2:
+                plot(
+                    ep_inst,
+                    instances,
+                    solutions,
+                    iter_idx,
+                    to_dispatch,
+                    to_postpone,
+                    self.consensus_func,
+                )
+
             to_dispatch, to_postpone = self.consensus_func(
                 iter_idx,
                 list(zip(instances, solutions)),
@@ -148,6 +160,7 @@ class IterativeConditionalDispatch:
         req_service = ep_inst["service_times"]
         req_tw = ep_inst["time_windows"]
         req_release = ep_inst["release_times"]
+        req_must_dispatch = ep_inst["must_dispatch"]
 
         # Modify the release time of postponed requests: they should start
         # at the next departure time.
@@ -188,6 +201,10 @@ class IterativeConditionalDispatch:
                 (req_dispatch, np.full(num_new_reqs, horizon))
             )
 
+            req_must_dispatch = np.concatenate(
+                (req_must_dispatch, np.full(num_new_reqs, False))
+            )
+
         dist = static_inst["duration_matrix"]
 
         return {
@@ -202,4 +219,81 @@ class IterativeConditionalDispatch:
             "duration_matrix": dist[req_cust_idx][:, req_cust_idx],
             "release_times": req_release,
             "dispatch_times": req_dispatch,
+            "must_dispatch": req_must_dispatch,
         }
+
+
+def plot(
+    ep_inst,
+    instances,
+    solutions,
+    iter_idx,
+    to_dispatch,
+    to_postpone,
+    consensus_func,
+):
+    # Plot epoch instance
+    save_fig(
+        "figs/epoch_instance.jpg",
+        "Epoch instance",
+        ep_inst,
+    )
+
+    scenarios = list(zip(instances, solutions))
+    for idx, (instance, solution) in enumerate(scenarios):
+        # Plot scenario instance
+        save_fig(
+            f"figs/scenario_{iter_idx}_{idx}.jpg",
+            "Scenario instance",
+            instance,
+            postponed=to_postpone,
+            dispatched=to_dispatch,
+        )
+
+        # Plot scenario solution
+        save_fig(
+            f"figs/scenario_solution_{iter_idx}_{idx}.jpg",
+            "Scenario instance",
+            instance,
+            postponed=to_postpone,
+            dispatched=to_dispatch,
+            routes=solution,
+        )
+
+    # Plot epoch instance with dispatch frequencies as labels, only if requests
+    # are not already dispatched or postponed
+    counts = utils.get_dispatch_count(scenarios, to_dispatch, to_postpone)
+    freqs = counts / len(scenarios)
+    decided = np.flatnonzero(to_dispatch | to_postpone)
+    labels = {idx: val for idx, val in enumerate(freqs) if idx not in decided}
+
+    save_fig(
+        f"figs/epoch_instance_{iter_idx}_with_labels.jpg",
+        "Epoch instance with dispatch frequencies",
+        ep_inst,
+        labels=labels,
+        postponed=to_postpone,
+        dispatched=to_dispatch,
+    )
+
+    # Plot epoch instance with dispatch frequencies and the corresponding action
+    new_dispatch, new_postpone = consensus_func(
+        iter_idx, scenarios, ep_inst, to_dispatch, to_postpone
+    )
+    save_fig(
+        f"figs/epoch_instance_{iter_idx}_with_labels_and_action.jpg",
+        "Epoch instance with dispatch frequencies and the corresponding action",
+        ep_inst,
+        labels=labels,
+        postponed=new_postpone,
+        dispatched=new_dispatch,
+    )
+
+    # Plot epoch instance with action, but no labels
+    save_fig(
+        f"figs/epoch_instance_{iter_idx}_with_action.jpg",
+        "Epoch instance with dispatch frequencies and the corresponding action",
+        ep_inst,
+        postponed=new_postpone,
+        dispatched=new_dispatch,
+    )

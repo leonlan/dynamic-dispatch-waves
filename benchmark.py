@@ -21,6 +21,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("instances", nargs="+", help="Instance paths.")
+    parser.add_argument("--max_requests_per_epoch", type=int, default=100)
     parser.add_argument("--env_seed", type=int, default=1)
     parser.add_argument("--agent_seed", type=int, default=1)
     parser.add_argument("--solver_seed", type=int, default=1)
@@ -42,6 +43,7 @@ def parse_args():
 def solve(
     loc: str,
     agent_config_loc: str,
+    max_requests_per_epoch: int,
     env_seed: int,
     agent_seed: int,
     num_procs_scenarios: int,
@@ -54,7 +56,11 @@ def solve(
     path = Path(loc)
     static_instance = utils.read(path)
     env = EnvironmentCompetition(
-        env_seed, static_instance, epoch_tlim, sample_epoch_requests
+        env_seed,
+        static_instance,
+        epoch_tlim,
+        sample_epoch_requests,
+        max_requests_per_epoch,
     )
 
     with open(agent_config_loc, "rb") as fh:

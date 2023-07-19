@@ -117,14 +117,12 @@ def plot_dynamic_instance(
         ax.plot(*coords, alpha=0.5, c="tab:grey", label="route")
 
         # Edges from and to the depot, very thinly dashed.
-        coords = coords.T
-        x = coords[:, 0]
-        y = coords[:, 1]
+        coords = coordinates[route]  # no transpose
         depot = coordinates[0]
+        kwargs = {"ls": (0, (5, 15)), "linewidth": 0.25, "color": "grey"}
 
-        kwargs = {"ls": (0, (5, 15)), "linewidth": 0.30, "color": "grey"}
-        ax.plot([depot[0], x[0]], [depot[1], y[0]], **kwargs)
-        ax.plot([x[-1], depot[0]], [y[-1], depot[1]], **kwargs)
+        ax.plot([depot[0], coords[0][0]], [depot[1], coords[0][1]], **kwargs)
+        ax.plot([coords[-1][0], depot[0]], [coords[-1][1], depot[1]], **kwargs)
 
     ax.grid(color="grey", linestyle="--", linewidth=0.25)
 

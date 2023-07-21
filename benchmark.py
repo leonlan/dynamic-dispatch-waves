@@ -162,14 +162,14 @@ def solve_dynamic(env, agent: Agent, seed: int, solve_tlim: float):
 def plot(instance, routes):
     # Plot the dispatch instance.
     save_fig(
-        "figs/dispatch_instance.png",
+        "figs/dispatch_instance.pdf",
         "Dispatch instance",
         instance,
     )
 
     # Plot the dispatch instance with solution, aka epoch solution
     save_fig(
-        "figs/dispatch_solution.png",
+        "figs/dispatch_solution.pdf",
         "Dispatch instance with solution",
         instance,
         routes=routes,

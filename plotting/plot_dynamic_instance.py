@@ -163,7 +163,7 @@ def save_fig(
     labels: Optional[dict[int, float]] = None,
     description="",
 ):
-    fig, ax = plt.subplots(figsize=[10, 7.5], dpi=150)
+    fig, ax = plt.subplots(figsize=[8, 6], dpi=150)
     plot_dynamic_instance(
         ax,
         title,

@@ -234,7 +234,7 @@ def plot(
 ):
     # Plot epoch instance
     save_fig(
-        "figs/epoch_instance.jpg",
+        "figs/epoch_instance.pdf",
         "Epoch instance",
         ep_inst,
     )
@@ -243,7 +243,7 @@ def plot(
     for idx, (instance, solution) in enumerate(scenarios):
         # Plot scenario instance
         save_fig(
-            f"figs/scenario_{iter_idx}_{idx}.jpg",
+            f"figs/scenario_{iter_idx}_{idx}.pdf",
             "Scenario instance",
             instance,
             postponed=to_postpone,
@@ -252,7 +252,7 @@ def plot(
 
         # Plot scenario solution
         save_fig(
-            f"figs/scenario_solution_{iter_idx}_{idx}.jpg",
+            f"figs/scenario_solution_{iter_idx}_{idx}.pdf",
             "Scenario instance",
             instance,
             postponed=to_postpone,
@@ -268,7 +268,7 @@ def plot(
     labels = {idx: val for idx, val in enumerate(freqs) if idx not in decided}
 
     save_fig(
-        f"figs/epoch_instance_{iter_idx}_with_labels.jpg",
+        f"figs/epoch_instance_{iter_idx}_with_labels.pdf",
         "Epoch instance with dispatch frequencies",
         ep_inst,
         labels=labels,
@@ -281,7 +281,7 @@ def plot(
         iter_idx, scenarios, ep_inst, to_dispatch, to_postpone
     )
     save_fig(
-        f"figs/epoch_instance_{iter_idx}_with_labels_and_action.jpg",
+        f"figs/epoch_instance_{iter_idx}_with_labels_and_action.pdf",
         "Epoch instance with dispatch frequencies and the corresponding action",
         ep_inst,
         labels=labels,
@@ -291,7 +291,7 @@ def plot(
 
     # Plot epoch instance with action, but no labels
     save_fig(
-        f"figs/epoch_instance_{iter_idx}_with_action.jpg",
+        f"figs/epoch_instance_{iter_idx}_with_action.pdf",
         "Epoch instance with dispatch frequencies and the corresponding action",
         ep_inst,
         postponed=new_postpone,

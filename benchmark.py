@@ -165,6 +165,7 @@ def plot(instance, routes):
         "figs/dispatch_instance.pdf",
         "Dispatch instance",
         instance,
+        dispatched=np.ones(instance["request_idx"].size, dtype=bool),
     )
 
     # Plot the dispatch instance with solution, aka epoch solution
@@ -173,6 +174,7 @@ def plot(instance, routes):
         "Dispatch instance with solution",
         instance,
         routes=routes,
+        dispatched=np.ones(instance["request_idx"].size, dtype=bool),
     )
 
 

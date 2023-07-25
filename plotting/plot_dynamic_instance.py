@@ -55,24 +55,31 @@ def plot_dynamic_instance(
     coordinates[:, 1] += 85
 
     # Depot
-    kwargs = {"marker": "*", "zorder": 5, "s": 500, "edgecolors": "black"}
+    kwargs = {"marker": "*", "zorder": 5, "s": 400, "edgecolors": "black"}
     depot_coords = coordinates[0].T
     ax.scatter(*depot_coords, c="tab:blue", label="depot", **kwargs)
 
     # Must dispatch
-    kwargs = {"marker": ".", "zorder": 3, "s": 300, "edgecolors": "black"}
+    kwargs = {"marker": "d", "zorder": 3, "s": 100, "edgecolors": "black"}
 
     must_dispatch = instance["must_dispatch"]
     coords = coordinates[must_dispatch].T
     ax.scatter(*coords, c="tab:red", label="must-dispatch", **kwargs)
 
     # Undecided
+    kwargs = {"marker": ".", "zorder": 3, "s": 300, "edgecolors": "black"}
+
     undecided = ~instance["must_dispatch"] & (instance["request_idx"] > 0)
     coords = coordinates[undecided].T
     ax.scatter(*coords, c="white", label="undecided", **kwargs)
 
-    # Dispatched
-    dispatched_idcs = np.flatnonzero(dispatched)
+    # Dispatched (excluding must-dispatch)
+    dispatched_idcs = (
+        # Hacky way to get the idcs of the non-must-dispatch dispatched requests
+        np.flatnonzero(dispatched & ~must_dispatch[: dispatched.size])
+        if any(dispatched)
+        else []
+    )
     coords = coordinates[dispatched_idcs].T
     ax.scatter(*coords, c="tab:red", label="dispatched", **kwargs)
 
@@ -93,25 +100,28 @@ def plot_dynamic_instance(
     else:
         scale = 1
 
-    ax.scatter(
-        *coords,
-        marker=".",
-        c="silver",
-        label="sampled",
-        s=50 + 100 * scale,
-        edgecolors="black",
-        zorder=3,
-    )
+    kwargs = {
+        "marker": ".",
+        "zorder": 3,
+        "edgecolors": "black",
+        "label": "sampled",
+        "c": "silver",
+    }
+    ax.scatter([], [], s=150, **kwargs)  # empty for correct size in legend
+    ax.scatter(*coords, s=50 + 100 * scale, **kwargs)
 
     # Labels
     if labels is not None:
         for idx, label in labels.items():
             if idx > 0 and ~instance["must_dispatch"][idx]:
-                margin = 50
+                margin = 65
                 x, y = coordinates[idx]
                 ax.annotate(label, (x + margin, y + margin), fontsize=10)
 
     # Plot routes
+    # Dummy plot to get the legend right
+    ax.plot(*[[]], alpha=0.5, c="tab:grey", label="route")
+
     for route in routes:
         coords = coordinates[route].T
         ax.plot(*coords, alpha=0.5, c="tab:grey", label="route")
@@ -119,17 +129,17 @@ def plot_dynamic_instance(
         # Edges from and to the depot, very thinly dashed.
         coords = coordinates[route]  # no transpose
         depot = coordinates[0]
-        kwargs = {"ls": (0, (5, 15)), "linewidth": 0.25, "color": "grey"}
+        kwargs = {"ls": (0, (5, 15)), "linewidth": 0.33, "color": "grey"}
 
         ax.plot([depot[0], coords[0][0]], [depot[1], coords[0][1]], **kwargs)
         ax.plot([coords[-1][0], depot[0]], [coords[-1][1], depot[1]], **kwargs)
 
-    ax.grid(color="grey", linestyle="--", linewidth=0.25)
+    ax.grid(color="grey", linestyle="--", linewidth=0.20)
 
     ax.set_title(description)  # REVIEW Try this out
 
     ax.set_xlim(-500, 8500)
-    ax.set_ylim(0, 4000)
+    ax.set_ylim(100, 4600)
 
     # Prevent duplicate labels in the legend
     handles, labels = plt.gca().get_legend_handles_labels()

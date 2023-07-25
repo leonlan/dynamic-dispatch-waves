@@ -92,13 +92,14 @@ def plot_dynamic_instance(
     sampled = instance["request_idx"] < 0
     coords = coordinates[sampled].T
 
-    if coords.any():
+    if False and coords.any():
+        # TODO I disabled this because the legend kept showing different sizes
         # Make requests with late release times smaller
         release_times = instance["release_times"][sampled]
         delta = release_times.max() - release_times.min()
         scale = (release_times.max() - release_times) / delta  # between [0, 1]
     else:
-        scale = 1
+        scale = 0.5
 
     kwargs = {
         "marker": ".",
@@ -107,7 +108,6 @@ def plot_dynamic_instance(
         "label": "sampled",
         "c": "silver",
     }
-    ax.scatter([], [], s=150, **kwargs)  # empty for correct size in legend
     ax.scatter(*coords, s=50 + 100 * scale, **kwargs)
 
     # Labels

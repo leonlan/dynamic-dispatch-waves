@@ -1,4 +1,4 @@
-name: pyflowshop
+name: CI
 
 on:
   push:

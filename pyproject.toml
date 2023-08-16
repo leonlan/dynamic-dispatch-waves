@@ -8,6 +8,7 @@ authors = [
     "Niels Wouda <n.a.wouda@rug.nl>",
 ]
 license = "MIT"
+packages = [{include = "benchmark.py"}]
 
 
 [tool.poetry.dependencies]

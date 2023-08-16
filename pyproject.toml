@@ -27,6 +27,7 @@ pyvrp = { git = "https://github.com/leonlan/PyVRP.git", rev = "60350fe" }
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.6.0"
+pre-commit = "^3.3.3"
 
 
 [tool.black]

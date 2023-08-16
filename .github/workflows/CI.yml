@@ -29,7 +29,7 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
       - name: Install Python dependencies
         if: steps.cache-python.outputs.cache-hit != 'true'
-        run: poetry install --no-root
+        run: poetry install
       - name: Cache pre-commit
         uses: actions/cache@v3
         id: cache-pre-commit

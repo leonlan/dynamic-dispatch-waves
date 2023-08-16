@@ -22,7 +22,7 @@ matplotlib = "^3.5.1"
 tomli = "^2.0.1"
 tqdm = "^4.64.0"
 vrplib = "^1.0.1"
-pyvrp = {git = "https://github.com/leonlan/PyVRP.git"}
+pyvrp = { git = "https://github.com/leonlan/PyVRP.git", rev = "60350fe" }
 
 
 [tool.poetry.group.dev.dependencies]

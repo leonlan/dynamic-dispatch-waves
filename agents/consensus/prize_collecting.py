@@ -41,18 +41,10 @@ def prize_collecting(
     prizes[new_dispatch] = 0  # marks these as required
     pc_inst["prizes"] = prizes[not_postponed].astype(int)
 
-    if not_postponed.sum() <= 2:
-        # BUG Empty or single client dispatch instance, PyVRP cannot handle
-        # this (see https://github.com/PyVRP/PyVRP/issues/272).
-        # We don't know for sure if we want to dispatch these, but it's just
-        # one client so it cannot be all that bad either way.
-        new_dispatch[not_postponed] = True
-        new_dispatch[0] = False  # do not dispatch depot
-    else:
-        sol2ep = np.flatnonzero(not_postponed)
-        res = default_solver(pc_inst, seed, time_limit)
-        for route in res.best.get_routes():
-            new_dispatch[sol2ep[route]] = True
+    sol2ep = np.flatnonzero(not_postponed)
+    res = default_solver(pc_inst, seed, time_limit)
+    for route in res.best.get_routes():
+        new_dispatch[sol2ep[route]] = True
 
     verify_action(old_dispatch, old_postpone, new_dispatch, new_postpone)
     return new_dispatch, new_postpone

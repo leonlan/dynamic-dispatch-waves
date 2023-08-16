@@ -1,3 +1,5 @@
+import warnings
+
 from pyvrp import (
     GeneticAlgorithm,
     GeneticAlgorithmParams,
@@ -5,12 +7,13 @@ from pyvrp import (
     PenaltyParams,
     Population,
     PopulationParams,
+    RandomNumberGenerator,
     Result,
     Solution,
-    XorShift128,
 )
 from pyvrp.crossover import selective_route_exchange as srex
 from pyvrp.diversity import broken_pairs_distance as bpd
+from pyvrp.exceptions import EmptySolutionWarning
 from pyvrp.search import (
     Exchange10,
     Exchange11,
@@ -22,6 +25,8 @@ from pyvrp.search import (
 from pyvrp.stop import MaxRuntime
 
 from .instance2data import instance2data
+
+warnings.filterwarnings("ignore", category=EmptySolutionWarning)
 
 
 def scenario_solver(instance: dict, seed: int, time_limit: float) -> Result:
@@ -43,9 +48,7 @@ def scenario_solver(instance: dict, seed: int, time_limit: float) -> Result:
     Result
         An `pyvrp.Result` instance.
     """
-    gen_params = GeneticAlgorithmParams(
-        repair_probability=0, intensify_probability=0, intensify_on_best=False
-    )
+    gen_params = GeneticAlgorithmParams(repair_probability=0)
     pen_params = PenaltyParams(
         init_time_warp_penalty=14,
         repair_booster=12,
@@ -60,7 +63,7 @@ def scenario_solver(instance: dict, seed: int, time_limit: float) -> Result:
     )
 
     data = instance2data(instance)
-    rng = XorShift128(seed=seed)
+    rng = RandomNumberGenerator(seed=seed)
     pen_manager = PenaltyManager(pen_params)
     pop = Population(bpd, params=pop_params)
 

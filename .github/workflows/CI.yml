@@ -45,4 +45,4 @@ jobs:
       - name: Run pre-commit
         run: poetry run pre-commit run --all-files
       - name: Test run instance
-        run: poetry run python benchmark.py instances/ortec/ORTEC-VRPTW-ASYM-00*.txt --epoch_tlim 5  --solve_tlim 1
+        run: poetry run python benchmark.py instances/ortec/ORTEC-VRPTW-ASYM-01*.txt --epoch_tlim 5  --solve_tlim 5

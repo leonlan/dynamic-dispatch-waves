@@ -2,18 +2,17 @@
 This repository hosts all code used to solve the *dynamic dispatch waves problem* (DDWP). 
 In the DDWP, a set of unknown delivery requests arrive at each epoch, which must be served before the end of the planning horizon. 
 At each decision epoch, it must be decided which requests to dispatch in the current epoch (and how to route them), and which requests to postpone to consolidate with future requests that arrive in later epochs.
-See [our paper][#Paper] for more information about the DDWP. 
+See [our paper](#Paper) for more information about the DDWP. 
 
 
 ## Installation
-Make sure to have [Poetry](https://python-poetry.org/) installed with version 1.2 or higher.
-Then run the following command:
+Make sure to have [Poetry](https://python-poetry.org/) installed with version 1.2 or higher. 
+The following command will then install all necessary dependencies:
 
 ```bash
 poetry install
 ```
 
-This will install all necessary dependencies.
 
 If you don't have Poetry installed, make sure that you have Python 3.9 or higher and install the packages indicated in the `pyproject.toml` file. 
 
@@ -26,11 +25,13 @@ Morover, agents (i.e., algorithms) to solve the DDWP implement the `Agent` proto
 To solve an instance of the dynamic dispatch waves problem, you can use the script `benchmark.py`. Here's an example:
 
 ``` bash
-poetry run benchmark ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt --environment euro_neurips --env_seed 1 --agent greedy --agent_seed 2 --epoch_tlim 5
+poetry run benchmark ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt \
+    --environment euro_neurips --env_seed 1 --agent greedy --agent_seed 2 \
+    --epoch_tlim 5
 ```
 
 This solves the instance `ORTEC-VRPTW-ASYM-01829532-d1-n324-k22` within the `EuroNeurips` environment with seed 1. 
-It uses a greedy agent with seed 2. 
+It uses a greedy agent with seed 2 as solver, which simply dispatches all requests at each decision epoch.
 Each epoch has a time limit of five seconds, which is the maximum time that an agent can use before it must return a solution to the environment.
 
 ## Paper

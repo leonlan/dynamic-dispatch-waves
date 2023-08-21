@@ -1,6 +1,7 @@
- [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # Dynamic dispatch waves problem
+ [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/leonlan/dynamic-dispatch-waves/actions/workflows/CI.yaml/badge.svg)](https://github.com/leonlan/dynamic-dispatch-waves/actions/workflows/CI.yaml)
 
 This repository hosts all code used to solve the *dynamic dispatch waves problem* (DDWP). 
 

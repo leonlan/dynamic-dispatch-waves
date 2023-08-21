@@ -41,7 +41,7 @@ Each epoch has a time limit of five seconds, which is the maximum time that an a
 For more details about the DDWP, please see our paper "An iterative conditional dispatch algorithm for the dynamic dispatch waves problem" (TODO). If this code is useful for your work, please consider citing our work:
 
 ``` bibtex
-@article{Lan2023,
+@misc{Lan2023,
   title = {An iterative conditional dispatch algorithm for the dynamic dispatch waves problem},
   author = {Lan, Leon and {van Doorn}, Jasper and Wouda, Niels A. and Rijal, Arpan and Bhulai, Sandjai},
   year = {2023}

@@ -14,7 +14,6 @@ from agents import AGENTS, Agent
 from environments import EnvironmentCompetition
 from sampling import sample_epoch_requests
 from static_solvers import default_solver
-from utils import filter_instance
 
 
 def parse_args():
@@ -23,7 +22,6 @@ def parse_args():
     parser.add_argument("instances", nargs="+", help="Instance paths.")
     parser.add_argument("--env_seed", type=int, default=1)
     parser.add_argument("--agent_seed", type=int, default=1)
-    parser.add_argument("--solver_seed", type=int, default=1)
     parser.add_argument(
         "--agent_config_loc",
         type=str,
@@ -33,7 +31,6 @@ def parse_args():
     parser.add_argument("--num_procs_scenarios", type=int, default=1)
     parser.add_argument("--hindsight", action="store_true")
     parser.add_argument("--epoch_tlim", type=float, default=60)
-    parser.add_argument("--solve_tlim", type=float, default=10)
     parser.add_argument("--sol_dir", type=str)
 
     return parser.parse_args()
@@ -47,7 +44,6 @@ def solve(
     num_procs_scenarios: int,
     hindsight: bool,
     epoch_tlim: float,
-    solve_tlim: float,
     sol_dir: str,
     **kwargs,
 ):
@@ -75,9 +71,9 @@ def solve(
     start = perf_counter()
 
     if hindsight:
-        costs, routes = solve_hindsight(env, agent_seed, solve_tlim)
+        costs, routes = solve_hindsight(env, agent_seed, epoch_tlim)
     else:
-        costs, routes = solve_dynamic(env, agent, agent_seed, solve_tlim)
+        costs, routes = solve_dynamic(env, agent)
 
     if sol_dir:
         instance_name = Path(loc).stem
@@ -95,7 +91,7 @@ def solve(
     )
 
 
-def solve_dynamic(env, agent: Agent, seed: int, solve_tlim: float):
+def solve_dynamic(env, agent: Agent):
     """
     Solves the dynamic problem.
 
@@ -105,33 +101,19 @@ def solve_dynamic(env, agent: Agent, seed: int, solve_tlim: float):
         Environment of the dynamic problem.
     agent: Agent
         Agent that selects the dispatch action.
-    seed: int
-        RNG seed used to solve the dispatch instances.
-    solve_tlim: float
-        Time limit for the dispatch instance solver.
     """
     done = False
     observation, static_info = env.reset()
 
     while not done:
-        epoch_instance = observation["epoch_instance"]
-        dispatch_action = agent.act(static_info, observation)
-        dispatch_instance = filter_instance(epoch_instance, dispatch_action)
-
-        res = default_solver(dispatch_instance, seed, solve_tlim)
-        routes = [route.visits() for route in res.best.get_routes()]
-        ep_sol = [
-            dispatch_instance["request_idx"][route].tolist()
-            for route in routes
-        ]
-
-        observation, _, done, info = env.step(ep_sol)
+        action = agent.act(static_info, observation)
+        observation, _, done, info = env.step(action)
         assert info["error"] is None, info["error"]
 
     return env.final_costs, env.final_solutions
 
 
-def solve_hindsight(env, seed: int, solve_tlim: float):
+def solve_hindsight(env, seed: int, time_limit: float):
     """
     Solves the dynamic problem in hindsight.
 
@@ -141,14 +123,14 @@ def solve_hindsight(env, seed: int, solve_tlim: float):
         Environment of the dynamic problem.
     seed: int
         RNG seed used to solve the hindsight instances.
-    solve_tlim: float
+    time_limit: float
         Time limit for solving the hindsight instance.
 
     """
     observation, info = env.reset()
     hindsight_inst = env.get_hindsight_problem()
 
-    res = default_solver(hindsight_inst, seed, solve_tlim)
+    res = default_solver(hindsight_inst, seed, time_limit)
     hindsight_sol = [route.visits() for route in res.best.get_routes()]
 
     done = False

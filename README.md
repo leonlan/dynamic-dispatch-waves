@@ -34,7 +34,7 @@ poetry run benchmark ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt \
 ```
 
 This solves the instance `ORTEC-VRPTW-ASYM-01829532-d1-n324-k22` within the `EuroNeurips` environment with seed 1. 
-It uses a greedy agent with seed 2 as solver, which simply dispatches all requests at each decision epoch.
+The instance is solved using the `GreedyDispatch` agent with seed 2, which simply dispatches all requests at each epoch.
 Each epoch has a time limit of five seconds, which is the maximum time that an agent can use before it must return a solution to the environment.
 
 ## Paper

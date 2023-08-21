@@ -1,3 +1,5 @@
+ [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 # Dynamic dispatch waves problem
 
 This repository hosts all code used to solve the *dynamic dispatch waves problem* (DDWP). 

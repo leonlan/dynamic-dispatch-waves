@@ -1,10 +1,11 @@
 # Dynamic dispatch waves problem
+
 This repository hosts all code used to solve the *dynamic dispatch waves problem* (DDWP). 
 
 In the DDWP, a set of unknown delivery requests arrive at each epoch, which must be served before the end of the planning horizon. 
 At each decision epoch, it must be decided which requests to dispatch in the current epoch (and how to route them), and which requests to postpone to consolidate with future requests that arrive in later epochs.
 
-See [our paper](#paper) for more information about the DDWP. 
+See [our paper](#paper) for more information about the DDWP and the implemented algorithms.
 
 
 ## Installation

@@ -47,5 +47,3 @@ For more details about the DDWP, please see our paper "An iterative conditional 
   year = {2023}
 }
 ```
-
-`

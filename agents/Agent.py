@@ -1,7 +1,5 @@
 from typing import Protocol
 
-import numpy as np
-
 
 class Agent(Protocol):
     """
@@ -22,5 +20,7 @@ class Agent(Protocol):
         Returns
         -------
         list[list[int]]
-            The epoch action.
+            The dispatched routes, where the indices correspond to request
+            indices.
         """
+        ...

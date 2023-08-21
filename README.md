@@ -42,7 +42,7 @@ For more details about the DDWP, please see our paper "An iterative conditional 
 
 ``` bibtex
 @article{Lan2023,
-  title = {An Iterative Conditional Dispatch Algorithm for the Dynamic Dispatch Waves Problem},
+  title = {An iterative conditional dispatch algorithm for the dynamic dispatch waves problem},
   author = {Lan, Leon and {van Doorn}, Jasper and Wouda, Niels A. and Rijal, Arpan and Bhulai, Sandjai},
   year = {2023}
 }

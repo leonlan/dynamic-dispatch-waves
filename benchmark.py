@@ -31,6 +31,7 @@ def parse_args():
     parser.add_argument("--num_procs_scenarios", type=int, default=1)
     parser.add_argument("--hindsight", action="store_true")
     parser.add_argument("--epoch_tlim", type=float, default=60)
+    parser.add_argument("--strategy_tlim_factor", type=float, default=0.8)
     parser.add_argument("--sol_dir", type=str)
 
     return parser.parse_args()
@@ -44,6 +45,7 @@ def solve(
     num_procs_scenarios: int,
     hindsight: bool,
     epoch_tlim: float,
+    strategy_tlim_factor: float,
     sol_dir: str,
     **kwargs,
 ):
@@ -61,10 +63,14 @@ def solve(
             # Include the number of scenarios to solve in parallel.
             params["num_parallel_solve"] = num_procs_scenarios
 
-            # Set the scenario solving time limit based on the epoch time limit
-            # and the total number of scenarios to be solved.
+            # Set the scenario solving time limit based on the time budget for
+            # scenarios divided by the total number of scenarios to solve.
             total = params["num_iterations"] * params["num_scenarios"]
-            params["scenario_time_limit"] = epoch_tlim / total
+            scenario_time = epoch_tlim * strategy_tlim_factor
+            params["scenario_time_limit"] = scenario_time / total
+
+            # Set the dispatch time limit.
+            params["dispatch_time_limit"] = epoch_tlim - scenario_time
 
         agent = AGENTS[config["agent"]](agent_seed, **params)
 

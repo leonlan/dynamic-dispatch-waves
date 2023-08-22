@@ -1,13 +1,26 @@
 from typing import Protocol
 
-import numpy as np
-
 
 class Agent(Protocol):
-    def __init__(self, seed, **kwargs):
-        ...
+    """
+    Protocol describing an agent.
+    """
 
-    def act(self, static_info: dict, observation: dict) -> np.ndarray:
+    def act(self, static_info: dict, observation: dict) -> list[list[int]]:
         """
-        Returns a dispatch action for the given static info and observation.
+        Returns a routing solution for the current epoch.
+
+        Parameters
+        ----------
+        static_info
+            The static information about the environment.
+        observation
+            The current epoch state.
+
+        Returns
+        -------
+        list[list[int]]
+            The dispatched routes, where the indices correspond to request
+            indices.
         """
+        ...

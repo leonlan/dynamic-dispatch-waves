@@ -1,25 +1,36 @@
 import numpy as np
 
+from static_solvers import default_solver
+from utils import filter_instance
+
 
 class _RandomDispatch:
     def __init__(self, seed: int, prob: float):
         if not 0 <= prob <= 1:
             raise ValueError(f"prob must be in [0, 1], got {prob}.")
 
+        self.seed = seed
         self.rng = np.random.default_rng(seed)
         self.prob = prob
 
-    def act(self, info, obs) -> np.ndarray:
+    def act(self, info, obs) -> list[list[int]]:
         """
-        Randomly dispatches not "must dispatch" requests with probability ``prob``.
+        Randomly dispatches requests (that are not must-dispatch) with
+        probability ``prob``.
         """
-        instance = obs["epoch_instance"]
+        epoch_instance = obs["epoch_instance"]
+        sample_shape = epoch_instance["must_dispatch"].shape
         to_dispatch = (
-            instance["is_depot"]
-            | instance["must_dispatch"]
-            | (self.rng.random(instance["must_dispatch"].shape) < self.prob)
+            (self.rng.random(sample_shape) < self.prob)
+            | epoch_instance["is_depot"]
+            | epoch_instance["must_dispatch"]
         )
-        return to_dispatch
+        dispatch_instance = filter_instance(epoch_instance, to_dispatch)
+
+        res = default_solver(dispatch_instance, self.seed, info["epoch_tlim"])
+        routes = [route.visits() for route in res.best.get_routes()]
+
+        return [dispatch_instance["request_idx"][r].tolist() for r in routes]
 
 
 class GreedyDispatch(_RandomDispatch):

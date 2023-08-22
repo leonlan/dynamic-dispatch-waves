@@ -77,6 +77,11 @@ class EnvironmentCompetition:
     def reset(self) -> Tuple[State, Info]:
         """
         Resets the environment.
+
+        Returns
+        -------
+        Tuple[State, Info]
+            The current epoch observation and the static environment info.
         """
         self.rng = np.random.default_rng(self.seed)
         tw = self.instance["time_windows"]

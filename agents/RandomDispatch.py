@@ -29,9 +29,8 @@ class _RandomDispatch:
 
         res = default_solver(dispatch_instance, self.seed, info["epoch_tlim"])
         routes = [route.visits() for route in res.best.get_routes()]
-        sol = [dispatch_instance["request_idx"][r].tolist() for r in routes]
 
-        return sol
+        return [dispatch_instance["request_idx"][r].tolist() for r in routes]
 
 
 class GreedyDispatch(_RandomDispatch):

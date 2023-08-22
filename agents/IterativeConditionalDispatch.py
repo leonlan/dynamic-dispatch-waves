@@ -67,13 +67,14 @@ class IterativeConditionalDispatch:
         """
         epoch_instance = obs["epoch_instance"]
         to_dispatch = self._determine_dispatch(info, obs)
-        instance = filter_instance(epoch_instance, to_dispatch)
+        dispatch_instance = filter_instance(epoch_instance, to_dispatch)
 
-        res = default_solver(instance, self.seed, self.dispatch_time_limit)
+        res = default_solver(
+            dispatch_instance, self.seed, self.dispatch_time_limit
+        )
         routes = [route.visits() for route in res.best.get_routes()]
-        sol = [instance["request_idx"][route].tolist() for route in routes]
 
-        return sol
+        return [dispatch_instance["request_idx"][r].tolist() for r in routes]
 
     def _determine_dispatch(self, info, obs) -> np.ndarray:
         """

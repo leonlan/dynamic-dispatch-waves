@@ -18,21 +18,20 @@ class _RandomDispatch:
         Randomly dispatches requests (that are not must-dispatch) with
         probability ``prob``.
         """
-        instance = obs["epoch_instance"]
+        epoch_instance = obs["epoch_instance"]
+        sample_shape = epoch_instance["must_dispatch"].shape
         to_dispatch = (
-            instance["is_depot"]
-            | instance["must_dispatch"]
-            | (self.rng.random(instance["must_dispatch"].shape) < self.prob)
+            (self.rng.random(sample_shape) < self.prob)
+            | epoch_instance["is_depot"]
+            | epoch_instance["must_dispatch"]
         )
-        dispatch_instance = filter_instance(instance, to_dispatch)
+        dispatch_instance = filter_instance(epoch_instance, to_dispatch)
 
         res = default_solver(dispatch_instance, self.seed, info["epoch_tlim"])
         routes = [route.visits() for route in res.best.get_routes()]
-        ep_sol = [
-            dispatch_instance["request_idx"][route].tolist()
-            for route in routes
-        ]
-        return ep_sol
+        sol = [dispatch_instance["request_idx"][r].tolist() for r in routes]
+
+        return sol
 
 
 class GreedyDispatch(_RandomDispatch):

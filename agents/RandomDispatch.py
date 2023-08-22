@@ -13,9 +13,10 @@ class _RandomDispatch:
         self.rng = np.random.default_rng(seed)
         self.prob = prob
 
-    def act(self, info, obs) -> np.ndarray:
+    def act(self, info, obs) -> list[list[int]]:
         """
-        Randomly dispatches not "must dispatch" requests with probability ``prob``.
+        Randomly dispatches requests (that are not must-dispatch) with
+        probability ``prob``.
         """
         instance = obs["epoch_instance"]
         to_dispatch = (
@@ -23,8 +24,8 @@ class _RandomDispatch:
             | instance["must_dispatch"]
             | (self.rng.random(instance["must_dispatch"].shape) < self.prob)
         )
-
         dispatch_instance = filter_instance(instance, to_dispatch)
+
         res = default_solver(dispatch_instance, self.seed, info["epoch_tlim"])
         routes = [route.visits() for route in res.best.get_routes()]
         ep_sol = [

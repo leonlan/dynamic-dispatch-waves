@@ -15,7 +15,7 @@ class Agent(Protocol):
         static_info
             The static information about the environment.
         observation
-            The observed epoch state.
+            The current epoch state.
 
         Returns
         -------

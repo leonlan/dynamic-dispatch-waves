@@ -21,19 +21,19 @@
 # SOFTWARE.
 
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Callable
 
 import numpy as np
 
 import utils
 
-State = Dict[str, Any]
-Action = List[List[int]]
-Info = Dict[str, Any]
+from .Environment import Action, Environment, Info, State
 
 
-class EnvironmentCompetition:
+class EuroNeurips(Environment):
     """
+    EURO meets NeurIPS 2022 vehicle routing problem [1] DDWP environment.
+
     Parameters
     ----------
     seed
@@ -52,12 +52,16 @@ class EnvironmentCompetition:
         the routes is `t * epoch_duration + dispatch_margin`.
     epoch_duration
         The time between two consecutive epochs.
+
+    References
+    ----------
+    [1] https://euro-neurips-vrp-2022.challenges.ortec.com/
     """
 
     def __init__(
         self,
         seed: int,
-        instance: Dict,
+        instance: dict,
         epoch_tlim: float,
         instance_sampler: Callable,
         max_requests_per_epoch: int = 100,
@@ -74,7 +78,7 @@ class EnvironmentCompetition:
 
         self.is_done = True  # Requires reset to be called first
 
-    def reset(self) -> Tuple[State, Info]:
+    def reset(self) -> tuple[State, Info]:
         """
         Resets the environment.
         """
@@ -93,10 +97,10 @@ class EnvironmentCompetition:
         self.current_time = self.current_epoch * self.epoch_duration
 
         self.is_done = False
-        self.final_solutions: Dict[int, Optional[List]] = {}
-        self.final_costs: Dict[int, Optional[float]] = {}
+        self.final_solutions: dict[int, list] = {}
+        self.final_costs: dict[int, float] = {}
 
-        self.sample_complete_dynamic_instance()
+        self._sample_complete_dynamic_instance()
 
         observation = self._next_observation()
         static_info = {
@@ -113,7 +117,7 @@ class EnvironmentCompetition:
         self.start_time_epoch = time.time()
         return observation, static_info
 
-    def sample_complete_dynamic_instance(self):
+    def _sample_complete_dynamic_instance(self):
         """
         Sample the complete dynamic instance.
         """
@@ -165,9 +169,7 @@ class EnvironmentCompetition:
                 (self.req_release_time, epoch_reqs["release_times"])
             )
 
-    def step(
-        self, solution: Action
-    ) -> Tuple[Optional[State], float, bool, Info]:
+    def step(self, solution: Action) -> tuple[State, float, bool, Info]:
         """
         Steps to the next epoch. If the submitted solution is valid, then this
         method returns the observation of the next epoch. Otherwise, the epoch
@@ -177,7 +179,7 @@ class EnvironmentCompetition:
             self._validate_step(solution)
         except AssertionError as error:
             self.is_done = True
-            return (None, float("inf"), self.is_done, {"error": str(error)})
+            return ({}, float("inf"), self.is_done, {"error": str(error)})
 
         cost = utils.validation.validate_dynamic_epoch_solution(
             self.ep_inst, solution
@@ -190,7 +192,7 @@ class EnvironmentCompetition:
         self.current_time = self.current_epoch * self.epoch_duration
         self.is_done = self.current_epoch > self.end_epoch
 
-        observation = self._next_observation() if not self.is_done else None
+        observation = self._next_observation() if not self.is_done else {}
         reward = -cost
 
         self.start_time_epoch = time.time()

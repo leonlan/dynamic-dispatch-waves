@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 State = dict[str, Any]
 Action = list[list[int]]
@@ -11,6 +11,10 @@ class Environment(ABC):
     Base class describing an environment for the DDWP.
     """
 
+    def __init__(self):
+        self.final_costs = {}
+        self.final_solutions = {}
+
     @abstractmethod
     def reset(self) -> tuple[State, Info]:
         """
@@ -20,9 +24,7 @@ class Environment(ABC):
         pass
 
     @abstractmethod
-    def step(
-        self, action: Action
-    ) -> tuple[Optional[State], float, bool, Info]:
+    def step(self, action: Action) -> tuple[State, float, bool, Info]:
         """
         Steps to the next state for the given action.
 
@@ -33,15 +35,15 @@ class Environment(ABC):
 
         Returns
         -------
-        Optional[State]
+        State
             The next state. If the action is invalid, or when the episode is
-            done, this should return ``None``.
-        reward: float
+            done, this should return an empty dictionary.
+        float
             The reward for the transition. If the action is invalid, this
             should return ``float("inf")``.
-        done: bool
+        bool
             Whether the episode is done.
-        info: Info
+        Info
             Success information about the step.
         """
         pass

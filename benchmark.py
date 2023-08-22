@@ -11,7 +11,7 @@ from tqdm.contrib.concurrent import process_map
 
 import utils
 from agents import AGENTS, Agent
-from environments import EnvironmentCompetition
+from environments import ENVIRONMENTS, Environment
 from sampling import sample_epoch_requests
 from static_solvers import default_solver
 from utils import filter_instance
@@ -24,6 +24,7 @@ def parse_args():
     parser.add_argument("--env_seed", type=int, default=1)
     parser.add_argument("--agent_seed", type=int, default=1)
     parser.add_argument("--solver_seed", type=int, default=1)
+    parser.add_argument("--environment", type=str, default="euro_neurips")
     parser.add_argument(
         "--agent_config_loc",
         type=str,
@@ -53,7 +54,7 @@ def solve(
 ):
     path = Path(loc)
     static_instance = utils.read(path)
-    env = EnvironmentCompetition(
+    env = ENVIRONMENTS["euro_neurips"](
         env_seed, static_instance, epoch_tlim, sample_epoch_requests
     )
 
@@ -95,7 +96,9 @@ def solve(
     )
 
 
-def solve_dynamic(env, agent: Agent, seed: int, solve_tlim: float):
+def solve_dynamic(
+    env: Environment, agent: Agent, seed: int, solve_tlim: float
+):
     """
     Solves the dynamic problem.
 
@@ -131,7 +134,7 @@ def solve_dynamic(env, agent: Agent, seed: int, solve_tlim: float):
     return env.final_costs, env.final_solutions
 
 
-def solve_hindsight(env, seed: int, solve_tlim: float):
+def solve_hindsight(env: Environment, seed: int, solve_tlim: float):
     """
     Solves the dynamic problem in hindsight.
 

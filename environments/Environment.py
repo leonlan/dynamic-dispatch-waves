@@ -25,7 +25,7 @@ from typing import Any, Callable
 
 import numpy as np
 
-import utils
+from utils.validation import validate_dynamic_epoch_solution
 
 State = dict[str, Any]
 Action = list[list[int]]
@@ -46,7 +46,7 @@ class Environment:
         The epoch time limit.
     instance_sampler
         The instance sampler to use.
-    max_requests_per_epoch
+    num_requests_per_epoch
         The maximum number of revealed requests per epoch.
     dispatch_margin
         The preparation time needed to dispatch a set of routes. That is, when
@@ -67,7 +67,7 @@ class Environment:
         instance: dict,
         epoch_tlim: float,
         instance_sampler: Callable,
-        max_requests_per_epoch: int = 100,
+        num_requests_per_epoch: int = 100,
         epoch_duration: int = 3600,
         dispatch_margin: int = 3600,
     ):
@@ -75,7 +75,7 @@ class Environment:
         self.instance = instance
         self.epoch_tlim = epoch_tlim
         self.instance_sampler = instance_sampler
-        self.max_requests_per_epoch = max_requests_per_epoch
+        self.num_requests_per_epoch = num_requests_per_epoch
         self.epoch_duration = epoch_duration
         self.dispatch_margin = dispatch_margin
 
@@ -119,7 +119,7 @@ class Environment:
             "epoch_tlim": self.epoch_tlim,
             "epoch_duration": self.epoch_duration,
             "dispatch_margin": self.dispatch_margin,
-            "max_requests_per_epoch": self.max_requests_per_epoch,
+            "num_requests_per_epoch": self.num_requests_per_epoch,
         }
 
         self.start_time_epoch = time.time()
@@ -129,53 +129,81 @@ class Environment:
         """
         Sample the complete dynamic instance.
         """
-        # Initialize request array with dummy request for depot
+        # Initialize request array with dummy request for depot.
         self.req_idx = np.array([0])
         self.req_customer_idx = np.array([0])
         self.req_tw = self.instance["time_windows"][0:1]
         self.req_service = self.instance["service_times"][0:1]
         self.req_demand = self.instance["demands"][0:1]
-        self.req_is_dispatched = np.array([False])
-        self.req_epoch = np.array([0])
         self.req_release_time = np.array([0])
-        self.req_must_dispatch = np.array([False])
+        self.req_epoch = np.array([0])  # epoch in which request is revealed
+        self.req_is_dispatched = np.array([False])
 
-        for epoch_idx in range(self.current_epoch, self.end_epoch + 1):
-            current_time = epoch_idx * self.epoch_duration
+        for epoch in range(self.current_epoch, self.end_epoch + 1):
+            current_time = epoch * self.epoch_duration
             departure_time = current_time + self.dispatch_margin
-            epoch_reqs = self.instance_sampler(
+            new_reqs = self.instance_sampler(
                 self.rng,
                 self.instance,
                 current_time,
                 departure_time,
-                self.max_requests_per_epoch,
+                self.num_requests_per_epoch,
             )
-            n_ep_reqs = epoch_reqs["customer_idx"].size
+            num_reqs = new_reqs["customer_idx"].size
 
             self.req_idx = np.concatenate(
-                (self.req_idx, np.arange(n_ep_reqs) + len(self.req_idx))
+                (self.req_idx, np.arange(num_reqs) + len(self.req_idx))
             )
             self.req_customer_idx = np.concatenate(
-                (self.req_customer_idx, epoch_reqs["customer_idx"])
+                (self.req_customer_idx, new_reqs["customer_idx"])
             )
             self.req_tw = np.concatenate(
-                (self.req_tw, epoch_reqs["time_windows"])
+                (self.req_tw, new_reqs["time_windows"])
             )
             self.req_service = np.concatenate(
-                (self.req_service, epoch_reqs["service_times"])
+                (self.req_service, new_reqs["service_times"])
             )
             self.req_demand = np.concatenate(
-                (self.req_demand, epoch_reqs["demands"])
-            )
-            self.req_is_dispatched = np.pad(
-                self.req_is_dispatched, (0, n_ep_reqs), mode="constant"
-            )
-            self.req_epoch = np.concatenate(
-                (self.req_epoch, np.full(n_ep_reqs, epoch_idx))
+                (self.req_demand, new_reqs["demands"])
             )
             self.req_release_time = np.concatenate(
-                (self.req_release_time, epoch_reqs["release_times"])
+                (self.req_release_time, new_reqs["release_times"])
             )
+            self.req_epoch = np.concatenate(
+                (self.req_epoch, np.full(num_reqs, epoch))
+            )
+            self.req_is_dispatched = np.pad(
+                self.req_is_dispatched, (0, num_reqs), mode="constant"
+            )
+
+        # Compute the latest epoch in which a request can be dispatched on time
+        # as a round-trip. These requests become "must-dispatch" in that epoch.
+        dist = self.instance["duration_matrix"]
+        horizon = self.instance["time_windows"][0, 1]
+
+        self.req_must_dispatch_epoch = self.req_epoch.copy()
+
+        for epoch in range(self.current_epoch, self.end_epoch + 1):
+            current_time = epoch * self.epoch_duration
+            departure_time = current_time + self.dispatch_margin
+
+            earliest_arrival = np.maximum(
+                departure_time + dist[0, self.req_customer_idx],
+                self.req_tw[:, 0],
+            )
+            earliest_return = (
+                earliest_arrival
+                + self.req_service
+                + dist[self.req_customer_idx, 0]
+            )
+
+            feasible = (earliest_arrival <= self.req_tw[:, 1]) & (
+                earliest_return <= horizon
+            )
+            self.req_must_dispatch_epoch[feasible] = epoch
+
+        # Do not mark depot as must-dispatch.
+        self.req_must_dispatch_epoch[0] = self.end_epoch + 1
 
     def step(self, solution: Action) -> tuple[State, float, bool, Info]:
         """
@@ -200,14 +228,16 @@ class Environment:
             Success information about the step.
         """
         try:
-            self._validate_step(solution)
+            assert not self.is_done, "Environment is finished."
+            cost = validate_dynamic_epoch_solution(self.ep_inst, solution)
         except AssertionError as error:
             self.is_done = True
             return ({}, float("inf"), self.is_done, {"error": str(error)})
 
-        cost = utils.validation.validate_dynamic_epoch_solution(
-            self.ep_inst, solution
-        )
+        # Mark orders of submitted solution as dispatched.
+        for route in solution:
+            assert not self.req_is_dispatched[route].any()
+            self.req_is_dispatched[route] = True
 
         self.final_solutions[self.current_epoch] = solution
         self.final_costs[self.current_epoch] = cost
@@ -222,70 +252,24 @@ class Environment:
         self.start_time_epoch = time.time()
         return (observation, reward, self.is_done, {"error": None})
 
-    def _validate_step(self, solution):
-        """
-        Validates if the solution was submitted on time, and whether it
-        satisfies the dynamic and static constraints.
-        """
-        assert not self.is_done, "Environment is finished"
-
-        # Check if solution is valid
-        utils.validation.validate_dynamic_epoch_solution(
-            self.ep_inst, solution
-        )
-
-        # Mark orders of submitted solution as dispatched
-        for route in solution:
-            assert not self.req_is_dispatched[route].any()
-            self.req_is_dispatched[route] = True
-
-        # We must not have any undispatched orders that must be dispatched
-        undispatched = (self.req_must_dispatch & ~self.req_is_dispatched).any()
-        assert not undispatched, "Must dispatch requests not dispatched."
-
     def _next_observation(self) -> State:
         """
-        Returns the next observation. This consists of all requests that were
-        not dispatched during the previous epoch, and newly arrived requests.
+        Returns the next observation. This consists of all revealed requests
+        that were not dispatched in the previous epoch, and new requests.
         """
-        # TODO Refactor this: we should take the dynamic instance and use the
-        # `filter_instance` function with mask to create a new instance.
-
-        dist = self.instance["duration_matrix"]
-        departure_time = self.current_time + self.dispatch_margin
-        depot_closed = self.instance["time_windows"][0, 1]
-
-        # Determine which requests are must-dispatch in the next epoch
-        if self.current_epoch < self.end_epoch:
-            next_departure_time = departure_time + self.epoch_duration
-
-            earliest_arrival = np.maximum(
-                next_departure_time + dist[0, self.req_customer_idx],
-                self.req_tw[:, 0],
-            )
-            earliest_return_at_depot = (
-                earliest_arrival
-                + self.req_service
-                + dist[self.req_customer_idx, 0]
-            )
-
-            self.req_must_dispatch = (earliest_arrival > self.req_tw[:, 1]) | (
-                earliest_return_at_depot > depot_closed
-            )
-        else:
-            # In the end epoch, all requests are must dispatch
-            self.req_must_dispatch = self.req_idx > 0
-
-        # Return the epoch instance. This consists of all requests that are not
-        # yet dispatched nor released.
-        current_reqs = self.req_idx[
-            ~self.req_is_dispatched & (self.req_epoch <= self.current_epoch)
-        ]
+        revealed = self.req_epoch <= self.current_epoch
+        not_dispatched = ~self.req_is_dispatched
+        current_reqs = self.req_idx[revealed & not_dispatched]
         customer_idx = self.req_customer_idx[current_reqs]
 
-        # Set depot time window to be at least the dispatch time
+        # Set depot time window to be at least the departure time.
+        departure_time = self.current_time + self.dispatch_margin
         time_windows = self.req_tw[current_reqs]
         time_windows[0, 0] = departure_time
+
+        # Determine the must dispatch requests.
+        must_dispatch_epoch = self.req_must_dispatch_epoch[current_reqs]
+        must_dispatch = must_dispatch_epoch == self.current_epoch
 
         self.ep_inst = {
             "is_depot": self.instance["is_depot"][customer_idx],
@@ -299,7 +283,7 @@ class Environment:
             "duration_matrix": self.instance["duration_matrix"][
                 np.ix_(customer_idx, customer_idx)
             ],
-            "must_dispatch": self.req_must_dispatch[current_reqs],
+            "must_dispatch": must_dispatch,
             "epoch": self.req_epoch[current_reqs],
             "release_times": self.req_release_time[current_reqs],
         }

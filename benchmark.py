@@ -53,7 +53,7 @@ def solve(
 ):
     path = Path(loc)
     static_instance = utils.read(path)
-    env = Environment(
+    env = Environment.euro_neurips(
         env_seed,
         static_instance,
         epoch_tlim,

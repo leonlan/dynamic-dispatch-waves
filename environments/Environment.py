@@ -49,12 +49,16 @@ class Environment:
         The instance sampler to use.
     num_requests_per_epoch
         The maximum number of revealed requests per epoch.
+    start_epoch
+        The start epoch.
+    end_epoch
+        The end epoch.
+    epoch_duration
+        The time between two consecutive epochs.
     dispatch_margin
         The preparation time needed to dispatch a set of routes. That is, when
         a set of routes are to be dispatched at epoch t, then the start time of
         the routes is `t * epoch_duration + dispatch_margin`.
-    epoch_duration
-        The time between two consecutive epochs.
 
     References
     ----------
@@ -68,19 +72,58 @@ class Environment:
         instance: dict,
         epoch_tlim: float,
         instance_sampler: Callable,
-        num_requests_per_epoch: int = 100,
-        epoch_duration: int = 3600,
-        dispatch_margin: int = 3600,
+        start_epoch: int,
+        end_epoch: int,
+        num_requests_per_epoch: list[int],
+        epoch_duration: int,
+        dispatch_margin: int,
     ):
         self.seed = seed
         self.instance = instance
         self.epoch_tlim = epoch_tlim
         self.instance_sampler = instance_sampler
+        self.start_epoch = start_epoch
+        self.end_epoch = end_epoch
         self.num_requests_per_epoch = num_requests_per_epoch
         self.epoch_duration = epoch_duration
         self.dispatch_margin = dispatch_margin
 
         self.is_done = True  # Requires reset to be called first
+
+    @classmethod
+    def euro_neurips(
+        cls,
+        seed: int,
+        instance: dict,
+        epoch_tlim: float,
+        instance_sampler: Callable,
+        num_requests: int = 100,
+        epoch_duration: int = 3600,
+        dispatch_margin: int = 3600,
+    ):
+        tw = instance["time_windows"]
+        earliest = tw[1:, 0].min() - dispatch_margin
+        latest = tw[1:, 0].max() - dispatch_margin
+
+        # The start and end epochs are determined by the earliest and latest
+        # opening client time windows, corrected by the dispatch margin.
+        start_epoch = int(max(earliest // epoch_duration, 0))
+        end_epoch = int(max(latest // epoch_duration, 0))
+
+        num_requests_per_epoch = [num_requests] * (end_epoch + 1)
+
+        return cls(
+            seed=seed,
+            instance=instance,
+            epoch_tlim=epoch_tlim,
+            instance_sampler=instance_sampler,
+            start_epoch=start_epoch,
+            end_epoch=end_epoch,
+            num_requests_per_epoch=num_requests_per_epoch,
+            epoch_duration=epoch_duration,
+            dispatch_margin=dispatch_margin,
+        )
+
 
     def reset(self) -> tuple[State, Info]:
         """
@@ -92,15 +135,6 @@ class Environment:
             The first epoch observation and the environment static information.
         """
         self.rng = np.random.default_rng(self.seed)
-        tw = self.instance["time_windows"]
-
-        earliest_open = tw[1:, 0].min() - self.dispatch_margin
-        latest_open = tw[1:, 0].max() - self.dispatch_margin
-
-        # The start and end epochs are determined by the earliest and latest
-        # time windows of all clients, corrected by the dispatch margin.
-        self.start_epoch = int(max(earliest_open // self.epoch_duration, 0))
-        self.end_epoch = int(max(latest_open // self.epoch_duration, 0))
 
         self.current_epoch = self.start_epoch
         self.current_time = self.current_epoch * self.epoch_duration
@@ -116,7 +150,6 @@ class Environment:
             "dynamic_context": self.instance,
             "start_epoch": self.start_epoch,
             "end_epoch": self.end_epoch,
-            "num_epochs": self.end_epoch - self.start_epoch + 1,
             "epoch_tlim": self.epoch_tlim,
             "epoch_duration": self.epoch_duration,
             "dispatch_margin": self.dispatch_margin,
@@ -128,7 +161,7 @@ class Environment:
 
     def _sample_complete_dynamic_instance(self):
         """
-        Sample the complete dynamic instance.
+        Samples the complete dynamic instance.
         """
         # Initialize request array with dummy request for depot.
         self.req_idx = np.array([0])
@@ -148,7 +181,7 @@ class Environment:
                 self.instance,
                 current_time,
                 departure_time,
-                self.num_requests_per_epoch,
+                self.num_requests_per_epoch[epoch],
             )
             num_reqs = new_reqs["customer_idx"].size
 

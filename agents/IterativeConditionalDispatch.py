@@ -1,9 +1,9 @@
 from functools import partial
 from multiprocessing import Pool
+from typing import Callable
 
 import numpy as np
 
-from sampling import sample_epoch_requests
 from static_solvers import default_solver, scenario_solver
 from utils import filter_instance
 
@@ -30,6 +30,8 @@ class IterativeConditionalDispatch:
         The time limit for solving a single scenario instance.
     dispatch_time_limit
         The time limit for solving the dispatch instance.
+    sampling_method
+        The method to use for sampling scenarios.
     consensus
         The consensus function to use.
     consensus_params
@@ -46,6 +48,7 @@ class IterativeConditionalDispatch:
         num_scenarios: int,
         scenario_time_limit: float,
         dispatch_time_limit: float,
+        sampling_method: Callable,
         consensus: str,
         consensus_params: dict,
         num_parallel_solve: int = 1,
@@ -57,6 +60,7 @@ class IterativeConditionalDispatch:
         self.num_scenarios = num_scenarios
         self.scenario_time_limit = scenario_time_limit
         self.dispatch_time_limit = dispatch_time_limit
+        self.sampling_method = sampling_method
         self.consensus_func = partial(CONSENSUS[consensus], **consensus_params)
         self.num_parallel_solve = num_parallel_solve
 
@@ -95,7 +99,7 @@ class IterativeConditionalDispatch:
 
         for iter_idx in range(self.num_iterations):
             instances = [
-                self._sample_scenario(info, obs, to_dispatch, to_postpone)
+                self._sampling_scenario(info, obs, to_dispatch, to_postpone)
                 for _ in range(self.num_scenarios)
             ]
 
@@ -126,7 +130,7 @@ class IterativeConditionalDispatch:
         result = scenario_solver(instance, self.seed, self.scenario_time_limit)
         return [route.visits() for route in result.best.get_routes()]
 
-    def _sample_scenario(
+    def _sampling_scenario(
         self,
         info: dict,
         obs: dict,
@@ -155,7 +159,7 @@ class IterativeConditionalDispatch:
         next_epoch = current_epoch + 1
         epochs_left = info["end_epoch"] - current_epoch
         max_lookahead = min(self.num_lookahead, epochs_left)
-        max_requests_per_epoch = info["max_requests_per_epoch"]
+        num_requests_per_epoch = info["num_requests_per_epoch"]
 
         static_inst = info["dynamic_context"]
         epoch_duration = info["epoch_duration"]
@@ -181,16 +185,16 @@ class IterativeConditionalDispatch:
         horizon = req_tw[0][1]
         req_dispatch = np.where(to_dispatch, departure_time, horizon)
 
-        for epoch_idx in range(next_epoch, next_epoch + max_lookahead):
-            next_epoch_start = epoch_idx * epoch_duration
+        for epoch in range(next_epoch, next_epoch + max_lookahead):
+            next_epoch_start = epoch * epoch_duration
             next_epoch_depart = next_epoch_start + dispatch_margin
 
-            new = sample_epoch_requests(
+            new = self.sampling_method(
                 self.rng,
                 static_inst,
                 next_epoch_start,
                 next_epoch_depart,
-                max_requests_per_epoch,
+                num_requests_per_epoch[epoch],
             )
             num_new_reqs = new["customer_idx"].size
 

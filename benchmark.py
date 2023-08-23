@@ -77,6 +77,9 @@ def solve(
             # Set the dispatch time limit.
             params["dispatch_time_limit"] = epoch_tlim - scenario_time
 
+            # Use the same sampling method as the environment.
+            params["sampling_method"] = SAMPLING_METHODS[sampling_method]
+
         agent = AGENTS[config["agent"]](agent_seed, **params)
 
     start = perf_counter()

@@ -11,8 +11,8 @@ from tqdm.contrib.concurrent import process_map
 
 import utils
 from agents import AGENTS, Agent
-from environments import ENVIRONMENTS, Environment
-from sampling import sample_epoch_requests
+from environments import Environment
+from sampling import SAMPLING_METHODS
 from static_solvers import default_solver
 
 
@@ -20,14 +20,14 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("instances", nargs="+", help="Instance paths.")
+    parser.add_argument("--sampling_method", type=str, default="euro_neurips")
     parser.add_argument("--env_seed", type=int, default=1)
-    parser.add_argument("--agent_seed", type=int, default=1)
-    parser.add_argument("--environment", type=str, default="euro_neurips")
     parser.add_argument(
         "--agent_config_loc",
         type=str,
         default="configs/icd-double-threshold.toml",
     )
+    parser.add_argument("--agent_seed", type=int, default=1)
     parser.add_argument("--num_procs", type=int, default=4)
     parser.add_argument("--num_procs_scenarios", type=int, default=1)
     parser.add_argument("--hindsight", action="store_true")
@@ -40,8 +40,9 @@ def parse_args():
 
 def solve(
     loc: str,
-    agent_config_loc: str,
+    sampling_method: str,
     env_seed: int,
+    agent_config_loc: str,
     agent_seed: int,
     num_procs_scenarios: int,
     hindsight: bool,
@@ -52,8 +53,11 @@ def solve(
 ):
     path = Path(loc)
     static_instance = utils.read(path)
-    env = ENVIRONMENTS["euro_neurips"](
-        env_seed, static_instance, epoch_tlim, sample_epoch_requests
+    env = Environment(
+        env_seed,
+        static_instance,
+        epoch_tlim,
+        SAMPLING_METHODS[sampling_method],
     )
 
     with open(agent_config_loc, "rb") as fh:

@@ -1,30 +1,36 @@
 import numpy as np
+from numpy.random import Generator
 
 
 def sample_epoch_requests(
-    rng: np.random.Generator,
+    rng: Generator,
     instance: dict,
     current_time: float,
     departure_time: float,
-    max_requests_per_epoch: int = 100,
+    num_requests: int = 100,
 ):
     """
     Samples requests from a VRP instance.
+
+    Only requests that can be served in a round trip that starts at
+    `departure_time` are returned.
 
     Parameters
     ----------
     rng
         Random number generator.
-    instance : dict
+    instance
         Dictionary containing the instance data.
-    current_time : float
+    current_time
         Current time of the epoch.
-    departure_time : float
-        Departure time of the vehicles.
+    departure_time
+        The next departure time of the vehicles.
+    num_requests
+        Number of requests to sample. Defaults to 100.
     """
     dist = instance["duration_matrix"]
     n_customers = instance["is_depot"].size - 1  # Exclude depot
-    num_samples = max_requests_per_epoch
+    num_samples = num_requests
 
     # Sample requests attributes uniformly from customer data
     cust_idx = rng.integers(n_customers, size=num_samples) + 1

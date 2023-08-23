@@ -2,20 +2,19 @@ import numpy as np
 from numpy.random import Generator
 
 
-def new_sampler(
+def custom_time_windows(
     rng: Generator,
     instance: dict,
     current_time: int,
     departure_time: int,
     num_requests: int = 100,
-    time_window_type: str = "deadlines",
-    time_window_width: int = 1,
+    tw_type: str = "deadlines",
+    tw_width: int = 1,
 ):
     """
-    Samples requests from a VRP instance.
-
-    Keeps sampling until the number of feasible requests is equal to the
-    passed number of requests per epoch.
+    Samples requests from a VRP instance with custom time windows, following
+    the procedure in [1]. Keeps sampling until the number of feasible requests
+    is equal to the passed number of requests.
 
     Parameters
     ----------
@@ -29,10 +28,21 @@ def new_sampler(
         Departure time of the vehicles.
     num_requests
         Number of requests to sample.
-    time_window_type
+    tw_type
         Type of the time windows: one of ["deadlines", "time_windows"].
-    time_window_width
+    tw_width
         Width of the time windows in number of epoch durations.
+
+    Returns
+    -------
+    dict
+        The sampled requests data.
+
+    References
+    ----------
+    [1] Lan, L., van Doorn, J., Wouda, N. A., Rijal, A., & Bhulai, S. (2023).
+        An iterative conditional dispatch algorithm for the dynamic dispatch
+        waves problem.
     """
     dist = instance["duration_matrix"]
     num_customers = instance["is_depot"].size - 1
@@ -64,24 +74,20 @@ def new_sampler(
             rng,
             instance,
             num_to_sample,
-            time_window_type,
-            time_window_width,
+            tw_type,
+            tw_width,
             current_time,
             3600,  # TODO make epoch duration argument
             # epoch_duration,
         )
         tw = np.concatenate((old_tw, new_tw))
 
-        # Filter sampled requests that cannot be served in a round trip
-        earliest_arrival = np.maximum(
-            departure_time + dist[0, cust_idx], tw[:, 0]
-        )
-        earliest_return = earliest_arrival + service + dist[cust_idx, 0]
+        # Exclude requests that cannot be served on time in a round trip.
+        early_arrive = np.maximum(departure_time + dist[0, cust_idx], tw[:, 0])
+        early_return = early_arrive + service + dist[cust_idx, 0]
         depot_closed = instance["time_windows"][0, 1]
 
-        feas = (earliest_arrival <= tw[:, 1]) & (
-            earliest_return <= depot_closed
-        )
+        feas = (early_arrive <= tw[:, 1]) & (early_return <= depot_closed)
         old_tw = tw[feas]
 
     return {
@@ -97,8 +103,8 @@ def _sample_time_windows(
     rng: Generator,
     instance: dict,
     num_samples: int,
-    time_window_type: str,
-    time_window_width: int,
+    tw_type: str,
+    tw_width: int,
     current_time: int,
     epoch_duration: int,
 ):
@@ -113,9 +119,9 @@ def _sample_time_windows(
         Dictionary containing the instance data.
     num_samples
         Number of samples to generate.
-    time_window_type
+    tw_type
         Type of the time windows: one of ["deadlines", "time_windows"].
-    time_window_width
+    tw_width
         Width of the time windows in number of epoch durations.
     current_time
         Current time of the epoch.
@@ -128,14 +134,12 @@ def _sample_time_windows(
         Time windows of the sampled requests.
     """
     horizon = instance["time_windows"][0][1]
-    widths = epoch_duration * (
-        rng.integers(time_window_width, size=num_samples) + 1
-    )
+    widths = epoch_duration * (rng.integers(tw_width, size=num_samples) + 1)
 
-    if time_window_type == "deadlines":
+    if tw_type == "deadlines":
         early = current_time * np.ones(num_samples, dtype=int)
         late = np.minimum(horizon, early + widths)
-    elif time_window_type == "time_windows":
+    elif tw_type == "time_windows":
         early = rng.integers(current_time, horizon, num_samples)
         late = np.minimum(horizon, early + widths)
     else:

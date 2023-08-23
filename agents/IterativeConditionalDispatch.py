@@ -186,22 +186,19 @@ class IterativeConditionalDispatch:
         req_dispatch = np.where(to_dispatch, departure_time, horizon)
 
         for epoch in range(next_epoch, next_epoch + max_lookahead):
-            next_epoch_start = epoch * epoch_duration
-            next_epoch_depart = next_epoch_start + dispatch_margin
+            epoch_start = epoch * epoch_duration
+            epoch_depart = epoch_start + dispatch_margin
+            num_requests = num_requests_per_epoch[epoch]
 
             new = self.sampling_method(
-                self.rng,
-                static_inst,
-                next_epoch_start,
-                next_epoch_depart,
-                num_requests_per_epoch[epoch],
+                self.rng, static_inst, epoch_start, epoch_depart, num_requests
             )
             num_new_reqs = new["customer_idx"].size
 
-            # Sampled request indices are negative so we can distinguish them
+            # Sampled request indices are negative so we can distinguish them.
             new_req_idx = -(np.arange(num_new_reqs) + 1) - len(req_idx)
 
-            # Concatenate the new requests to the current instance requests
+            # Concatenate the new requests to the current instance requests.
             req_idx = np.concatenate((req_idx, new_req_idx))
             req_cust_idx = np.concatenate((req_cust_idx, new["customer_idx"]))
             req_demand = np.concatenate((req_demand, new["demands"]))

@@ -20,8 +20,9 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("instances", nargs="+", help="Instance paths.")
-    parser.add_argument("--sampling_method", type=str, default="euro_neurips")
+    parser.add_argument("--environment", type=str, default="euro_neurips")
     parser.add_argument("--env_seed", type=int, default=1)
+    parser.add_argument("--sampling_method", type=str, default="euro_neurips")
     parser.add_argument(
         "--agent_config_loc",
         type=str,
@@ -40,8 +41,9 @@ def parse_args():
 
 def solve(
     loc: str,
-    sampling_method: str,
+    environment: str,
     env_seed: int,
+    sampling_method: str,
     agent_config_loc: str,
     agent_seed: int,
     num_procs_scenarios: int,
@@ -53,12 +55,21 @@ def solve(
 ):
     path = Path(loc)
     static_instance = utils.read(path)
-    env = Environment.euro_neurips(
-        env_seed,
-        static_instance,
-        epoch_tlim,
-        SAMPLING_METHODS[sampling_method],
-    )
+
+    if environment == "euro_neurips":
+        env = Environment.euro_neurips(
+            env_seed,
+            static_instance,
+            epoch_tlim,
+            SAMPLING_METHODS[sampling_method],
+        )
+    elif environment == "paper":
+        env = Environment.paper(
+            env_seed,
+            static_instance,
+            epoch_tlim,
+            SAMPLING_METHODS[sampling_method],
+        )
 
     with open(agent_config_loc, "rb") as fh:
         config = tomli.load(fh)

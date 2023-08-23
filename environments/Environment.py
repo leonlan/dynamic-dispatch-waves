@@ -154,7 +154,7 @@ class Environment:
         instance: dict,
         epoch_tlim: float,
         instance_sampler: Callable,
-        num_requests_per_epoch: list[int],
+        num_requests_per_epoch: list[int] = [75] * 8,
         num_epochs: int = 8,
     ):
         """

@@ -99,7 +99,7 @@ class IterativeConditionalDispatch:
 
         for iter_idx in range(self.num_iterations):
             instances = [
-                self._sampling_scenario(info, obs, to_dispatch, to_postpone)
+                self._sample_scenario(info, obs, to_dispatch, to_postpone)
                 for _ in range(self.num_scenarios)
             ]
 
@@ -130,7 +130,7 @@ class IterativeConditionalDispatch:
         result = scenario_solver(instance, self.seed, self.scenario_time_limit)
         return [route.visits() for route in result.best.get_routes()]
 
-    def _sampling_scenario(
+    def _sample_scenario(
         self,
         info: dict,
         obs: dict,

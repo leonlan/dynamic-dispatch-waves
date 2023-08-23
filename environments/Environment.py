@@ -20,12 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import time
+from time import perf_counter
 from typing import Any, Callable
+from warnings import warn
 
 import numpy as np
 
-from utils.validation import validate_dynamic_epoch_solution
+from utils.validation import validate_static_solution
 
 State = dict[str, Any]
 Action = list[list[int]]
@@ -122,7 +123,7 @@ class Environment:
             "num_requests_per_epoch": self.num_requests_per_epoch,
         }
 
-        self.start_time_epoch = time.time()
+        self.start_time_epoch = perf_counter()
         return observation, static_info
 
     def _sample_complete_dynamic_instance(self):
@@ -227,16 +228,33 @@ class Environment:
         Info
             Success information about the step.
         """
+        if perf_counter() - self.start_time_epoch > self.epoch_tlim + 2:
+            warn("Epoch time limit is exceeded.", TimeLimitWarning)
+
         try:
             assert not self.is_done, "Environment is finished."
-            cost = validate_dynamic_epoch_solution(self.ep_inst, solution)
+
+            # Convert requests to epoch instance indices.
+            req2idx = {r: i for i, r in enumerate(self.ep_inst["request_idx"])}
+            idx_sol = [[req2idx[req] for req in route] for route in solution]
+
+            # Check that all must-dispatch requests are dispatched.
+            must = np.flatnonzero(self.ep_inst["must_dispatch"])
+            dispatched = {req for route in idx_sol for req in route}
+
+            msg = "Not all must-dispatch requests are dispatched."
+            assert set(must).issubset(dispatched), msg
+
+            # Check that the (static) solution is feasible.
+            cost = validate_static_solution(
+                self.ep_inst, idx_sol, allow_skipped_customers=True
+            )
+
         except AssertionError as error:
             self.is_done = True
             return ({}, float("inf"), self.is_done, {"error": str(error)})
 
-        # Mark orders of submitted solution as dispatched.
         for route in solution:
-            assert not self.req_is_dispatched[route].any()
             self.req_is_dispatched[route] = True
 
         self.final_solutions[self.current_epoch] = solution
@@ -249,7 +267,7 @@ class Environment:
         observation = self._next_observation() if not self.is_done else {}
         reward = -cost
 
-        self.start_time_epoch = time.time()
+        self.start_time_epoch = perf_counter()
         return (observation, reward, self.is_done, {"error": None})
 
     def _next_observation(self) -> State:
@@ -303,7 +321,7 @@ class Environment:
         Returns
         -------
         State
-            A hindsight problem.
+            The hindsight problem instance.
         """
         customer_idx = self.req_customer_idx
 
@@ -321,3 +339,9 @@ class Environment:
             ],
             "release_times": self.req_release_time,
         }
+
+
+class TimeLimitWarning(UserWarning):
+    """
+    Raised when the epoch time limit is exceeded.
+    """

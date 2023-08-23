@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from copy import deepcopy
 from time import perf_counter
 from typing import Any, Callable
 from warnings import warn
@@ -35,7 +36,7 @@ Info = dict[str, Any]
 
 class Environment:
     """
-    Environment for the DDWP based on [1].
+    Environment for the DDWP.
 
     Parameters
     ----------
@@ -59,11 +60,6 @@ class Environment:
         The preparation time needed to dispatch a set of routes. That is, when
         a set of routes are to be dispatched at epoch t, then the start time of
         the routes is `t * epoch_duration + dispatch_margin`.
-
-    References
-    ----------
-    [1] EURO meets NeurIPS 2022 vehicle routing competition.
-        https://euro-neurips-vrp-2022.challenges.ortec.com/
     """
 
     def __init__(
@@ -101,6 +97,33 @@ class Environment:
         epoch_duration: int = 3600,
         dispatch_margin: int = 3600,
     ):
+        """
+        Creates a DDWP environment identical to the one used in [1].
+
+        Parameters
+        ----------
+        seed
+            Random seed.
+        instance
+            The static VRP instance from which requests are sampled.
+        epoch_tlim
+            The epoch time limit.
+        instance_sampler
+            The instance sampler to use.
+        num_requests
+            The maximum number of revealed requests per epoch.
+        epoch_duration
+            The time between two consecutive epochs.
+        dispatch_margin
+            The preparation time needed to dispatch a set of routes. That is, when
+            a set of routes are to be dispatched at epoch t, then the start time of
+            the routes is `t * epoch_duration + dispatch_margin`.
+
+        References
+        ----------
+        [1] EURO meets NeurIPS 2022 vehicle routing competition.
+            https://euro-neurips-vrp-2022.challenges.ortec.com/
+        """
         tw = instance["time_windows"]
         earliest = tw[1:, 0].min() - dispatch_margin
         latest = tw[1:, 0].max() - dispatch_margin
@@ -124,6 +147,73 @@ class Environment:
             dispatch_margin=dispatch_margin,
         )
 
+    @classmethod
+    def paper(
+        cls,
+        seed: int,
+        instance: dict,
+        epoch_tlim: float,
+        instance_sampler: Callable,
+        num_requests_per_epoch: list[int],
+        num_epochs: int = 8,
+    ):
+        """
+        Creates a DDWP environment identical to the one used in [1].
+
+        Parameters
+        ----------
+        seed
+            Random seed.
+        instance
+            The static VRP instance from which requests are sampled. Note that
+            the time windows are ignored in this environment.
+        epoch_tlim
+            The epoch time limit.
+        instance_sampler
+            The instance sampler to use.
+        num_requests_per_epoch
+            The maximum number of revealed requests per epoch.
+        num_epochs
+            The number of epochs to consider.
+
+        References
+        ----------
+        [1] Lan, L., van Doorn, J., Wouda, N. A., Rijal, A., & Bhulai, S. (2023).
+            An iterative conditional dispatch algorithm for the dynamic dispatch
+            waves problem.
+        """
+        # Assume an epoch duration of one hour (in seconds) and a horizon of
+        # ``num_epochs`` hours.
+        epoch_duration = 3600
+        horizon = num_epochs * epoch_duration
+        start_epoch = 0
+        end_epoch = num_epochs - 1
+
+        # Custom depot time windows. Instance time windows are not used!
+        instance = deepcopy(instance)
+        instance["time_windows"][0, :] = [0, horizon]
+
+        # Normalize the distances so that the furthest customer can be reached
+        # in one hour. Service times are also scaled accordingly.
+        scale = instance["duration_matrix"].max() / epoch_duration
+
+        dur_mat = np.ceil(instance["duration_matrix"] / scale).astype(int)
+        instance["duration_matrix"] = dur_mat
+
+        service_times = np.ceil(instance["service_times"] / scale).astype(int)
+        instance["service_times"] = service_times
+
+        return cls(
+            seed=seed,
+            instance=instance,
+            epoch_tlim=epoch_tlim,
+            instance_sampler=instance_sampler,
+            start_epoch=start_epoch,
+            end_epoch=end_epoch,
+            num_requests_per_epoch=num_requests_per_epoch,
+            epoch_duration=epoch_duration,
+            dispatch_margin=0,
+        )
 
     def reset(self) -> tuple[State, Info]:
         """

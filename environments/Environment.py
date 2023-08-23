@@ -351,8 +351,10 @@ class Environment:
         Info
             Success information about the step.
         """
-        if perf_counter() - self.start_time_epoch > self.epoch_tlim + 2:
-            warn("Epoch time limit is exceeded.", TimeLimitWarning)
+        elapsed = perf_counter() - self.start_time_epoch
+        if elapsed > self.epoch_tlim + 3:  # grace period of 3 seconds
+            msg = f"Time limit exceeded: {elapsed:.1f}s > {self.epoch_tlim}s."
+            warn(msg, TimeLimitWarning)
 
         try:
             assert not self.is_done, "Environment is finished."
@@ -372,11 +374,11 @@ class Environment:
             cost = validate_static_solution(
                 self.ep_inst, idx_sol, allow_skipped_customers=True
             )
-
         except AssertionError as error:
             self.is_done = True
             return ({}, float("inf"), self.is_done, {"error": str(error)})
 
+        # Mark dispatched requests as dispatched.
         for route in solution:
             self.req_is_dispatched[route] = True
 

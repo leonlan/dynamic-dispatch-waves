@@ -57,19 +57,18 @@ def solve(
     static_instance = utils.read(path)
 
     if environment == "euro_neurips":
-        env = Environment.euro_neurips(
-            env_seed,
-            static_instance,
-            epoch_tlim,
-            SAMPLING_METHODS[sampling_method],
-        )
+        env_func = Environment.euro_neurips  # type: ignore
     elif environment == "paper":
-        env = Environment.paper(
-            env_seed,
-            static_instance,
-            epoch_tlim,
-            SAMPLING_METHODS[sampling_method],
-        )
+        env_func = Environment.paper  # type: ignore
+    else:
+        raise ValueError(f"Unknown environment: {environment}")
+
+    env = env_func(
+        env_seed,
+        static_instance,
+        epoch_tlim,
+        SAMPLING_METHODS[sampling_method],
+    )
 
     with open(agent_config_loc, "rb") as fh:
         config = tomli.load(fh)

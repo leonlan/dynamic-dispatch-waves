@@ -7,7 +7,7 @@ def euro_neurips(
     instance: dict,
     current_time: float,
     departure_time: float,
-    num_requests: int = 100,
+    num_requests: int,
 ):
     """
     Samples requests from a VRP instance following the EURO-NeurIPS 2022
@@ -25,12 +25,12 @@ def euro_neurips(
     departure_time
         The next departure time of the vehicles.
     num_requests
-        Number of requests to sample. Defaults to 100.
+        Number of requests to sample.
 
     Returns
     -------
     dict
-        Dictionary containing the sampled, feasible requests.
+        Instance containing the sampled, feasible requests.
 
     References
     ----------
@@ -38,32 +38,29 @@ def euro_neurips(
         https://euro-neurips-vrp-2022.challenges.ortec.com/
     """
     dist = instance["duration_matrix"]
-    n_customers = instance["is_depot"].size - 1  # Exclude depot
-    num_samples = num_requests
+    num_customers = instance["is_depot"].size - 1
 
     # Sample requests attributes uniformly from customer data.
-    cust_idx = rng.integers(n_customers, size=num_samples) + 1
-    tw_idx = rng.integers(n_customers, size=num_samples) + 1
-    demand_idx = rng.integers(n_customers, size=num_samples) + 1
-    service_idx = rng.integers(n_customers, size=num_samples) + 1
+    cust_idx = rng.integers(num_customers, size=num_requests) + 1
+    tw_idx = rng.integers(num_customers, size=num_requests) + 1
+    demand_idx = rng.integers(num_customers, size=num_requests) + 1
+    service_idx = rng.integers(num_customers, size=num_requests) + 1
 
-    new_tw = instance["time_windows"][tw_idx]
-    new_demand = instance["demands"][demand_idx]
-    new_service = instance["service_times"][service_idx]
+    tw = instance["time_windows"][tw_idx]
+    demand = instance["demands"][demand_idx]
+    service = instance["service_times"][service_idx]
+    release = np.full(num_requests, departure_time)
 
     # Exclude requests that cannot be served on time in a round trip.
-    early_arrive = np.maximum(departure_time + dist[0, cust_idx], new_tw[:, 0])
-    early_return = early_arrive + new_service + dist[cust_idx, 0]
+    early_arrive = np.maximum(departure_time + dist[0, cust_idx], tw[:, 0])
+    early_return = early_arrive + service + dist[cust_idx, 0]
     depot_closed = instance["time_windows"][0, 1]
-
-    feas = (early_arrive <= new_tw[:, 1]) & (early_return <= depot_closed)
-    num_new_requests = feas.sum()
-    new_release = np.full(num_new_requests, departure_time)
+    feas = (early_arrive <= tw[:, 1]) & (early_return <= depot_closed)
 
     return {
         "customer_idx": cust_idx[feas],
-        "time_windows": new_tw[feas],
-        "demands": new_demand[feas],
-        "service_times": new_service[feas],
-        "release_times": new_release,
+        "time_windows": tw[feas],
+        "demands": demand[feas],
+        "service_times": service[feas],
+        "release_times": release[feas],
     }

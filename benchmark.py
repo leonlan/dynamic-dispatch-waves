@@ -19,7 +19,10 @@ from static_solvers import default_solver
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("instances", nargs="+", help="Instance paths.")
+    parser.add_argument(
+        "instances", nargs="+", type=Path, help="Instance paths."
+    )
+    parser.add_argument("--instance_format", type=str, default="vrplib")
     parser.add_argument("--environment", type=str, default="euro_neurips")
     parser.add_argument("--env_seed", type=int, default=1)
     parser.add_argument("--sampling_method", type=str, default="euro_neurips")
@@ -41,6 +44,7 @@ def parse_args():
 
 def solve(
     loc: str,
+    instance_format: str,
     environment: str,
     env_seed: int,
     sampling_method: str,
@@ -54,7 +58,7 @@ def solve(
     **kwargs,
 ):
     path = Path(loc)
-    static_instance = utils.read(path)
+    static_instance = utils.read(path, instance_format)
 
     if environment == "euro_neurips":
         env_constructor = Environment.euro_neurips  # type: ignore

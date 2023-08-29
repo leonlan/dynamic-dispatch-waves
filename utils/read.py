@@ -4,7 +4,7 @@ import numpy as np
 import vrplib
 
 
-def read(path: Path, instance_format="vrplib"):
+def read(path: Path, instance_format: str = "vrplib"):
     """
     Reads a VRPLIB instance from file and returns an ``instance`` dict,
     containing
@@ -18,9 +18,9 @@ def read(path: Path, instance_format="vrplib"):
 
     Parameters
     ----------
-    path: str
+    path
         Path to the instance file.
-    instance_format: str
+    instance_format
         Format of the instance file. One of ['vrplib', 'solomon'].
     """
     instance = vrplib.read_instance(path, instance_format=instance_format)

@@ -11,6 +11,8 @@ def custom_time_windows(
     num_requests: int = 100,
     tw_type: str = "deadlines",
     tw_width: int = 1,
+    noise_lb: float = 0.9,
+    noise_ub: float = 1.1,
 ) -> dict:
     """
     Samples requests from a VRP instance with custom time windows, following
@@ -35,6 +37,10 @@ def custom_time_windows(
         Type of the time windows: one of ["deadlines", "time_windows"].
     tw_width
         Width of the time windows in number of epoch durations.
+    noise_lb
+        Lower bound of the noise factor.
+    noise_ub
+        Upper bound of the noise factor.
 
     Returns
     -------
@@ -50,7 +56,7 @@ def custom_time_windows(
     dist = instance["duration_matrix"]
     num_customers = instance["is_depot"].size - 1
 
-    noise = rng.uniform(0.9, 1.1)
+    noise = rng.uniform(noise_lb, noise_ub)
     num_samples = int(noise * num_requests)
 
     feas = np.zeros(num_samples, dtype=bool)

@@ -120,9 +120,9 @@ def solve_dynamic(env: Environment, agent: Agent):
 
     Parameters
     ----------
-    env: Environment
+    env
         Environment of the dynamic problem.
-    agent: Agent
+    agent
         Agent that selects the dispatch action.
     """
     done = False

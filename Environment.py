@@ -37,7 +37,7 @@ Info = dict[str, Any]
 
 class Environment:
     """
-    Environment for the DDWP.
+    Environment for the DDWP with equidistant epochs.
 
     Parameters
     ----------

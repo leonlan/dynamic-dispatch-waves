@@ -331,7 +331,7 @@ class Environment:
         # Do not mark depot as must-dispatch.
         self.req_must_dispatch_epoch[0] = self.end_epoch + 1
 
-    def step(self, solution: Action) -> tuple[State, float, bool, Info]:
+    def step(self, action: Action) -> tuple[State, float, bool, Info]:
         """
         Steps to the next state for the given action.
 
@@ -363,7 +363,7 @@ class Environment:
 
             # Convert requests to epoch instance indices.
             req2idx = {r: i for i, r in enumerate(self.ep_inst["request_idx"])}
-            idx_sol = [[req2idx[req] for req in route] for route in solution]
+            idx_sol = [[req2idx[req] for req in route] for route in action]
 
             # Check that all must-dispatch requests are dispatched.
             must = np.flatnonzero(self.ep_inst["must_dispatch"])
@@ -381,10 +381,10 @@ class Environment:
             return ({}, float("inf"), self.is_done, {"error": str(error)})
 
         # Mark dispatched requests as dispatched.
-        for route in solution:
+        for route in action:
             self.req_is_dispatched[route] = True
 
-        self.final_solutions[self.current_epoch] = solution
+        self.final_solutions[self.current_epoch] = action
         self.final_costs[self.current_epoch] = cost
 
         self.current_epoch += 1

@@ -11,7 +11,7 @@ from tqdm.contrib.concurrent import process_map
 
 import utils
 from agents import AGENTS, Agent
-from environments import Environment
+from Environment import Environment
 from sampling import SAMPLING_METHODS
 from static_solvers import default_solver
 
@@ -57,13 +57,13 @@ def solve(
     static_instance = utils.read(path)
 
     if environment == "euro_neurips":
-        env_func = Environment.euro_neurips  # type: ignore
+        env_constructor = Environment.euro_neurips  # type: ignore
     elif environment == "paper":
-        env_func = Environment.paper  # type: ignore
+        env_constructor = Environment.paper  # type: ignore
     else:
         raise ValueError(f"Unknown environment: {environment}")
 
-    env = env_func(
+    env = env_constructor(
         env_seed,
         static_instance,
         epoch_tlim,
@@ -75,19 +75,14 @@ def solve(
         params = config.get("agent_params", {})
 
         if config["agent"] == "icd":
-            # Include the number of scenarios to solve in parallel.
-            params["num_parallel_solve"] = num_procs_scenarios
-
             # Set the scenario solving time limit based on the time budget for
             # scenarios divided by the total number of scenarios to solve.
             total = params["num_iterations"] * params["num_scenarios"]
             scenario_time = epoch_tlim * strategy_tlim_factor
             params["scenario_time_limit"] = scenario_time / total
 
-            # Set the dispatch time limit.
+            params["num_parallel_solve"] = num_procs_scenarios
             params["dispatch_time_limit"] = epoch_tlim - scenario_time
-
-            # Use the same sampling method as the environment.
             params["sampling_method"] = SAMPLING_METHODS[sampling_method]
 
         agent = AGENTS[config["agent"]](agent_seed, **params)
@@ -149,7 +144,6 @@ def solve_hindsight(env: Environment, seed: int, time_limit: float):
         RNG seed used to solve the hindsight instances.
     time_limit: float
         Time limit for solving the hindsight instance.
-
     """
     observation, info = env.reset()
     hindsight_inst = env.get_hindsight_problem()

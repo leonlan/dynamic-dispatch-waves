@@ -5,14 +5,14 @@ from numpy.random import Generator
 def euro_neurips(
     rng: Generator,
     instance: dict,
-    current_time: float,
-    departure_time: float,
-    num_requests: int,
-):
+    current_time: int,
+    departure_time: int,
+    epoch_duration: int,
+    num_requests: int = 100,
+) -> dict:
     """
     Samples requests from a VRP instance following the EURO-NeurIPS 2022
-    vehicle routing competition procedure [1]. Only requests that can be served
-    in a round trip are returned.
+    vehicle routing competition procedure [1].
 
     Parameters
     ----------
@@ -24,6 +24,8 @@ def euro_neurips(
         Current time of the epoch.
     departure_time
         The next departure time of the vehicles.
+    epoch_duration
+        Duration of the epoch.
     num_requests
         Number of requests to sample.
 

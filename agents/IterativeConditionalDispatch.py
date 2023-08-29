@@ -1,9 +1,9 @@
 from functools import partial
 from multiprocessing import Pool
-from typing import Callable
 
 import numpy as np
 
+from sampling import SamplingMethod
 from static_solvers import default_solver, scenario_solver
 from utils import filter_instance
 
@@ -48,7 +48,7 @@ class IterativeConditionalDispatch:
         num_scenarios: int,
         scenario_time_limit: float,
         dispatch_time_limit: float,
-        sampling_method: Callable,
+        sampling_method: SamplingMethod,
         consensus: str,
         consensus_params: dict,
         num_parallel_solve: int = 1,
@@ -191,7 +191,12 @@ class IterativeConditionalDispatch:
             num_requests = num_requests_per_epoch[epoch]
 
             new = self.sampling_method(
-                self.rng, static_inst, epoch_start, epoch_depart, num_requests
+                self.rng,
+                static_inst,
+                epoch_start,
+                epoch_depart,
+                epoch_duration,
+                num_requests,
             )
             num_new_reqs = new["customer_idx"].size
 

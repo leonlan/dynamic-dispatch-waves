@@ -7,10 +7,11 @@ def custom_time_windows(
     instance: dict,
     current_time: int,
     departure_time: int,
+    epoch_duration: int,
     num_requests: int = 100,
     tw_type: str = "deadlines",
     tw_width: int = 1,
-):
+) -> dict:
     """
     Samples requests from a VRP instance with custom time windows, following
     the procedure in [1]. Keeps sampling until the number of feasible requests
@@ -26,6 +27,8 @@ def custom_time_windows(
         Current time of the epoch.
     departure_time
         Departure time of the vehicles.
+    epoch_duration
+        Duration of the epoch.
     num_requests
         Number of requests to sample.
     tw_type
@@ -36,7 +39,7 @@ def custom_time_windows(
     Returns
     -------
     dict
-        The sampled requests data.
+        The sampled requests.
 
     References
     ----------
@@ -77,8 +80,7 @@ def custom_time_windows(
             tw_type,
             tw_width,
             current_time,
-            3600,  # TODO make epoch duration argument
-            # epoch_duration,
+            epoch_duration,
         )
         tw = np.concatenate((old_tw, new_tw))
 

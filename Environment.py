@@ -22,11 +22,12 @@
 
 from copy import deepcopy
 from time import perf_counter
-from typing import Any, Callable
+from typing import Any
 from warnings import warn
 
 import numpy as np
 
+from sampling import SamplingMethod
 from utils.validation import validate_static_solution
 
 State = dict[str, Any]
@@ -46,8 +47,8 @@ class Environment:
         The static VRP instance from which requests are sampled.
     epoch_tlim
         The epoch time limit.
-    instance_sampler
-        The instance sampler to use.
+    sampling_method
+        The sampling method to use.
     num_requests_per_epoch
         The maximum number of revealed requests per epoch.
     start_epoch
@@ -67,7 +68,7 @@ class Environment:
         seed: int,
         instance: dict,
         epoch_tlim: float,
-        instance_sampler: Callable,
+        sampling_method: SamplingMethod,
         start_epoch: int,
         end_epoch: int,
         num_requests_per_epoch: list[int],
@@ -77,7 +78,7 @@ class Environment:
         self.seed = seed
         self.instance = instance
         self.epoch_tlim = epoch_tlim
-        self.instance_sampler = instance_sampler
+        self.sampling_method = sampling_method
         self.start_epoch = start_epoch
         self.end_epoch = end_epoch
         self.num_requests_per_epoch = num_requests_per_epoch
@@ -92,7 +93,7 @@ class Environment:
         seed: int,
         instance: dict,
         epoch_tlim: float,
-        instance_sampler: Callable,
+        sampling_method: SamplingMethod,
         num_requests: int = 100,
         epoch_duration: int = 3600,
         dispatch_margin: int = 3600,
@@ -108,8 +109,8 @@ class Environment:
             The static VRP instance from which requests are sampled.
         epoch_tlim
             The epoch time limit.
-        instance_sampler
-            The instance sampler to use.
+        sampling_method
+            The sampling method to use.
         num_requests
             The maximum number of revealed requests per epoch.
         epoch_duration
@@ -139,7 +140,7 @@ class Environment:
             seed=seed,
             instance=instance,
             epoch_tlim=epoch_tlim,
-            instance_sampler=instance_sampler,
+            sampling_method=sampling_method,
             start_epoch=start_epoch,
             end_epoch=end_epoch,
             num_requests_per_epoch=num_requests_per_epoch,
@@ -153,7 +154,7 @@ class Environment:
         seed: int,
         instance: dict,
         epoch_tlim: float,
-        instance_sampler: Callable,
+        sampling_method: SamplingMethod,
         num_requests_per_epoch: list[int] = [75] * 8,
         num_epochs: int = 8,
     ):
@@ -169,8 +170,8 @@ class Environment:
             the time windows are ignored in this environment.
         epoch_tlim
             The epoch time limit.
-        instance_sampler
-            The instance sampler to use.
+        sampling_method
+            The sampling method to use.
         num_requests_per_epoch
             The maximum number of revealed requests per epoch.
         num_epochs
@@ -207,7 +208,7 @@ class Environment:
             seed=seed,
             instance=instance,
             epoch_tlim=epoch_tlim,
-            instance_sampler=instance_sampler,
+            sampling_method=sampling_method,
             start_epoch=start_epoch,
             end_epoch=end_epoch,
             num_requests_per_epoch=num_requests_per_epoch,
@@ -221,7 +222,7 @@ class Environment:
 
         Returns
         -------
-        Tuple[State, Info]
+        tuple[State, Info]
             The first epoch observation and the environment static information.
         """
         self.rng = np.random.default_rng(self.seed)
@@ -266,11 +267,12 @@ class Environment:
         for epoch in range(self.current_epoch, self.end_epoch + 1):
             current_time = epoch * self.epoch_duration
             departure_time = current_time + self.dispatch_margin
-            new_reqs = self.instance_sampler(
+            new_reqs = self.sampling_method(
                 self.rng,
                 self.instance,
                 current_time,
                 departure_time,
+                self.epoch_duration,
                 self.num_requests_per_epoch[epoch],
             )
             num_reqs = new_reqs["customer_idx"].size

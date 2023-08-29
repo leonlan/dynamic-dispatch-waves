@@ -41,11 +41,7 @@ jobs:
         run: poetry run pre-commit install --install-hooks
       - name: Run pre-commit
         run: poetry run pre-commit run --all-files
-      - name: Test run dynamic instance (EURO-NeurIPS)
+      - name: Test run dynamic instance
         run: poetry run benchmark instances/ortec/ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt --epoch_tlim 1 --strategy_tlim_factor 0.8
-      - name: Test run hindsight instance (EURO-NeurIPS)
+      - name: Test run hindsight instance
         run: poetry run benchmark instances/ortec/ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt --epoch_tlim 1 --strategy_tlim_factor 0.8 --hindsight
-      - name: Test run dynamic instance (Paper)
-        run: poetry run benchmark instances/hg/R2_10_1.txt --instance_format solomon --epoch_tlim 1 --strategy_tlim_factor 0.8 --environment paper --sampling_method TW8
-      - name: Test run hindsight instance (Paper)
-        run: poetry run benchmark instances/hg/R2_10_1.txt --instance_format solomon --epoch_tlim 1 --strategy_tlim_factor 0.8 --environment paper --sampling_method TW8 --hindsight

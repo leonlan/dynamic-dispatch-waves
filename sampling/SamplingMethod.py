@@ -16,7 +16,6 @@ class SamplingMethod(Protocol):
         departure_time: int,
         epoch_duration: int,
         num_requests: int,
-        **kwargs,
     ) -> dict:
         """
         Samples a set of requests from a base instance.
@@ -35,8 +34,6 @@ class SamplingMethod(Protocol):
             Duration of the epoch.
         num_requests
             Number of requests to sample.
-        kwargs
-            Additional keyword arguments.
 
         Returns
         -------

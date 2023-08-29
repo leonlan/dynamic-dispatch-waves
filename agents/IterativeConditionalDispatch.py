@@ -7,7 +7,7 @@ from sampling import SamplingMethod
 from static_solvers import default_solver, scenario_solver
 from utils import filter_instance
 
-from .consensus import CONSENSUS
+from .consensus import CONSENSUS, ConsensusFunction
 
 
 class IterativeConditionalDispatch:
@@ -33,7 +33,7 @@ class IterativeConditionalDispatch:
     sampling_method
         The method to use for sampling scenarios.
     consensus
-        The consensus function to use.
+        The name of the consensus function to use.
     consensus_params
         The parameters to pass to the consensus function.
     num_parallel_solve
@@ -61,7 +61,9 @@ class IterativeConditionalDispatch:
         self.scenario_time_limit = scenario_time_limit
         self.dispatch_time_limit = dispatch_time_limit
         self.sampling_method = sampling_method
-        self.consensus_func = partial(CONSENSUS[consensus], **consensus_params)
+        self.consensus_func: ConsensusFunction = partial(
+            CONSENSUS[consensus], **consensus_params
+        )
         self.num_parallel_solve = num_parallel_solve
 
     def act(self, info, obs) -> list[list[int]]:
@@ -110,7 +112,6 @@ class IterativeConditionalDispatch:
                     solutions = pool.map(self._solve_scenario, instances)
 
             to_dispatch, to_postpone = self.consensus_func(
-                iter_idx,
                 list(zip(instances, solutions)),
                 ep_inst,
                 to_dispatch,

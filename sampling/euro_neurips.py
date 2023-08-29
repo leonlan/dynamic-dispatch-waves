@@ -9,6 +9,7 @@ def euro_neurips(
     departure_time: int,
     epoch_duration: int,
     num_requests: int = 100,
+    **kwargs,
 ) -> dict:
     """
     Samples requests from a VRP instance following the EURO-NeurIPS 2022
@@ -28,6 +29,8 @@ def euro_neurips(
         Duration of the epoch.
     num_requests
         Number of requests to sample.
+    kwargs
+        Additional keyword arguments (unused).
 
     Returns
     -------

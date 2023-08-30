@@ -22,10 +22,25 @@ def parse_args():
     parser.add_argument(
         "instances", nargs="+", type=Path, help="Instance paths."
     )
-    parser.add_argument("--instance_format", type=str, default="vrplib")
-    parser.add_argument("--environment", type=str, default="euro_neurips")
+    parser.add_argument(
+        "--instance_format",
+        type=str,
+        choices=["vrplib", "solomon"],
+        default="vrplib",
+    )
+    parser.add_argument(
+        "--environment",
+        type=str,
+        choices=["euro_neurips", "paper"],
+        default="euro_neurips",
+    )
     parser.add_argument("--env_seed", type=int, default=1)
-    parser.add_argument("--sampling_method", type=str, default="euro_neurips")
+    parser.add_argument(
+        "--sampling_method",
+        type=str,
+        choices=SAMPLING_METHODS.keys(),
+        default="euro_neurips",
+    )
     parser.add_argument(
         "--agent_config_loc",
         type=str,

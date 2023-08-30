@@ -3,11 +3,11 @@ from multiprocessing import Pool
 
 import numpy as np
 
-from sampling import sample_epoch_requests
+from sampling import SamplingMethod
 from static_solvers import default_solver, scenario_solver
 from utils import filter_instance
 
-from .consensus import CONSENSUS
+from .consensus import CONSENSUS, ConsensusFunction
 
 
 class IterativeConditionalDispatch:
@@ -30,8 +30,10 @@ class IterativeConditionalDispatch:
         The time limit for solving a single scenario instance.
     dispatch_time_limit
         The time limit for solving the dispatch instance.
+    sampling_method
+        The method to use for sampling scenarios.
     consensus
-        The consensus function to use.
+        The name of the consensus function to use.
     consensus_params
         The parameters to pass to the consensus function.
     num_parallel_solve
@@ -46,6 +48,7 @@ class IterativeConditionalDispatch:
         num_scenarios: int,
         scenario_time_limit: float,
         dispatch_time_limit: float,
+        sampling_method: SamplingMethod,
         consensus: str,
         consensus_params: dict,
         num_parallel_solve: int = 1,
@@ -57,7 +60,10 @@ class IterativeConditionalDispatch:
         self.num_scenarios = num_scenarios
         self.scenario_time_limit = scenario_time_limit
         self.dispatch_time_limit = dispatch_time_limit
-        self.consensus_func = partial(CONSENSUS[consensus], **consensus_params)
+        self.sampling_method = sampling_method
+        self.consensus_func: ConsensusFunction = partial(
+            CONSENSUS[consensus], **consensus_params
+        )
         self.num_parallel_solve = num_parallel_solve
 
     def act(self, info, obs) -> list[list[int]]:
@@ -106,7 +112,6 @@ class IterativeConditionalDispatch:
                     solutions = pool.map(self._solve_scenario, instances)
 
             to_dispatch, to_postpone = self.consensus_func(
-                iter_idx,
                 list(zip(instances, solutions)),
                 ep_inst,
                 to_dispatch,
@@ -155,7 +160,7 @@ class IterativeConditionalDispatch:
         next_epoch = current_epoch + 1
         epochs_left = info["end_epoch"] - current_epoch
         max_lookahead = min(self.num_lookahead, epochs_left)
-        max_requests_per_epoch = info["max_requests_per_epoch"]
+        num_requests_per_epoch = info["num_requests_per_epoch"]
 
         static_inst = info["dynamic_context"]
         epoch_duration = info["epoch_duration"]
@@ -181,23 +186,25 @@ class IterativeConditionalDispatch:
         horizon = req_tw[0][1]
         req_dispatch = np.where(to_dispatch, departure_time, horizon)
 
-        for epoch_idx in range(next_epoch, next_epoch + max_lookahead):
-            next_epoch_start = epoch_idx * epoch_duration
-            next_epoch_depart = next_epoch_start + dispatch_margin
+        for epoch in range(next_epoch, next_epoch + max_lookahead):
+            epoch_start = epoch * epoch_duration
+            epoch_depart = epoch_start + dispatch_margin
+            num_requests = num_requests_per_epoch[epoch]
 
-            new = sample_epoch_requests(
+            new = self.sampling_method(
                 self.rng,
                 static_inst,
-                next_epoch_start,
-                next_epoch_depart,
-                max_requests_per_epoch,
+                epoch_start,
+                epoch_depart,
+                epoch_duration,
+                num_requests,
             )
             num_new_reqs = new["customer_idx"].size
 
-            # Sampled request indices are negative so we can distinguish them
+            # Sampled request indices are negative so we can distinguish them.
             new_req_idx = -(np.arange(num_new_reqs) + 1) - len(req_idx)
 
-            # Concatenate the new requests to the current instance requests
+            # Concatenate the new requests to the current instance requests.
             req_idx = np.concatenate((req_idx, new_req_idx))
             req_cust_idx = np.concatenate((req_cust_idx, new["customer_idx"]))
             req_demand = np.concatenate((req_demand, new["demands"]))

@@ -7,9 +7,5 @@ num_scenarios = 30
 consensus = "fixed_threshold"
 
 [agent_params.consensus_params]
-postpone_thresholds = [
-    1.01, # don't postpone
-]
-dispatch_thresholds = [
-    0.50,
-]
+postpone_thresholds = 1.01 # don't postpone
+dispatch_threshold = 0.50

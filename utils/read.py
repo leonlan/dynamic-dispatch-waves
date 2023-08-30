@@ -1,11 +1,10 @@
-import os
-from typing import Union
+from pathlib import Path
 
 import numpy as np
 import vrplib
 
 
-def read(path: Union[os.PathLike, str], instance_format="vrplib"):
+def read(path: Path, instance_format: str = "vrplib"):
     """
     Reads a VRPLIB instance from file and returns an ``instance`` dict,
     containing
@@ -19,10 +18,10 @@ def read(path: Union[os.PathLike, str], instance_format="vrplib"):
 
     Parameters
     ----------
-    path: str
+    path
         Path to the instance file.
-    instance_format: str
-        Format of the instance file. The default is 'vrplib'.
+    instance_format
+        Format of the instance file. One of ['vrplib', 'solomon'].
     """
     instance = vrplib.read_instance(path, instance_format=instance_format)
     dimension: int = instance.get("dimension", instance["demand"].size)

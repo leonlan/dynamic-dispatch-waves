@@ -19,35 +19,39 @@ The following command will then install all necessary dependencies:
 poetry install
 ```
 
-
 If you don't have Poetry installed, make sure that you have Python 3.9 or higher and install the packages indicated in the `pyproject.toml` file. 
 
 ## Usage
 
-This repository includes several different environments (i.e., models) of the DDWP, each of which implement the `Environment` protocol. 
-All environments can be found under `environments/`.
-Morover, agents (i.e., algorithms) to solve the DDWP implement the `Agent` protocol, which can be found under `agents/`.
+This repository includes an environment (`Environment.py`) that models the DDWP.
+There are two specialized constructors for the environment: the EURO-NeurIPS variant [1], which was used during the EURO meets NeurIPS 2022 vehicle routing competition, and a variant that was used in our paper. 
+The environment requires a sampling method (see `sampling/`), which describes how future, unknown requests are sampled.
+Moreover, a number of solution methods can be found under `agents/`.
 
-To solve an instance of the dynamic dispatch waves problem, you can use the script `benchmark.py`. Here's an example:
+To solve an instance of the DDWP, you can use the `benchmark.py` script. Here's an example:
 
 ``` bash
-poetry run benchmark ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt \
-    --environment euro_neurips --env_seed 1 --agent greedy --agent_seed 2 \
+poetry run benchmark instances/ortec/ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt\
+    --environment euro_neurips --sampling_method euro_neurips --env_seed 1\
+    --agent_config_loc configs/icd-double-threshold.toml --agent_seed 2\
     --epoch_tlim 5
 ```
 
-This solves the instance `ORTEC-VRPTW-ASYM-01829532-d1-n324-k22` within the `EuroNeurips` environment with seed 1. 
-The instance is solved using the `GreedyDispatch` agent with seed 2, which simply dispatches all requests at each epoch.
-Each epoch has a time limit of five seconds, which is the maximum time that an agent can use before it must return a solution to the environment.
+This solves the an instance of the DDWP problem using the static VRP instance `ORTEC-VRPTW-ASYM-01829532-d1-n324-k22` for sampling future requests.
+It follows the EURO-NeurIPS environment and sampling procedure with seed 1. 
+It uses the iterative conditional dispatch algorithm with double threshold consensus function and seed 2.
+Each epoch has a time limit of five seconds, which is the maximum time that an algorithm can use before it must return a solution to the environment.
 
 ## Paper
 
-For more details about the DDWP, please see our paper "An iterative conditional dispatch algorithm for the dynamic dispatch waves problem" (TODO). If this code is useful for your work, please consider citing our work:
+For more details about the DDWP, see our paper [An iterative conditional dispatch algorithm for the dynamic dispatch waves problem](https://tex.stackexchange.com/questions/3833/how-to-cite-an-article-from-arxiv-using-bibtex). If this code is useful for your work, please consider citing our work:
 
 ``` bibtex
 @misc{Lan2023,
-  title = {An iterative conditional dispatch algorithm for the dynamic dispatch waves problem},
-  author = {Lan, Leon and {van Doorn}, Jasper and Wouda, Niels A. and Rijal, Arpan and Bhulai, Sandjai},
-  year = {2023}
+  title = {An iterative conditional dispatch algorithm for the dynamic dispatch waves problem}, 
+  author = {Leon Lan and Jasper van Doorn and Niels A. Wouda and Arpan Rijal and Sandjai Bhulai},
+  year = {2023},
+  eprint = {arXiv:2308.14476},
+  url = {https://doi.org/10.48550/arXiv.2308.14476}
 }
 ```

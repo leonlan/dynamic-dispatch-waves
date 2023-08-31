@@ -5,7 +5,7 @@
 
 This repository hosts all code used to solve the *dynamic dispatch waves problem* (DDWP). 
 
-In the DDWP, a set of unknown delivery requests arrive at each epoch, which must be served before the end of the planning horizon. 
+In the DDWP, a set of delivery requests arrive at each epoch, which must be served before the end of the planning horizon. 
 At each decision epoch, it must be decided which requests to dispatch in the current epoch (and how to route them), and which requests to postpone to consolidate with future requests that arrive in later epochs.
 
 See [our paper](#paper) for more information about the DDWP and the implemented algorithms.
@@ -23,28 +23,33 @@ If you don't have Poetry installed, make sure that you have Python 3.9 or higher
 
 ## Usage
 
-This repository includes an environment (`Environment.py`) that models the DDWP.
-There are two specialized constructors for the environment: the EURO-NeurIPS variant [1], which was used during the EURO meets NeurIPS 2022 vehicle routing competition, and a variant that was used in our paper. 
+This repository includes an environment that models the DDWP.
+There are two specialized constructors for the environment: one variant that was used during the [EURO Meets NeurIPS 2022 Vehicle Routing Competition](https://euro-neurips-vrp-2022.challenges.ortec.com/), and another variant that was used in our paper. 
 The environment requires a sampling method (see `sampling/`), which describes how future, unknown requests are sampled.
 Moreover, a number of solution methods can be found under `agents/`.
 
 To solve an instance of the DDWP, you can use the `benchmark.py` script. Here's an example:
 
 ``` bash
-poetry run benchmark instances/ortec/ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt\
-    --environment euro_neurips --sampling_method euro_neurips --env_seed 1\
-    --agent_config_loc configs/icd-double-threshold.toml --agent_seed 2\
+poetry run benchmark instances/ortec/ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt \
+    --environment euro_neurips --sampling_method euro_neurips --env_seed 1 \
+    --agent_config_loc configs/icd-double-threshold.toml --agent_seed 2 \
     --epoch_tlim 5
 ```
 
 This solves the an instance of the DDWP problem using the static VRP instance `ORTEC-VRPTW-ASYM-01829532-d1-n324-k22` for sampling future requests.
 It follows the EURO-NeurIPS environment and sampling procedure with seed 1. 
 It uses the iterative conditional dispatch algorithm with double threshold consensus function and seed 2.
-Each epoch has a time limit of five seconds, which is the maximum time that an algorithm can use before it must return a solution to the environment.
+Each epoch has a time limit of five seconds, which is the maximum time that an algorithm spend in a single epoch before it must return a solution to the environment.
+
+
+## Experiments
+
+TODO
 
 ## Paper
 
-For more details about the DDWP, see our paper [An iterative conditional dispatch algorithm for the dynamic dispatch waves problem](https://tex.stackexchange.com/questions/3833/how-to-cite-an-article-from-arxiv-using-bibtex). If this code is useful for your work, please consider citing our work:
+For more details about the DDWP, see our paper *[An iterative conditional dispatch algorithm for the dynamic dispatch waves problem](https://tex.stackexchange.com/questions/3833/how-to-cite-an-article-from-arxiv-using-bibtex)*. If this code is useful for your work, please consider citing our work:
 
 ``` bibtex
 @misc{Lan2023,

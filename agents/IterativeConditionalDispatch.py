@@ -4,7 +4,8 @@ from multiprocessing import Pool
 import numpy as np
 
 from sampling import sample_epoch_requests
-from static_solvers import scenario_solver
+from static_solvers import default_solver, scenario_solver
+from utils import filter_instance
 
 from .consensus import CONSENSUS
 
@@ -27,6 +28,8 @@ class IterativeConditionalDispatch:
         The number of scenarios to sample in each iteration.
     scenario_time_limit
         The time limit for solving a single scenario instance.
+    dispatch_time_limit
+        The time limit for solving the dispatch instance.
     consensus
         The consensus function to use.
     consensus_params
@@ -42,6 +45,7 @@ class IterativeConditionalDispatch:
         num_lookahead: int,
         num_scenarios: int,
         scenario_time_limit: float,
+        dispatch_time_limit: float,
         consensus: str,
         consensus_params: dict,
         num_parallel_solve: int = 1,
@@ -52,10 +56,33 @@ class IterativeConditionalDispatch:
         self.num_lookahead = num_lookahead
         self.num_scenarios = num_scenarios
         self.scenario_time_limit = scenario_time_limit
+        self.dispatch_time_limit = dispatch_time_limit
         self.consensus_func = partial(CONSENSUS[consensus], **consensus_params)
         self.num_parallel_solve = num_parallel_solve
 
-    def act(self, info, obs) -> np.ndarray:
+    def act(self, info, obs) -> list[list[int]]:
+        """
+        First determines the dispatch decisions for the current epoch, then
+        solves the instance of dispatched requests.
+        """
+        epoch_instance = obs["epoch_instance"]
+        to_dispatch = self._determine_dispatch(info, obs)
+        dispatch_instance = filter_instance(epoch_instance, to_dispatch)
+
+        res = default_solver(
+            dispatch_instance, self.seed, self.dispatch_time_limit
+        )
+        routes = [route.visits() for route in res.best.get_routes()]
+
+        return [dispatch_instance["request_idx"][r].tolist() for r in routes]
+
+    def _determine_dispatch(self, info, obs) -> np.ndarray:
+        """
+        Determines which requests to dispatch in the current epoch by solving
+        a set of sample scenarios and using a consensus function to determine
+        which requests to dispatch or postpone. This procedure is repeated
+        for a fixed number of iterations.
+        """
         ep_inst = obs["epoch_instance"]
         ep_size = ep_inst["is_depot"].size
 
@@ -90,7 +117,7 @@ class IterativeConditionalDispatch:
             if ep_size - 1 == to_dispatch.sum() + to_postpone.sum():
                 break
 
-        return to_dispatch | ep_inst["is_depot"]  # include depot
+        return to_dispatch | ep_inst["is_depot"]
 
     def _solve_scenario(self, instance: dict) -> list[list[int]]:
         """
@@ -115,7 +142,7 @@ class IterativeConditionalDispatch:
         info
             The static problem information.
         obs
-            The current epcoh observation.
+            The current epoch observation.
         to_dispatch
             A boolean array where True means that the corresponding request must be
             dispatched.

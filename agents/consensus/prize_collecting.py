@@ -7,7 +7,6 @@ from .utils import get_dispatch_count, verify_action
 
 
 def prize_collecting(
-    iteration_idx: int,
     scenarios: list[tuple[dict, list[list[int]]]],
     instance,
     old_dispatch: np.ndarray,
@@ -15,7 +14,6 @@ def prize_collecting(
     fix_threshold: float,
     seed: int,
     time_limit: float,
-    **kwargs
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     A prize-collecting consensus function. It uses thresholds to fix some

@@ -8,13 +8,11 @@ from .utils import (
 
 
 def hamming_distance(
-    iteration_idx: int,
     scenarios: list[tuple[dict, list[list[int]]]],
-    instance,
+    instance: dict,
     old_dispatch: np.ndarray,
     old_postpone: np.ndarray,
-    postpone_thresholds: list[float],
-    **kwargs
+    postpone_threshold: float,
 ):
     """
     Selects the solution with the smallest average Hamming distance w.r.t.
@@ -27,19 +25,17 @@ def hamming_distance(
     num_scenarios = len(scenarios)
     hamming_distances = np.zeros(num_scenarios)
 
-    for i in range(num_scenarios):
-        row = dispatch_matrix[i, :]
-        other_rows = np.delete(dispatch_matrix, i, axis=0)
+    for idx in range(num_scenarios):
+        row = dispatch_matrix[idx, :]
+        other_rows = np.delete(dispatch_matrix, idx, axis=0)
         row_distances = np.sum(np.abs(other_rows - row), axis=1)
-        hamming_distances[i] = np.sum(row_distances)
+        hamming_distances[idx] = np.sum(row_distances)
 
     best_idx = hamming_distances.argmin()
     new_dispatch = dispatch_matrix[best_idx].astype(bool)
 
     # Postpone requests using a fixed threshold, as long as the requests
     # are not yet dispatched.
-    post_thresh_idx = min(iteration_idx, len(postpone_thresholds) - 1)
-    postpone_threshold = postpone_thresholds[post_thresh_idx]
     new_postpone = select_postpone_on_threshold(
         scenarios, old_dispatch, old_postpone, postpone_threshold
     )

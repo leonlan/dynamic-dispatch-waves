@@ -94,38 +94,3 @@ def validate_static_solution(
             )
 
     return compute_solution_driving_time(instance, solution)
-
-
-def validate_dynamic_epoch_solution(epoch_instance, epoch_solution):
-    """
-    Validates a solution for a VRPTW instance, raises assertion if not valid
-    Returns total driving time (excluding waiting time)
-    """
-
-    # Renumber requests (and depot) to 0,1...n
-    request_idx = epoch_instance["request_idx"]
-    assert request_idx[0] == 0
-    assert (request_idx[1:] > request_idx[:-1]).all()
-    # Look up positions of request idx
-    solution = [
-        np.searchsorted(request_idx, route) for route in epoch_solution
-    ]
-
-    # Check that all 'must_dispatch' requests are dispatched
-    # if 'must_dispatch' in instance:
-    must_dispatch = epoch_instance["must_dispatch"].copy()
-    for route in solution:
-        must_dispatch[route] = False
-    assert (
-        not must_dispatch.any()
-    ), f"Some requests must be dispatched but were not: {request_idx[must_dispatch]}"
-
-    static_instance = {
-        k: v
-        for k, v in epoch_instance.items()
-        if k not in ("request_idx", "customer_idx", "must_dispatch")
-    }
-
-    return validate_static_solution(
-        static_instance, solution, allow_skipped_customers=True
-    )

@@ -49,7 +49,7 @@ TODO
 
 ## Paper
 
-For more details about the DDWP, see our paper *[An iterative conditional dispatch algorithm for the dynamic dispatch waves problem](https://tex.stackexchange.com/questions/3833/how-to-cite-an-article-from-arxiv-using-bibtex)*. If this code is useful for your work, please consider citing our work:
+For more details about the DDWP, see our paper *[An iterative conditional dispatch algorithm for the dynamic dispatch waves problem](https://doi.org/10.48550/arXiv.2308.14476)*. If this code is useful for your work, please consider citing our work:
 
 ``` bibtex
 @misc{Lan2023,

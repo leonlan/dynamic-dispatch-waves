@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "dynamic-dispatch-waves"
 version = "0.1.0"
-description = "" # TODO
+description = "Code for dynamic dispatch waves problem"
 authors = [
     "Leon Lan <l.lan@vu.nl>",
     "Jasper van Doorn <j.m.h.van.doorn@vu.nl>",

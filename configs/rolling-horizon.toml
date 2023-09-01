@@ -1,0 +1,4 @@
+agent = "rolling_horizon"
+
+[agent_params]
+num_lookahead = 100 # arbitrarily large value to sample all future epochs

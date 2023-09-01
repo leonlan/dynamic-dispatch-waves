@@ -44,11 +44,8 @@ class RollingHorizon:
 
         solution = []
         for route in res.best.get_routes():
-            # Routes that must be dispatched at latest before the the next
-            # epoch's deprature moment must be dispatched now.
-            latest_dispatch = route.start_time() + route.slack()
-            next_depart_time = obs["departure_time"] + info["epoch_duration"]
-            if latest_dispatch <= next_depart_time:
+            num_reqs = to_postpone.size
+            if any(must_dispatch[idx] for idx in route if idx < num_reqs):
                 solution.append(route.visits())
 
         return [scenario["request_idx"][r].tolist() for r in solution]

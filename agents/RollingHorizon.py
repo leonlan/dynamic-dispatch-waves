@@ -40,13 +40,15 @@ class RollingHorizon:
         scenario = self._sample_scenario(info, obs, must_dispatch, to_postpone)
         res = default_solver(scenario, self.seed, self.time_limit)
 
+        assert res.best.is_feasible(), "Solution is not feasible."
+
         solution = []
         for route in res.best.get_routes():
-            # BUG `Route.start_time()` does not include release times, so we
-            # use `Route.release_time()` instead as proxy. If the route's
-            # release time is less than the current departure time, then
-            # the route only has "revealed" requests, hence we dispatch.
-            if route.release_time() <= obs["departure_time"]:
+            # Routes that must be dispatched at latest before the the next
+            # epoch's deprature moment must be dispatched now.
+            latest_dispatch = route.start_time() + route.slack()
+            next_depart_time = obs["departure_time"] + info["epoch_duration"]
+            if latest_dispatch <= next_depart_time:
                 solution.append(route.visits())
 
         return [scenario["request_idx"][r].tolist() for r in solution]

@@ -104,6 +104,10 @@ def solve(
             params["dispatch_time_limit"] = epoch_tlim - scenario_time
             params["sampling_method"] = SAMPLING_METHODS[sampling_method]
 
+        if config["agent"] == "rolling_horizon":
+            params["time_limit"] = epoch_tlim
+            params["sampling_method"] = SAMPLING_METHODS[sampling_method]
+
         agent = AGENTS[config["agent"]](agent_seed, **params)
 
     start = perf_counter()

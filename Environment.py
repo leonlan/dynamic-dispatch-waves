@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 from copy import deepcopy
+from dataclasses import dataclass
 from time import perf_counter
 from typing import Any
 from warnings import warn
@@ -32,7 +33,41 @@ from utils.validation import validate_static_solution
 
 State = dict[str, Any]
 Action = list[list[int]]
-Info = dict[str, Any]
+Info = dict
+
+
+@dataclass(frozen=True)
+class StaticInfo:
+    """
+    Static global information about the DDWP episode.
+
+    Parameters
+    ----------
+    static_instance
+        The static VRP instance from which requests are sampled.
+    start_epoch
+        The start epoch index.
+    end_epoch
+        The end epoch index.
+    epoch_tlim
+        The epoch time limit.
+    epoch_duration
+        The time between two consecutive epochs.
+    dispatch_margin
+        The preparation time needed to dispatch a set of routes. That is, when
+        a set of routes are to be dispatched at epoch t, then the start time of
+        the routes is `t * epoch_duration + dispatch_margin`.
+    num_requests_per_epoch
+        The expected number of revealed requests per epoch.
+    """
+
+    static_instance: dict
+    start_epoch: int
+    end_epoch: int
+    epoch_tlim: float
+    epoch_duration: int
+    dispatch_margin: int
+    num_requests_per_epoch: list[int]
 
 
 class Environment:
@@ -50,7 +85,7 @@ class Environment:
     sampling_method
         The sampling method to use.
     num_requests_per_epoch
-        The maximum number of revealed requests per epoch.
+        The expected number of revealed requests per epoch.
     start_epoch
         The start epoch.
     end_epoch
@@ -85,6 +120,16 @@ class Environment:
         self.epoch_duration = epoch_duration
         self.dispatch_margin = dispatch_margin
 
+        self.static_info = StaticInfo(
+            static_instance=instance,
+            start_epoch=start_epoch,
+            end_epoch=end_epoch,
+            epoch_tlim=epoch_tlim,
+            epoch_duration=epoch_duration,
+            dispatch_margin=dispatch_margin,
+            num_requests_per_epoch=num_requests_per_epoch,
+        )
+
         self.is_done = True  # Requires reset to be called first
 
     @classmethod
@@ -112,7 +157,7 @@ class Environment:
         sampling_method
             The sampling method to use.
         num_requests
-            The maximum number of revealed requests per epoch.
+            The expected number of revealed requests per epoch.
         epoch_duration
             The time between two consecutive epochs.
         dispatch_margin
@@ -173,7 +218,7 @@ class Environment:
         sampling_method
             The sampling method to use.
         num_requests_per_epoch
-            The maximum number of revealed requests per epoch.
+            The expected number of revealed requests per epoch.
         num_epochs
             The number of epochs to consider.
 
@@ -216,13 +261,13 @@ class Environment:
             dispatch_margin=0,
         )
 
-    def reset(self) -> tuple[State, Info]:
+    def reset(self) -> tuple[State, StaticInfo]:
         """
         Resets the environment.
 
         Returns
         -------
-        tuple[State, Info]
+        tuple[State, StaticInfo]
             The first epoch observation and the environment static information.
         """
         self.rng = np.random.default_rng(self.seed)
@@ -236,19 +281,9 @@ class Environment:
 
         self._sample_complete_dynamic_instance()
 
-        observation = self._next_observation()
-        static_info = {
-            "dynamic_context": self.instance,
-            "start_epoch": self.start_epoch,
-            "end_epoch": self.end_epoch,
-            "epoch_tlim": self.epoch_tlim,
-            "epoch_duration": self.epoch_duration,
-            "dispatch_margin": self.dispatch_margin,
-            "num_requests_per_epoch": self.num_requests_per_epoch,
-        }
-
         self.start_time_epoch = perf_counter()
-        return observation, static_info
+
+        return self._next_observation(), self.static_info
 
     def _sample_complete_dynamic_instance(self):
         """

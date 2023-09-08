@@ -8,6 +8,7 @@ from static_solvers import default_solver, scenario_solver
 from utils import filter_instance
 
 from .consensus import CONSENSUS, ConsensusFunction
+from .Environment import StaticInfo
 
 
 class IterativeConditionalDispatch:
@@ -66,7 +67,7 @@ class IterativeConditionalDispatch:
         )
         self.num_parallel_solve = num_parallel_solve
 
-    def act(self, info, obs) -> list[list[int]]:
+    def act(self, info: StaticInfo, obs) -> list[list[int]]:
         """
         First determines the dispatch decisions for the current epoch, then
         solves the instance of dispatched requests.
@@ -82,7 +83,7 @@ class IterativeConditionalDispatch:
 
         return [dispatch_instance["request_idx"][r].tolist() for r in routes]
 
-    def _determine_dispatch(self, info, obs) -> np.ndarray:
+    def _determine_dispatch(self, info: StaticInfo, obs) -> np.ndarray:
         """
         Determines which requests to dispatch in the current epoch by solving
         a set of sample scenarios and using a consensus function to determine
@@ -93,7 +94,7 @@ class IterativeConditionalDispatch:
         ep_size = ep_inst["is_depot"].size
 
         # In the last epoch, all requests must be dispatched.
-        if obs["current_epoch"] == info["end_epoch"]:
+        if obs["current_epoch"] == info.end_epoch:
             return np.ones(ep_size, dtype=bool)
 
         to_dispatch = ep_inst["must_dispatch"].copy()
@@ -133,7 +134,7 @@ class IterativeConditionalDispatch:
 
     def _sample_scenario(
         self,
-        info: dict,
+        info: StaticInfo,
         obs: dict,
         to_dispatch: np.ndarray,
         to_postpone: np.ndarray,
@@ -145,7 +146,7 @@ class IterativeConditionalDispatch:
         Parameters
         ----------
         info
-            The static problem information.
+            The static information.
         obs
             The current epoch observation.
         to_dispatch
@@ -158,13 +159,13 @@ class IterativeConditionalDispatch:
         # Parameters
         current_epoch = obs["current_epoch"]
         next_epoch = current_epoch + 1
-        epochs_left = info["end_epoch"] - current_epoch
+        epochs_left = info.end_epoch - current_epoch
         max_lookahead = min(self.num_lookahead, epochs_left)
-        num_requests_per_epoch = info["num_requests_per_epoch"]
+        num_requests_per_epoch = info.num_requests_per_epoch
 
-        static_inst = info["dynamic_context"]
-        epoch_duration = info["epoch_duration"]
-        dispatch_margin = info["dispatch_margin"]
+        static_inst = info.static_instance
+        epoch_duration = info.epoch_duration
+        dispatch_margin = info.dispatch_margin
         ep_inst = obs["epoch_instance"]
         departure_time = obs["departure_time"]
 

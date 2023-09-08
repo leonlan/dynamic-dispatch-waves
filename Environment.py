@@ -23,6 +23,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
 from time import perf_counter
+from typing import Any
 from warnings import warn
 
 import numpy as np
@@ -71,10 +72,32 @@ class StaticInfo:
 
 @dataclass(frozen=True)
 class State:
+    """
+    State of an epoch.
+    """
+
     current_epoch: int
     current_time: int
     departure_time: float
     epoch_instance: dict
+
+
+@dataclass
+class VrpInstance:
+    """
+    A static VRP instance.
+    """
+
+    is_depot: np.ndarray[Any, bool]
+    customer_idx: np.ndarray[Any, int]
+    request_idx: np.ndarray[Any, int]
+    coords: np.ndarray[Any, int]
+    demands: np.ndarray[Any, int]
+    capacity: float
+    time_windows: np.ndarray[Any, int]
+    service_times: np.ndarray[Any, int]
+    duration_matrix: np.ndarray[Any, int]
+    release_times: np.ndarray[Any, int]
 
 
 class Environment:
@@ -487,32 +510,32 @@ class Environment:
             self.current_epoch, self.current_time, departure_time, self.ep_inst
         )
 
-    def get_hindsight_problem(self) -> Instance:
+    def get_hindsight_problem(self) -> VrpInstance:
         """
         Returns the hindsight problem, which is a static VRP instance that
         represents the dynamic instance assuming perfect information.
 
         Returns
         -------
-        Instance
+        VrpInstance
             The hindsight problem instance.
         """
         customer_idx = self.req_customer_idx
 
-        return {
-            "is_depot": self.instance["is_depot"][customer_idx],
-            "customer_idx": customer_idx,
-            "request_idx": self.req_idx,
-            "coords": self.instance["coords"][customer_idx],
-            "demands": self.req_demand,
-            "capacity": self.instance["capacity"],
-            "time_windows": self.req_tw,
-            "service_times": self.req_service,
-            "duration_matrix": self.instance["duration_matrix"][
+        return VrpInstance(
+            is_depot=self.instance["is_depot"][customer_idx],
+            coords=self.instance["coords"][customer_idx],
+            customer_idx=customer_idx,
+            request_idx=self.req_idx,
+            demands=self.req_demand,
+            capacity=self.instance["capacity"],
+            time_windows=self.req_tw,
+            service_times=self.req_service,
+            duration_matrix=self.instance["duration_matrix"][
                 np.ix_(customer_idx, customer_idx)
             ],
-            "release_times": self.req_release_time,
-        }
+            release_times=self.req_release_time,
+        )
 
 
 class TimeLimitWarning(UserWarning):

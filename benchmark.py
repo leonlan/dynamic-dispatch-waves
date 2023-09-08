@@ -186,7 +186,7 @@ def solve_hindsight(env: Environment, seed: int, time_limit: float):
         ep_sol = [
             route
             for route in hindsight_sol
-            if hindsight_inst["release_times"][route].max() == departure_time
+            if hindsight_inst.release_times[route].max() == departure_time
         ]
 
         observation, _, done = env.step(ep_sol)

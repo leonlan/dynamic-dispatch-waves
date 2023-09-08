@@ -476,6 +476,7 @@ class Environment:
         self.ep_inst = EpochInstance(
             is_depot=self.instance.is_depot[customer_idx],
             customer_idx=customer_idx,
+            request_idx=current_reqs,
             coords=self.instance.coords[customer_idx],
             demands=self.req_demand[current_reqs],
             capacity=self.instance.capacity,

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 import numpy as np
@@ -29,7 +29,15 @@ class VrpInstance:
 
 @dataclass
 class EpochInstance(VrpInstance):
-    customer_idx: npt.NDArray[np.int_] = np.array([])
-    request_idx: npt.NDArray[np.int_] = np.array([])
-    must_dispatch: npt.NDArray[np.bool_] = np.array([])
-    epoch: npt.NDArray[np.int_] = np.array([])
+    customer_idx: npt.NDArray[np.int_] = field(
+        default_factory=lambda: np.array([], dtype=np.int_)
+    )
+    request_idx: npt.NDArray[np.int_] = field(
+        default_factory=lambda: np.array([], dtype=np.int_)
+    )
+    must_dispatch: npt.NDArray[np.bool_] = field(
+        default_factory=lambda: np.array([], dtype=np.bool_)
+    )
+    epoch: npt.NDArray[np.int_] = field(
+        default_factory=lambda: np.array([], dtype=np.int_)
+    )

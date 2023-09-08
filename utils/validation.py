@@ -64,7 +64,7 @@ def compute_route_driving_time(route, duration_matrix):
 def compute_solution_driving_time(instance, solution):
     return sum(
         [
-            compute_route_driving_time(route, instance["duration_matrix"])
+            compute_route_driving_time(route, instance.duration_matrix)
             for route in solution
         ]
     )
@@ -74,23 +74,21 @@ def validate_static_solution(
     instance, solution, allow_skipped_customers=False
 ):
     if not allow_skipped_customers:
-        _validate_all_customers_visited(solution, len(instance["coords"]) - 1)
+        _validate_all_customers_visited(solution, len(instance.coords) - 1)
 
     for route in solution:
-        _validate_route_capacity(
-            route, instance["demands"], instance["capacity"]
-        )
+        _validate_route_capacity(route, instance.demands, instance.capacity)
         _validate_route_time_windows(
             route,
-            instance["duration_matrix"],
-            instance["time_windows"],
-            instance["service_times"],
-            instance.get("release_times", None),
+            instance.duration_matrix,
+            instance.time_windows,
+            instance.service_times,
+            instance.release_times,
         )
 
-        if "dispatch_times" in instance:
+        if instance.dispatch_times:
             _validate_route_dispatch_windows(
-                route, instance["release_times"], instance["dispatch_times"]
+                route, instance.release_times, instance.dispatch_times
             )
 
     return compute_solution_driving_time(instance, solution)

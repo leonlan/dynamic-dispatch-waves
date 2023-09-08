@@ -21,17 +21,21 @@ def instance2data(instance: VrpInstance) -> ProblemData:
     durations = distances
     time_windows: np.ndarray = instance.time_windows
 
-    # Default release time is zero
-    release_times = instance.release_times or np.zeros(dimension, dtype=int)
+    if instance.release_times is not None:
+        release_times = instance.release_times
+    else:
+        release_times = np.zeros(dimension, dtype=int)
 
-    # Default dispatch time is planning horizon
-    horizon = instance.time_windows[0][1]  # depot latest tw
-    dispatch_times = (
-        instance.dispatch_times or np.ones(dimension, dtype=int) * horizon
-    )
+    if instance.dispatch_times is not None:
+        dispatch_times = instance.dispatch_times
+    else:
+        horizon = instance.time_windows[0][1]  # depot latest tw
+        dispatch_times = np.ones(dimension, dtype=int) * horizon
 
-    # Default prize is zero
-    prizes = instance.prizes or np.zeros(dimension, dtype=int)
+    if instance.prizes is not None:
+        prizes = instance.prizes
+    else:
+        prizes = np.zeros(dimension, dtype=int)
 
     # Checks
     if len(depots) != 1 or depots[0] != 0:

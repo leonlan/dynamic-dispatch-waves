@@ -1,6 +1,6 @@
 import numpy as np
 
-from Environment import StaticInfo
+from Environment import State, StaticInfo
 from sampling import SamplingMethod
 from static_solvers import default_solver
 
@@ -34,8 +34,8 @@ class RollingHorizon:
 
         self.rng = np.random.default_rng(seed)
 
-    def act(self, info: StaticInfo, obs) -> list[list[int]]:
-        must_dispatch = obs["epoch_instance"]["must_dispatch"]
+    def act(self, info: StaticInfo, obs: State) -> list[list[int]]:
+        must_dispatch = obs.epoch_instance["must_dispatch"]
         to_postpone = np.zeros_like(must_dispatch, dtype=bool)
 
         scenario = self._sample_scenario(info, obs, must_dispatch, to_postpone)
@@ -54,7 +54,7 @@ class RollingHorizon:
     def _sample_scenario(
         self,
         info: StaticInfo,
-        obs: dict,
+        obs: State,
         to_dispatch: np.ndarray,
         to_postpone: np.ndarray,
     ) -> dict:
@@ -77,7 +77,7 @@ class RollingHorizon:
             postponed.
         """
         # Parameters
-        current_epoch = obs["current_epoch"]
+        current_epoch = obs.current_epoch
         next_epoch = current_epoch + 1
         epochs_left = info.end_epoch - current_epoch
         max_lookahead = min(self.num_lookahead, epochs_left)
@@ -86,8 +86,8 @@ class RollingHorizon:
         static_inst = info.static_instance
         epoch_duration = info.epoch_duration
         dispatch_margin = info.dispatch_margin
-        ep_inst = obs["epoch_instance"]
-        departure_time = obs["departure_time"]
+        ep_inst = obs.epoch_instance
+        departure_time = obs.departure_time
 
         # Scenario instance fields
         req_cust_idx = ep_inst["customer_idx"]

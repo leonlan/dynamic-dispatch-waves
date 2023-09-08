@@ -23,7 +23,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Any
 from warnings import warn
 
 import numpy as np
@@ -31,7 +30,7 @@ import numpy as np
 from sampling import SamplingMethod
 from utils.validation import validate_static_solution
 
-State = dict[str, Any]
+Instance = dict
 Action = list[list[int]]
 Info = dict
 
@@ -68,6 +67,14 @@ class StaticInfo:
     epoch_duration: int
     dispatch_margin: int
     num_requests_per_epoch: list[int]
+
+
+@dataclass(frozen=True)
+class State:
+    current_epoch: int
+    current_time: int
+    departure_time: float
+    epoch_instance: dict
 
 
 class Environment:
@@ -366,7 +373,7 @@ class Environment:
         # Do not mark depot as must-dispatch.
         self.req_must_dispatch_epoch[0] = self.end_epoch + 1
 
-    def step(self, action: Action) -> tuple[State, float, bool, Info]:
+    def step(self, action: Action) -> tuple[State, float, bool]:
         """
         Steps to the next state for the given action.
 
@@ -378,15 +385,16 @@ class Environment:
         Returns
         -------
         State
-            The next state. If the action is invalid, or when the episode is
-            done, this should return an empty dictionary.
+            The next state.
         float
-            The reward for the transition. If the action is invalid, this
-            should return ``float("inf")``.
+            The epoch reward for the transition.
         bool
             Whether the episode is done.
-        Info
-            Success information about the step.
+
+        Raises
+        ------
+        RuntimeError
+            If the submitted action is invalid.
         """
         elapsed = perf_counter() - self.start_time_epoch
         if elapsed > self.epoch_tlim + 3:  # grace period of 3 seconds
@@ -413,7 +421,7 @@ class Environment:
             )
         except AssertionError as error:
             self.is_done = True
-            return ({}, float("inf"), self.is_done, {"error": str(error)})
+            raise RuntimeError(f"Invalid action. Error: {error}.")
 
         # Mark dispatched requests as dispatched.
         for route in action:
@@ -426,17 +434,24 @@ class Environment:
         self.current_time = self.current_epoch * self.epoch_duration
         self.is_done = self.current_epoch > self.end_epoch
 
-        observation = self._next_observation() if not self.is_done else {}
-        reward = -cost
-
         self.start_time_epoch = perf_counter()
-        return (observation, reward, self.is_done, {"error": None})
+
+        return self._next_observation(), -cost, self.is_done
 
     def _next_observation(self) -> State:
         """
         Returns the next observation. This consists of all revealed requests
         that were not dispatched in the previous epoch, and new requests.
+
+        Returns
+        -------
+        State
+            The next observation. If the episode is done, returns a dummy
+            observation.
         """
+        if self.is_done:
+            return State(-1, -1, -1, {})
+
         revealed = self.req_epoch <= self.current_epoch
         not_dispatched = ~self.req_is_dispatched
         current_reqs = self.req_idx[revealed & not_dispatched]
@@ -468,21 +483,18 @@ class Environment:
             "release_times": self.req_release_time[current_reqs],
         }
 
-        return {
-            "current_epoch": self.current_epoch,
-            "current_time": self.current_time,
-            "departure_time": departure_time,
-            "epoch_instance": self.ep_inst,
-        }
+        return State(
+            self.current_epoch, self.current_time, departure_time, self.ep_inst
+        )
 
-    def get_hindsight_problem(self) -> State:
+    def get_hindsight_problem(self) -> Instance:
         """
         Returns the hindsight problem, which is a static VRP instance that
         represents the dynamic instance assuming perfect information.
 
         Returns
         -------
-        State
+        Instance
             The hindsight problem instance.
         """
         customer_idx = self.req_customer_idx

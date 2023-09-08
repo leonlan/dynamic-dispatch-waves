@@ -1,6 +1,6 @@
 import numpy as np
 
-from Environment import StaticInfo
+from Environment import State, StaticInfo
 from static_solvers import default_solver
 from utils import filter_instance
 
@@ -14,12 +14,12 @@ class _RandomDispatch:
         self.rng = np.random.default_rng(seed)
         self.prob = prob
 
-    def act(self, info: StaticInfo, obs) -> list[list[int]]:
+    def act(self, info: StaticInfo, obs: State) -> list[list[int]]:
         """
         Randomly dispatches requests (that are not must-dispatch) with
         probability ``prob``.
         """
-        epoch_instance = obs["epoch_instance"]
+        epoch_instance = obs.epoch_instance
         sample_shape = epoch_instance["must_dispatch"].shape
         to_dispatch = (
             (self.rng.random(sample_shape) < self.prob)

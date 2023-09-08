@@ -8,7 +8,7 @@ from static_solvers import default_solver, scenario_solver
 from utils import filter_instance
 
 from .consensus import CONSENSUS, ConsensusFunction
-from .Environment import StaticInfo
+from .Environment import State, StaticInfo
 
 
 class IterativeConditionalDispatch:
@@ -67,12 +67,12 @@ class IterativeConditionalDispatch:
         )
         self.num_parallel_solve = num_parallel_solve
 
-    def act(self, info: StaticInfo, obs) -> list[list[int]]:
+    def act(self, info: StaticInfo, obs: State) -> list[list[int]]:
         """
         First determines the dispatch decisions for the current epoch, then
         solves the instance of dispatched requests.
         """
-        epoch_instance = obs["epoch_instance"]
+        epoch_instance = obs.epoch_instance
         to_dispatch = self._determine_dispatch(info, obs)
         dispatch_instance = filter_instance(epoch_instance, to_dispatch)
 
@@ -83,24 +83,24 @@ class IterativeConditionalDispatch:
 
         return [dispatch_instance["request_idx"][r].tolist() for r in routes]
 
-    def _determine_dispatch(self, info: StaticInfo, obs) -> np.ndarray:
+    def _determine_dispatch(self, info: StaticInfo, obs: State) -> np.ndarray:
         """
         Determines which requests to dispatch in the current epoch by solving
         a set of sample scenarios and using a consensus function to determine
         which requests to dispatch or postpone. This procedure is repeated
         for a fixed number of iterations.
         """
-        ep_inst = obs["epoch_instance"]
+        ep_inst = obs.epoch_instance
         ep_size = ep_inst["is_depot"].size
 
         # In the last epoch, all requests must be dispatched.
-        if obs["current_epoch"] == info.end_epoch:
+        if obs.current_epoch == info.end_epoch:
             return np.ones(ep_size, dtype=bool)
 
         to_dispatch = ep_inst["must_dispatch"].copy()
         to_postpone = np.zeros(ep_size, dtype=bool)
 
-        for iter_idx in range(self.num_iterations):
+        for _ in range(self.num_iterations):
             instances = [
                 self._sample_scenario(info, obs, to_dispatch, to_postpone)
                 for _ in range(self.num_scenarios)
@@ -135,7 +135,7 @@ class IterativeConditionalDispatch:
     def _sample_scenario(
         self,
         info: StaticInfo,
-        obs: dict,
+        obs: State,
         to_dispatch: np.ndarray,
         to_postpone: np.ndarray,
     ) -> dict:
@@ -157,7 +157,7 @@ class IterativeConditionalDispatch:
             postponed.
         """
         # Parameters
-        current_epoch = obs["current_epoch"]
+        current_epoch = obs.current_epoch
         next_epoch = current_epoch + 1
         epochs_left = info.end_epoch - current_epoch
         max_lookahead = min(self.num_lookahead, epochs_left)
@@ -166,8 +166,8 @@ class IterativeConditionalDispatch:
         static_inst = info.static_instance
         epoch_duration = info.epoch_duration
         dispatch_margin = info.dispatch_margin
-        ep_inst = obs["epoch_instance"]
-        departure_time = obs["departure_time"]
+        ep_inst = obs.epoch_instance
+        departure_time = obs.departure_time
 
         # Scenario instance fields
         req_cust_idx = ep_inst["customer_idx"]

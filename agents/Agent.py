@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from Environment import StaticInfo
+from Environment import State, StaticInfo
 
 
 class Agent(Protocol):
@@ -9,7 +9,7 @@ class Agent(Protocol):
     """
 
     def act(
-        self, static_info: StaticInfo, observation: dict
+        self, static_info: StaticInfo, observation: State
     ) -> list[list[int]]:
         """
         Returns a routing solution for the current epoch.

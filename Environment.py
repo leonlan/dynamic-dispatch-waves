@@ -23,13 +23,13 @@
 from copy import deepcopy
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Any
 from warnings import warn
 
 import numpy as np
 
 from sampling import SamplingMethod
 from utils.validation import validate_static_solution
+from VrpInstance import VrpInstance
 
 Instance = dict
 Action = list[list[int]]
@@ -61,7 +61,7 @@ class StaticInfo:
         The expected number of revealed requests per epoch.
     """
 
-    static_instance: dict
+    static_instance: VrpInstance
     start_epoch: int
     end_epoch: int
     epoch_tlim: float
@@ -80,24 +80,6 @@ class State:
     current_time: int
     departure_time: float
     epoch_instance: dict
-
-
-@dataclass
-class VrpInstance:
-    """
-    A static VRP instance.
-    """
-
-    is_depot: np.ndarray[Any, bool]
-    customer_idx: np.ndarray[Any, int]
-    request_idx: np.ndarray[Any, int]
-    coords: np.ndarray[Any, int]
-    demands: np.ndarray[Any, int]
-    capacity: float
-    time_windows: np.ndarray[Any, int]
-    service_times: np.ndarray[Any, int]
-    duration_matrix: np.ndarray[Any, int]
-    release_times: np.ndarray[Any, int]
 
 
 class Environment:
@@ -131,7 +113,7 @@ class Environment:
     def __init__(
         self,
         seed: int,
-        instance: dict,
+        instance: VrpInstance,
         epoch_tlim: float,
         sampling_method: SamplingMethod,
         start_epoch: int,
@@ -166,7 +148,7 @@ class Environment:
     def euro_neurips(
         cls,
         seed: int,
-        instance: dict,
+        instance: VrpInstance,
         epoch_tlim: float,
         sampling_method: SamplingMethod,
         num_requests: int = 100,
@@ -200,7 +182,7 @@ class Environment:
         [1] EURO meets NeurIPS 2022 vehicle routing competition.
             https://euro-neurips-vrp-2022.challenges.ortec.com/
         """
-        tw = instance["time_windows"]
+        tw = instance.time_windows
         earliest = tw[1:, 0].min() - dispatch_margin
         latest = tw[1:, 0].max() - dispatch_margin
 
@@ -227,7 +209,7 @@ class Environment:
     def paper(
         cls,
         seed: int,
-        instance: dict,
+        instance: VrpInstance,
         epoch_tlim: float,
         sampling_method: SamplingMethod,
         num_requests_per_epoch: list[int] = [75] * 8,
@@ -265,19 +247,21 @@ class Environment:
         start_epoch = 0
         end_epoch = num_epochs - 1
 
+        # TODO make new copy
+
         # Custom depot time windows. Instance time windows are not used!
         instance = deepcopy(instance)
-        instance["time_windows"][0, :] = [0, horizon]
+        instance.time_windows[0, :] = [0, horizon]
 
         # Normalize the distances so that the furthest customer can be reached
         # in one hour. Service times are also scaled accordingly.
-        scale = instance["duration_matrix"].max() / epoch_duration
+        scale = instance.duration_matrix.max() / epoch_duration
 
-        dur_mat = np.ceil(instance["duration_matrix"] / scale).astype(int)
-        instance["duration_matrix"] = dur_mat
+        dur_mat = np.ceil(instance.duration_matrix / scale).astype(int)
+        instance.duration_matrix = dur_mat
 
-        service_times = np.ceil(instance["service_times"] / scale).astype(int)
-        instance["service_times"] = service_times
+        service_times = np.ceil(instance.service_times / scale).astype(int)
+        instance.service_times = service_times
 
         return cls(
             seed=seed,
@@ -322,9 +306,9 @@ class Environment:
         # Initialize request array with dummy request for depot.
         self.req_idx = np.array([0])
         self.req_customer_idx = np.array([0])
-        self.req_tw = self.instance["time_windows"][0:1]
-        self.req_service = self.instance["service_times"][0:1]
-        self.req_demand = self.instance["demands"][0:1]
+        self.req_tw = self.instance.time_windows[0:1]
+        self.req_service = self.instance.service_times[0:1]
+        self.req_demand = self.instance.demands[0:1]
         self.req_release_time = np.array([0])
         self.req_epoch = np.array([0])  # epoch in which request is revealed
         self.req_is_dispatched = np.array([False])
@@ -369,8 +353,8 @@ class Environment:
 
         # Compute the latest epoch in which a request can be dispatched on time
         # as a round-trip. These requests become "must-dispatch" in that epoch.
-        dist = self.instance["duration_matrix"]
-        horizon = self.instance["time_windows"][0, 1]
+        dist = self.instance.duration_matrix
+        horizon = self.instance.time_windows[0, 1]
 
         self.req_must_dispatch_epoch = self.req_epoch.copy()
 
@@ -490,15 +474,15 @@ class Environment:
         must_dispatch = must_dispatch_epoch == self.current_epoch
 
         self.ep_inst = {
-            "is_depot": self.instance["is_depot"][customer_idx],
+            "is_depot": self.instance.is_depot[customer_idx],
             "customer_idx": customer_idx,
             "request_idx": current_reqs,
-            "coords": self.instance["coords"][customer_idx],
+            "coords": self.instance.coords[customer_idx],
             "demands": self.req_demand[current_reqs],
-            "capacity": self.instance["capacity"],
+            "capacity": self.instance.capacity,
             "time_windows": time_windows,
             "service_times": self.req_service[current_reqs],
-            "duration_matrix": self.instance["duration_matrix"][
+            "duration_matrix": self.instance.duration_matrix[
                 np.ix_(customer_idx, customer_idx)
             ],
             "must_dispatch": must_dispatch,
@@ -523,15 +507,15 @@ class Environment:
         customer_idx = self.req_customer_idx
 
         return VrpInstance(
-            is_depot=self.instance["is_depot"][customer_idx],
-            coords=self.instance["coords"][customer_idx],
+            is_depot=self.instance.is_depot[customer_idx],
+            coords=self.instance.coords[customer_idx],
             customer_idx=customer_idx,
             request_idx=self.req_idx,
             demands=self.req_demand,
-            capacity=self.instance["capacity"],
+            capacity=self.instance.capacity,
             time_windows=self.req_tw,
             service_times=self.req_service,
-            duration_matrix=self.instance["duration_matrix"][
+            duration_matrix=self.instance.duration_matrix[
                 np.ix_(customer_idx, customer_idx)
             ],
             release_times=self.req_release_time,

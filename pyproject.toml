@@ -36,6 +36,7 @@ line-length = 79
 
 [tool.mypy]
 ignore_missing_imports = true
+plugins = ['numpy.typing.mypy_plugin']
 
 
 [tool.ruff]

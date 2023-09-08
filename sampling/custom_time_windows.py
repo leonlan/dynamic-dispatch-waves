@@ -1,10 +1,12 @@
 import numpy as np
 from numpy.random import Generator
 
+from VrpInstance import VrpInstance
+
 
 def custom_time_windows(
     rng: Generator,
-    instance: dict,
+    instance: VrpInstance,
     current_time: int,
     departure_time: int,
     epoch_duration: int,
@@ -53,8 +55,8 @@ def custom_time_windows(
         An iterative conditional dispatch algorithm for the dynamic dispatch
         waves problem.
     """
-    dist = instance["duration_matrix"]
-    num_customers = instance["is_depot"].size - 1
+    dist = instance.duration_matrix
+    num_customers: int = instance.is_depot.size - 1
 
     noise = rng.uniform(noise_lb, noise_ub)
     num_samples = int(noise * num_requests)
@@ -66,18 +68,18 @@ def custom_time_windows(
     old_tw = np.empty(shape=(0, 2), dtype=int)
 
     while not feas.all():
-        num_to_sample = np.sum(~feas)
+        num_to_sample = sum(not is_feas for is_feas in feas)
 
         new_cust_idx = rng.integers(num_customers, size=num_to_sample) + 1
         cust_idx = np.append(cust_idx[feas], new_cust_idx)
 
         new_demand_idx = rng.integers(num_customers, size=num_to_sample) + 1
         demand_idx = np.append(demand_idx[feas], new_demand_idx)
-        demand = instance["demands"][demand_idx]
+        demand = instance.demands[demand_idx]
 
         new_service_idx = rng.integers(num_customers, size=num_to_sample) + 1
         service_idx = np.append(service_idx[feas], new_service_idx)
-        service = instance["service_times"][service_idx]
+        service = instance.service_times[service_idx]
 
         new_tw = _sample_time_windows(
             rng,
@@ -93,7 +95,7 @@ def custom_time_windows(
         # Exclude requests that cannot be served on time in a round trip.
         early_arrive = np.maximum(departure_time + dist[0, cust_idx], tw[:, 0])
         early_return = early_arrive + service + dist[cust_idx, 0]
-        depot_closed = instance["time_windows"][0, 1]
+        depot_closed = instance.time_windows[0, 1]
 
         feas = (early_arrive <= tw[:, 1]) & (early_return <= depot_closed)
         old_tw = tw[feas]
@@ -109,7 +111,7 @@ def custom_time_windows(
 
 def _sample_time_windows(
     rng: Generator,
-    instance: dict,
+    instance: VrpInstance,
     num_samples: int,
     tw_type: str,
     tw_width: int,
@@ -124,7 +126,7 @@ def _sample_time_windows(
     rng
         Random number generator.
     instance
-        Dictionary containing the instance data.
+        Base static VRP instance.
     num_samples
         Number of samples to generate.
     tw_type
@@ -141,7 +143,7 @@ def _sample_time_windows(
     np.ndarray
         Time windows of the sampled requests.
     """
-    horizon = instance["time_windows"][0][1]
+    horizon = instance.time_windows[0][1]
     widths = epoch_duration * (rng.integers(tw_width, size=num_samples) + 1)
 
     if tw_type == "deadlines":

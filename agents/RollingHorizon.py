@@ -137,15 +137,15 @@ class RollingHorizon:
                 (req_dispatch, np.full(num_new_reqs, horizon))
             )
 
-        dist = static_inst["duration_matrix"]
+        dist = static_inst.duration_matrix
 
         return {
-            "is_depot": static_inst["is_depot"][req_cust_idx],
+            "is_depot": static_inst.is_depot[req_cust_idx],
             "customer_idx": req_cust_idx,
             "request_idx": req_idx,
-            "coords": static_inst["coords"][req_cust_idx],
+            "coords": static_inst.coords[req_cust_idx],
             "demands": req_demand,
-            "capacity": static_inst["capacity"],
+            "capacity": static_inst.capacity,
             "time_windows": req_tw,
             "service_times": req_service,
             "duration_matrix": dist[req_cust_idx][:, req_cust_idx],

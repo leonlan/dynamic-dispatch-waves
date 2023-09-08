@@ -1,14 +1,24 @@
+import dataclasses
+from typing import TypeVar
+
 import numpy as np
 
+from VrpInstance import VrpInstance
 
-def filter_instance(instance: dict, mask: np.ndarray) -> dict:
+T = TypeVar("T", bound="VrpInstance")
+
+
+def filter_instance(instance: T, mask: np.ndarray) -> T:
     """
     Filters all items of an instance using the passed-in mask.
     """
-    return {
-        key: _filter_instance_value(value, mask)
-        for key, value in instance.items()
-    }
+    data = {}
+
+    for field in dataclasses.fields(instance):
+        value = getattr(instance, field.name)
+        data[field.name] = _filter_instance_value(value, mask)
+
+    return type(instance)(**data)
 
 
 def _filter_instance_value(value: np.ndarray, mask: np.ndarray):

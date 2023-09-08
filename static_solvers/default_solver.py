@@ -1,10 +1,14 @@
 from pyvrp import Model, Result
 from pyvrp.stop import MaxRuntime
 
+from VrpInstance import VrpInstance
+
 from .instance2data import instance2data
 
 
-def default_solver(instance: dict, seed: int, time_limit: float) -> Result:
+def default_solver(
+    instance: VrpInstance, seed: int, time_limit: float
+) -> Result:
     """
     Solves the given instance with the default PyVRP solver.
 

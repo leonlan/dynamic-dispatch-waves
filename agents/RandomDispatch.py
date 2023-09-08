@@ -20,18 +20,19 @@ class _RandomDispatch:
         probability ``prob``.
         """
         epoch_instance = obs.epoch_instance
-        sample_shape = epoch_instance["must_dispatch"].shape
+        sample_shape = epoch_instance.must_dispatch.shape
+
         to_dispatch = (
             (self.rng.random(sample_shape) < self.prob)
-            | epoch_instance["is_depot"]
-            | epoch_instance["must_dispatch"]
+            | epoch_instance.is_depot
+            | epoch_instance.must_dispatch
         )
         dispatch_instance = filter_instance(epoch_instance, to_dispatch)
 
         res = default_solver(dispatch_instance, self.seed, info.epoch_tlim)
         routes = [route.visits() for route in res.best.get_routes()]
 
-        return [dispatch_instance["request_idx"][r].tolist() for r in routes]
+        return [dispatch_instance.request_idx[r].tolist() for r in routes]
 
 
 class GreedyDispatch(_RandomDispatch):

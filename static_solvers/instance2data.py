@@ -1,37 +1,37 @@
 import numpy as np
 from pyvrp import Client, ProblemData, VehicleType
 
+from VrpInstance import VrpInstance
+
 _INT_MAX = np.iinfo(np.int32).max
 
 
-def instance2data(instance: dict) -> ProblemData:
+def instance2data(instance: VrpInstance) -> ProblemData:
     """
     Converts an instance to a ``pyvrp.ProblemData`` instance.
     """
-    dimension = instance["demands"].size
-    depots: np.ndarray = instance.get("depot", np.array([0]))
-    num_vehicles: int = instance.get("vehicles", dimension - 1)
-    capacity: int = instance.get("capacity", _INT_MAX)
-    distances: np.ndarray = instance["duration_matrix"]
-    demands: np.ndarray = instance["demands"]
-    coords: np.ndarray = instance["coords"]
-    service_times: np.ndarray = instance["service_times"]
+    dimension = instance.demands.size
+    depots: np.ndarray = np.array([0])
+    num_vehicles: int = dimension - 1  # TODO
+    capacity: int = instance.capacity
+    distances: np.ndarray = instance.duration_matrix
+    demands: np.ndarray = instance.demands
+    coords: np.ndarray = instance.coords
+    service_times: np.ndarray = instance.service_times
     durations = distances
-    time_windows: np.ndarray = instance["time_windows"]
+    time_windows: np.ndarray = instance.time_windows
 
     # Default release time is zero
-    release_times = instance.get(
-        "release_times", np.zeros(dimension, dtype=int)
-    )
+    release_times = instance.release_times or np.zeros(dimension, dtype=int)
 
     # Default dispatch time is planning horizon
-    horizon = instance["time_windows"][0][1]  # depot latest tw
-    dispatch_times = instance.get(
-        "dispatch_times", np.ones(dimension, dtype=int) * horizon
+    horizon = instance.time_windows[0][1]  # depot latest tw
+    dispatch_times = (
+        instance.dispatch_times or np.ones(dimension, dtype=int) * horizon
     )
 
     # Default prize is zero
-    prizes = instance.get("prizes", np.zeros(dimension, dtype=int))
+    prizes = instance.prizes or np.zeros(dimension, dtype=int)
 
     # Checks
     if len(depots) != 1 or depots[0] != 0:

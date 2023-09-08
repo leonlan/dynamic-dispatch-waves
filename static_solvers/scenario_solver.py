@@ -24,12 +24,16 @@ from pyvrp.search import (
 )
 from pyvrp.stop import MaxRuntime
 
+from VrpInstance import VrpInstance
+
 from .instance2data import instance2data
 
 warnings.filterwarnings("ignore", category=EmptySolutionWarning)
 
 
-def scenario_solver(instance: dict, seed: int, time_limit: float) -> Result:
+def scenario_solver(
+    instance: VrpInstance, seed: int, time_limit: float
+) -> Result:
     """
     Solves the given instance using a customised hybrid genetic search solver
     opimised for small time limits.

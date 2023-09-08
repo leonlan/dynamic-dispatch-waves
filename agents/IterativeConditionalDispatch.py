@@ -3,12 +3,13 @@ from multiprocessing import Pool
 
 import numpy as np
 
+from Environment import State, StaticInfo
 from sampling import SamplingMethod
 from static_solvers import default_solver, scenario_solver
 from utils import filter_instance
+from VrpInstance import VrpInstance
 
 from .consensus import CONSENSUS, ConsensusFunction
-from .Environment import State, StaticInfo
 
 
 class IterativeConditionalDispatch:
@@ -81,7 +82,7 @@ class IterativeConditionalDispatch:
         )
         routes = [route.visits() for route in res.best.get_routes()]
 
-        return [dispatch_instance["request_idx"][r].tolist() for r in routes]
+        return [dispatch_instance.request_idx[r].tolist() for r in routes]
 
     def _determine_dispatch(self, info: StaticInfo, obs: State) -> np.ndarray:
         """
@@ -91,13 +92,13 @@ class IterativeConditionalDispatch:
         for a fixed number of iterations.
         """
         ep_inst = obs.epoch_instance
-        ep_size = ep_inst["is_depot"].size
+        ep_size = ep_inst.is_depot.size
 
         # In the last epoch, all requests must be dispatched.
         if obs.current_epoch == info.end_epoch:
             return np.ones(ep_size, dtype=bool)
 
-        to_dispatch = ep_inst["must_dispatch"].copy()
+        to_dispatch = ep_inst.must_dispatch.copy()
         to_postpone = np.zeros(ep_size, dtype=bool)
 
         for _ in range(self.num_iterations):
@@ -123,9 +124,9 @@ class IterativeConditionalDispatch:
             if ep_size - 1 == to_dispatch.sum() + to_postpone.sum():
                 break
 
-        return to_dispatch | ep_inst["is_depot"]
+        return to_dispatch | ep_inst.is_depot
 
-    def _solve_scenario(self, instance: dict) -> list[list[int]]:
+    def _solve_scenario(self, instance: VrpInstance) -> list[list[int]]:
         """
         Solves a single scenario instance, returning the solution.
         """
@@ -138,7 +139,7 @@ class IterativeConditionalDispatch:
         obs: State,
         to_dispatch: np.ndarray,
         to_postpone: np.ndarray,
-    ) -> dict:
+    ) -> VrpInstance:
         """
         Samples a VRPTW scenario instance. The scenario instance is created by
         appending the sampled requests to the current epoch instance.
@@ -170,12 +171,12 @@ class IterativeConditionalDispatch:
         departure_time = obs.departure_time
 
         # Scenario instance fields
-        req_cust_idx = ep_inst["customer_idx"]
-        req_idx = ep_inst["request_idx"]
-        req_demand = ep_inst["demands"]
-        req_service = ep_inst["service_times"]
-        req_tw = ep_inst["time_windows"]
-        req_release = ep_inst["release_times"]
+        req_cust_idx = ep_inst.customer_idx
+        req_idx = ep_inst.request_idx
+        req_demand = ep_inst.demands
+        req_service = ep_inst.service_times
+        req_tw = ep_inst.time_windows
+        req_release = ep_inst.release_times
 
         # Modify the release time of postponed requests: they should start
         # at the next departure time.
@@ -220,16 +221,16 @@ class IterativeConditionalDispatch:
 
         dist = static_inst.duration_matrix
 
-        return {
-            "is_depot": static_inst.is_depot[req_cust_idx],
-            "customer_idx": req_cust_idx,
-            "request_idx": req_idx,
-            "coords": static_inst.coords[req_cust_idx],
-            "demands": req_demand,
-            "capacity": static_inst.capacity,
-            "time_windows": req_tw,
-            "service_times": req_service,
-            "duration_matrix": dist[req_cust_idx][:, req_cust_idx],
-            "release_times": req_release,
-            "dispatch_times": req_dispatch,
-        }
+        return VrpInstance(
+            is_depot=static_inst.is_depot[req_cust_idx],
+            customer_idx=req_cust_idx,
+            request_idx=req_idx,
+            coords=static_inst.coords[req_cust_idx],
+            demands=req_demand,
+            capacity=static_inst.capacity,
+            time_windows=req_tw,
+            service_times=req_service,
+            duration_matrix=dist[req_cust_idx][:, req_cust_idx],
+            release_times=req_release,
+            dispatch_times=req_dispatch,
+        )

@@ -29,7 +29,7 @@ import numpy as np
 
 from sampling import SamplingMethod
 from utils.validation import validate_static_solution
-from VrpInstance import VrpInstance
+from VrpInstance import EpochInstance, VrpInstance
 
 Instance = dict
 Action = list[list[int]]
@@ -79,7 +79,7 @@ class State:
     current_epoch: int
     current_time: int
     departure_time: float
-    epoch_instance: dict
+    epoch_instance: EpochInstance
 
 
 class Environment:
@@ -412,11 +412,11 @@ class Environment:
             assert not self.is_done, "Environment is finished."
 
             # Convert requests to epoch instance indices.
-            req2idx = {r: i for i, r in enumerate(self.ep_inst["request_idx"])}
+            req2idx = {r: i for i, r in enumerate(self.ep_inst.request_idx)}
             idx_sol = [[req2idx[req] for req in route] for route in action]
 
             # Check that all must-dispatch requests are dispatched.
-            must = np.flatnonzero(self.ep_inst["must_dispatch"])
+            must = np.flatnonzero(self.ep_inst.must_dispatch)
             dispatched = {req for route in idx_sol for req in route}
 
             msg = "Not all must-dispatch requests are dispatched."
@@ -457,7 +457,7 @@ class Environment:
             observation.
         """
         if self.is_done:
-            return State(-1, -1, -1, {})
+            return State(-1, -1, -1, None)  # type: ignore
 
         revealed = self.req_epoch <= self.current_epoch
         not_dispatched = ~self.req_is_dispatched
@@ -473,22 +473,21 @@ class Environment:
         must_dispatch_epoch = self.req_must_dispatch_epoch[current_reqs]
         must_dispatch = must_dispatch_epoch == self.current_epoch
 
-        self.ep_inst = {
-            "is_depot": self.instance.is_depot[customer_idx],
-            "customer_idx": customer_idx,
-            "request_idx": current_reqs,
-            "coords": self.instance.coords[customer_idx],
-            "demands": self.req_demand[current_reqs],
-            "capacity": self.instance.capacity,
-            "time_windows": time_windows,
-            "service_times": self.req_service[current_reqs],
-            "duration_matrix": self.instance.duration_matrix[
+        self.ep_inst = EpochInstance(
+            is_depot=self.instance.is_depot[customer_idx],
+            customer_idx=customer_idx,
+            coords=self.instance.coords[customer_idx],
+            demands=self.req_demand[current_reqs],
+            capacity=self.instance.capacity,
+            time_windows=time_windows,
+            service_times=self.req_service[current_reqs],
+            duration_matrix=self.instance.duration_matrix[
                 np.ix_(customer_idx, customer_idx)
             ],
-            "must_dispatch": must_dispatch,
-            "epoch": self.req_epoch[current_reqs],
-            "release_times": self.req_release_time[current_reqs],
-        }
+            must_dispatch=must_dispatch,
+            epoch=self.req_epoch[current_reqs],
+            release_times=self.req_release_time[current_reqs],
+        )
 
         return State(
             self.current_epoch, self.current_time, departure_time, self.ep_inst

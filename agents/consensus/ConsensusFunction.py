@@ -2,6 +2,8 @@ from typing import Protocol
 
 import numpy as np
 
+from VrpInstance import VrpInstance
+
 
 class ConsensusFunction(Protocol):
     """
@@ -10,8 +12,8 @@ class ConsensusFunction(Protocol):
 
     def __call__(
         self,
-        scenarios: list[tuple[dict, list[list[int]]]],
-        instance: dict,
+        scenarios: list[tuple[VrpInstance, list[list[int]]]],
+        instance: VrpInstance,
         to_dispatch: np.ndarray,
         to_postpone: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:

@@ -7,7 +7,37 @@ import numpy.typing as npt
 
 class VrpInstance:
     """
-    A class representing a VRP instance.
+    Class representing a static VRP instance.
+
+    Parameters
+    ----------
+    is_depot
+        Boolean array indicating whether a request is a depot.
+    coords
+        Request location coordinates.
+    demands
+        Request demands.
+    capacity
+        Vehicle capacity.
+    time_windows
+        Request time windows.
+    service_times
+        Request service times.
+    duration_matrix
+        Request duration matrix.
+    release_times
+        Request release times.
+    customer_idx
+        Request customer indices. Used to identify which requests belong to
+        which customer.
+    request_idx
+        Request indices.
+    dispatch_times
+        Request dispatch times.
+    must_dispatch
+        Boolean array indicating whether a request must be dispatched.
+    prizes
+        Request prizes.
     """
 
     def __init__(
@@ -24,7 +54,6 @@ class VrpInstance:
         request_idx: Optional[npt.NDArray[np.int_]] = None,
         dispatch_times: Optional[npt.NDArray[np.int_]] = None,
         must_dispatch: Optional[npt.NDArray[np.bool_]] = None,
-        epoch: Optional[npt.NDArray[np.int_]] = None,
         prizes: Optional[npt.NDArray[np.int_]] = None,
     ):
         self._is_depot = is_depot
@@ -47,7 +76,6 @@ class VrpInstance:
         self._must_dispatch = _set_if_none(
             must_dispatch, np.zeros(self.dimension, dtype=bool)
         )
-        self._epoch = _set_if_none(epoch, np.zeros(self.dimension, dtype=int))
         self._prizes = _set_if_none(
             prizes, np.zeros(self.dimension, dtype=int)
         )
@@ -101,10 +129,6 @@ class VrpInstance:
         return self._must_dispatch
 
     @property
-    def epoch(self) -> npt.NDArray[np.int_]:
-        return self._epoch
-
-    @property
     def prizes(self) -> npt.NDArray[np.int_]:
         return self._prizes
 
@@ -130,7 +154,6 @@ class VrpInstance:
         request_idx: Optional[npt.NDArray[np.int_]] = None,
         dispatch_times: Optional[npt.NDArray[np.int_]] = None,
         must_dispatch: Optional[npt.NDArray[np.bool_]] = None,
-        epoch: Optional[npt.NDArray[np.int_]] = None,
         prizes: Optional[npt.NDArray[np.int_]] = None,
     ):
         return VrpInstance(
@@ -148,7 +171,6 @@ class VrpInstance:
             request_idx=_copy_if_none(request_idx, self.request_idx),
             dispatch_times=_copy_if_none(dispatch_times, self.dispatch_times),
             must_dispatch=_copy_if_none(must_dispatch, self.must_dispatch),
-            epoch=_copy_if_none(epoch, self.epoch),
             prizes=_copy_if_none(prizes, self.prizes),
         )
 

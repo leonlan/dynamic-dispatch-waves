@@ -485,7 +485,6 @@ class Environment:
                 np.ix_(customer_idx, customer_idx)
             ],
             must_dispatch=must_dispatch,
-            epoch=self.req_epoch[current_reqs],
             release_times=self.req_release_time[current_reqs],
         )
 

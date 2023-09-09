@@ -70,12 +70,7 @@ def compute_solution_driving_time(instance, solution):
     )
 
 
-def validate_static_solution(
-    instance, solution, allow_skipped_customers=False
-):
-    if not allow_skipped_customers:
-        _validate_all_customers_visited(solution, len(instance.coords) - 1)
-
+def validate_static_solution(instance, solution):
     for route in solution:
         _validate_route_capacity(route, instance.demands, instance.capacity)
         _validate_route_time_windows(

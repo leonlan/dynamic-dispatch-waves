@@ -422,9 +422,8 @@ class Environment:
             assert set(must).issubset(dispatched), msg
 
             # Check that the (static) solution is feasible.
-            cost = validate_static_solution(
-                self.ep_inst, idx_sol, allow_skipped_customers=True
-            )
+            cost = validate_static_solution(self.ep_inst, idx_sol)
+
         except AssertionError as error:
             self.is_done = True
             raise RuntimeError(f"Invalid action. Error: {error}.")

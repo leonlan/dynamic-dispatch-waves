@@ -85,10 +85,8 @@ def validate_static_solution(
             instance.service_times,
             instance.release_times,
         )
-
-        if instance.dispatch_times:
-            _validate_route_dispatch_windows(
-                route, instance.release_times, instance.dispatch_times
-            )
+        _validate_route_dispatch_windows(
+            route, instance.release_times, instance.dispatch_times
+        )
 
     return compute_solution_driving_time(instance, solution)

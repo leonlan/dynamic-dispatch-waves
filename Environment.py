@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from copy import deepcopy
 from dataclasses import dataclass
 from time import perf_counter
 from warnings import warn
@@ -29,7 +28,7 @@ import numpy as np
 
 from sampling import SamplingMethod
 from utils.validation import validate_static_solution
-from VrpInstance import EpochInstance, VrpInstance
+from VrpInstance import VrpInstance
 
 Instance = dict
 Action = list[list[int]]
@@ -79,7 +78,7 @@ class State:
     current_epoch: int
     current_time: int
     departure_time: float
-    epoch_instance: EpochInstance
+    epoch_instance: VrpInstance
 
 
 class Environment:
@@ -247,25 +246,25 @@ class Environment:
         start_epoch = 0
         end_epoch = num_epochs - 1
 
-        # TODO make new copy
-
         # Custom depot time windows. Instance time windows are not used!
-        instance = deepcopy(instance)
-        instance.time_windows[0, :] = [0, horizon]
+        time_windows = instance.time_windows.copy()
+        time_windows[0, :] = [0, horizon]
 
         # Normalize the distances so that the furthest customer can be reached
         # in one hour. Service times are also scaled accordingly.
         scale = instance.duration_matrix.max() / epoch_duration
-
         dur_mat = np.ceil(instance.duration_matrix / scale).astype(int)
-        instance.duration_matrix = dur_mat
-
         service_times = np.ceil(instance.service_times / scale).astype(int)
-        instance.service_times = service_times
+
+        new_instance = instance.replace(
+            time_windows=time_windows,
+            duration_matrix=dur_mat,
+            service_times=service_times,
+        )
 
         return cls(
             seed=seed,
-            instance=instance,
+            instance=new_instance,
             epoch_tlim=epoch_tlim,
             sampling_method=sampling_method,
             start_epoch=start_epoch,
@@ -473,7 +472,7 @@ class Environment:
         must_dispatch_epoch = self.req_must_dispatch_epoch[current_reqs]
         must_dispatch = must_dispatch_epoch == self.current_epoch
 
-        self.ep_inst = EpochInstance(
+        self.ep_inst = VrpInstance(
             is_depot=self.instance.is_depot[customer_idx],
             customer_idx=customer_idx,
             request_idx=current_reqs,

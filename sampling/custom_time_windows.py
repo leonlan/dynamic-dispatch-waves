@@ -95,7 +95,7 @@ def custom_time_windows(
         # Exclude requests that cannot be served on time in a round trip.
         early_arrive = np.maximum(departure_time + dist[0, cust_idx], tw[:, 0])
         early_return = early_arrive + service + dist[cust_idx, 0]
-        depot_closed = instance.time_windows[0, 1]
+        depot_closed = instance.horizon
 
         feas = (early_arrive <= tw[:, 1]) & (early_return <= depot_closed)
         old_tw = tw[feas]
@@ -143,7 +143,7 @@ def _sample_time_windows(
     np.ndarray
         Time windows of the sampled requests.
     """
-    horizon = instance.time_windows[0][1]
+    horizon = instance.horizon
     widths = epoch_duration * (rng.integers(tw_width, size=num_samples) + 1)
 
     if tw_type == "deadlines":

@@ -50,8 +50,7 @@ class RollingHorizon:
             if any(must_dispatch[idx] for idx in route if idx < num_reqs):
                 solution.append(route.visits())
 
-        # TODO fix typing here
-        return [scenario.request_idx[r].tolist() for r in solution]  # type: ignore
+        return [scenario.request_idx[r].tolist() for r in solution]
 
     def _sample_scenario(
         self,

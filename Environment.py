@@ -353,7 +353,7 @@ class Environment:
         # Compute the latest epoch in which a request can be dispatched on time
         # as a round-trip. These requests become "must-dispatch" in that epoch.
         dist = self.instance.duration_matrix
-        horizon = self.instance.time_windows[0, 1]
+        horizon = self.instance.horizon
 
         self.req_must_dispatch_epoch = self.req_epoch.copy()
 

@@ -92,7 +92,7 @@ class IterativeConditionalDispatch:
         for a fixed number of iterations.
         """
         ep_inst = obs.epoch_instance
-        ep_size = ep_inst.is_depot.size
+        ep_size = ep_inst.dimension
 
         # In the last epoch, all requests must be dispatched.
         if obs.current_epoch == info.end_epoch:

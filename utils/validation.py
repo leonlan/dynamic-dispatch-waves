@@ -1,14 +1,4 @@
-import numpy as np
-
 # TODO Rewrite this
-
-
-def _validate_all_customers_visited(solution, num_customers):
-    flat_solution = np.array([stop for route in solution for stop in route])
-    assert len(flat_solution) == num_customers, "Not all customers are visited"
-    visited = np.zeros(num_customers + 1)  # Add padding for depot
-    visited[flat_solution] = True
-    assert visited[1:].all(), "Not all customers are visited"
 
 
 def _validate_route_capacity(route, demands, capacity):

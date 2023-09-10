@@ -80,6 +80,8 @@ class VrpInstance:
             prizes, np.zeros(self.dimension, dtype=int)
         )
 
+        # TODO add HF
+
     @property
     def is_depot(self) -> npt.NDArray[np.bool_]:
         return self._is_depot
@@ -156,6 +158,7 @@ class VrpInstance:
         must_dispatch: Optional[npt.NDArray[np.bool_]] = None,
         prizes: Optional[npt.NDArray[np.int_]] = None,
     ) -> "VrpInstance":
+        # TODO add HF
         return VrpInstance(
             is_depot=_copy_if_none(is_depot, self.is_depot),
             coords=_copy_if_none(coords, self.coords),
@@ -191,6 +194,7 @@ class VrpInstance:
             A new VrpInstance with the filtered requests.
         """
 
+        # TODO add HF
         return self.replace(
             is_depot=self.is_depot[mask],
             coords=self.coords[mask, :],

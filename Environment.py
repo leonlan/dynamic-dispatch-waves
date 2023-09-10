@@ -424,6 +424,8 @@ class Environment:
             # Check that the (static) solution is feasible.
             cost = validate_static_solution(self.ep_inst, idx_sol)
 
+            # TODO add penalty for using more than primary vehicles
+
         except AssertionError as error:
             self.is_done = True
             raise RuntimeError("Invalid action.") from error
@@ -471,6 +473,7 @@ class Environment:
         must_dispatch_epoch = self.req_must_dispatch_epoch[current_reqs]
         must_dispatch = must_dispatch_epoch == self.current_epoch
 
+        # TODO add number of available vehicles
         self.ep_inst = VrpInstance(
             is_depot=self.instance.is_depot[customer_idx],
             customer_idx=customer_idx,
@@ -503,6 +506,7 @@ class Environment:
         """
         customer_idx = self.req_customer_idx
 
+        # TODO extend with heterogeneous fleet
         return VrpInstance(
             is_depot=self.instance.is_depot[customer_idx],
             coords=self.instance.coords[customer_idx],

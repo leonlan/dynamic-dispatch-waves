@@ -95,6 +95,7 @@ def sample_scenario(
 
     dist = static_inst.duration_matrix
 
+    # TODO extend with future heterogeneous fleet
     return VrpInstance(
         is_depot=static_inst.is_depot[req_cust_idx],
         customer_idx=req_cust_idx,

@@ -2,7 +2,6 @@ import numpy as np
 
 from Environment import State, StaticInfo
 from static_solvers import default_solver
-from utils import filter_instance
 
 
 class _RandomDispatch:
@@ -27,7 +26,7 @@ class _RandomDispatch:
             | epoch_instance.is_depot
             | epoch_instance.must_dispatch
         )
-        dispatch_instance = filter_instance(epoch_instance, to_dispatch)
+        dispatch_instance = epoch_instance.filter(to_dispatch)
 
         res = default_solver(dispatch_instance, self.seed, info.epoch_tlim)
         routes = [route.visits() for route in res.best.get_routes()]

@@ -155,7 +155,7 @@ class VrpInstance:
         dispatch_times: Optional[npt.NDArray[np.int_]] = None,
         must_dispatch: Optional[npt.NDArray[np.bool_]] = None,
         prizes: Optional[npt.NDArray[np.int_]] = None,
-    ):
+    ) -> "VrpInstance":
         return VrpInstance(
             is_depot=_copy_if_none(is_depot, self.is_depot),
             coords=_copy_if_none(coords, self.coords),
@@ -172,6 +172,38 @@ class VrpInstance:
             dispatch_times=_copy_if_none(dispatch_times, self.dispatch_times),
             must_dispatch=_copy_if_none(must_dispatch, self.must_dispatch),
             prizes=_copy_if_none(prizes, self.prizes),
+        )
+
+    def filter(self, mask: npt.NDArray[np.bool_]) -> "VrpInstance":
+        """
+        Filters requests from the current instance using a given mask and
+        returns a new VrpInstance.
+
+        Parameters
+        ----------
+        mask : npt.NDArray[np.bool_]
+            A boolean mask of length ``dimension`` indicating which requests
+            should be kept.
+
+        Returns
+        -------
+        VrpInstance
+            A new VrpInstance with the filtered requests.
+        """
+
+        return self.replace(
+            is_depot=self.is_depot[mask],
+            coords=self.coords[mask, :],
+            demands=self.demands[mask],
+            time_windows=self.time_windows[mask, :],
+            service_times=self.service_times[mask],
+            duration_matrix=self.duration_matrix[mask][:, mask],
+            release_times=self.release_times[mask],
+            customer_idx=self.customer_idx[mask],
+            request_idx=self.request_idx[mask],
+            dispatch_times=self.dispatch_times[mask],
+            must_dispatch=self.must_dispatch[mask],
+            prizes=self.prizes[mask],
         )
 
 

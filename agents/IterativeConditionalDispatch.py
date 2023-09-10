@@ -6,7 +6,6 @@ import numpy as np
 from Environment import State, StaticInfo
 from sampling import SamplingMethod
 from static_solvers import default_solver, scenario_solver
-from utils import filter_instance
 from VrpInstance import VrpInstance
 
 from .consensus import CONSENSUS, ConsensusFunction
@@ -76,7 +75,7 @@ class IterativeConditionalDispatch:
         """
         epoch_instance = obs.epoch_instance
         to_dispatch = self._determine_dispatch(info, obs)
-        dispatch_instance = filter_instance(epoch_instance, to_dispatch)
+        dispatch_instance = epoch_instance.filter(to_dispatch)
 
         res = default_solver(
             dispatch_instance, self.seed, self.dispatch_time_limit

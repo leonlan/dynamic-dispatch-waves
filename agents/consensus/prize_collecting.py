@@ -1,7 +1,6 @@
 import numpy as np
 
 from static_solvers import default_solver
-from utils import filter_instance
 
 from .utils import get_dispatch_count, verify_action
 
@@ -30,7 +29,7 @@ def prize_collecting(
     new_postpone[0] = False  # do not postpone depot
 
     not_postponed = ~new_postpone
-    pc_inst = filter_instance(instance, not_postponed)
+    pc_inst = instance.filter(not_postponed)
 
     # Prize vector. We compute this as the average arc duration scaled by the
     # dispatch percentage (more scenario dispatch == higher prize).

@@ -149,8 +149,8 @@ def solve_dynamic(env: Environment, agent: Agent):
 
     while not done:
         action = agent.act(static_info, observation)
-        observation, _, done, info = env.step(action)
-        assert info["error"] is None, info["error"]
+        observation, _, done = env.step(action)  # type: ignore
+        assert observation is not None
 
     return env.final_costs, env.final_solutions
 
@@ -168,7 +168,7 @@ def solve_hindsight(env: Environment, seed: int, time_limit: float):
     time_limit: float
         Time limit for solving the hindsight instance.
     """
-    observation, info = env.reset()
+    observation, _ = env.reset()
     hindsight_inst = env.get_hindsight_problem()
 
     res = default_solver(hindsight_inst, seed, time_limit)
@@ -182,15 +182,14 @@ def solve_hindsight(env: Environment, seed: int, time_limit: float):
     while not done:
         # Routes that have a maximum release time equal to the epoch departure
         # time are to be dispatched in the current epoch.
-        departure_time = observation["departure_time"]
+        departure_time = observation.departure_time
         ep_sol = [
             route
             for route in hindsight_sol
-            if hindsight_inst["release_times"][route].max() == departure_time
+            if hindsight_inst.release_times[route].max() == departure_time
         ]
 
-        observation, _, done, info = env.step(ep_sol)
-        assert info["error"] is None, f"{info['error']}"
+        observation, _, done = env.step(ep_sol)
 
     costs = env.final_costs
     solutions = env.final_solutions
@@ -242,8 +241,8 @@ def benchmark(instances: list[str], num_procs: int = 1, **kwargs):
 
     dtypes = [
         ("inst", "U37"),
-        ("Env. seed", int),
-        ("Agent seed", int),
+        ("env_seed", int),
+        ("agent_seed", int),
         ("cost", int),
         ("time", float),
     ]

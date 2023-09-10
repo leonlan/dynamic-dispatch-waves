@@ -2,6 +2,8 @@ from typing import Protocol
 
 from numpy.random import Generator
 
+from VrpInstance import VrpInstance
+
 
 class SamplingMethod(Protocol):
     """
@@ -11,7 +13,7 @@ class SamplingMethod(Protocol):
     def __call__(
         self,
         rng: Generator,
-        instance: dict,
+        instance: VrpInstance,
         current_time: int,
         departure_time: int,
         epoch_duration: int,
@@ -25,7 +27,7 @@ class SamplingMethod(Protocol):
         rng
             Random number generator.
         instance
-            Static base instance.
+            Base static VRP instance.
         current_time
             Current epoch time.
         departure_time

@@ -3,11 +3,13 @@ from multiprocessing import Pool
 
 import numpy as np
 
+from Environment import State, StaticInfo
 from sampling import SamplingMethod
 from static_solvers import default_solver, scenario_solver
-from utils import filter_instance
+from VrpInstance import VrpInstance
 
 from .consensus import CONSENSUS, ConsensusFunction
+from .sample_scenario import sample_scenario
 
 
 class IterativeConditionalDispatch:
@@ -66,53 +68,61 @@ class IterativeConditionalDispatch:
         )
         self.num_parallel_solve = num_parallel_solve
 
-    def act(self, info, obs) -> list[list[int]]:
+    def act(self, info: StaticInfo, obs: State) -> list[list[int]]:
         """
         First determines the dispatch decisions for the current epoch, then
         solves the instance of dispatched requests.
         """
-        epoch_instance = obs["epoch_instance"]
+        epoch_instance = obs.epoch_instance
         to_dispatch = self._determine_dispatch(info, obs)
-        dispatch_instance = filter_instance(epoch_instance, to_dispatch)
+        dispatch_instance = epoch_instance.filter(to_dispatch)
 
         res = default_solver(
             dispatch_instance, self.seed, self.dispatch_time_limit
         )
         routes = [route.visits() for route in res.best.get_routes()]
 
-        return [dispatch_instance["request_idx"][r].tolist() for r in routes]
+        return [dispatch_instance.request_idx[r].tolist() for r in routes]
 
-    def _determine_dispatch(self, info, obs) -> np.ndarray:
+    def _determine_dispatch(self, info: StaticInfo, obs: State) -> np.ndarray:
         """
         Determines which requests to dispatch in the current epoch by solving
         a set of sample scenarios and using a consensus function to determine
         which requests to dispatch or postpone. This procedure is repeated
         for a fixed number of iterations.
         """
-        ep_inst = obs["epoch_instance"]
-        ep_size = ep_inst["is_depot"].size
+        ep_inst = obs.epoch_instance
+        ep_size = ep_inst.dimension
 
         # In the last epoch, all requests must be dispatched.
-        if obs["current_epoch"] == info["end_epoch"]:
+        if obs.current_epoch == info.end_epoch:
             return np.ones(ep_size, dtype=bool)
 
-        to_dispatch = ep_inst["must_dispatch"].copy()
+        to_dispatch = ep_inst.must_dispatch.copy()
         to_postpone = np.zeros(ep_size, dtype=bool)
 
-        for iter_idx in range(self.num_iterations):
-            instances = [
-                self._sample_scenario(info, obs, to_dispatch, to_postpone)
+        for _ in range(self.num_iterations):
+            scenarios = [
+                sample_scenario(
+                    info,
+                    obs,
+                    self.num_lookahead,
+                    self.sampling_method,
+                    self.rng,
+                    to_dispatch,
+                    to_postpone,
+                )
                 for _ in range(self.num_scenarios)
             ]
 
             if self.num_parallel_solve == 1:
-                solutions = list(map(self._solve_scenario, instances))
+                solutions = list(map(self._solve_scenario, scenarios))
             else:
                 with Pool(self.num_parallel_solve) as pool:
-                    solutions = pool.map(self._solve_scenario, instances)
+                    solutions = pool.map(self._solve_scenario, scenarios)
 
             to_dispatch, to_postpone = self.consensus_func(
-                list(zip(instances, solutions)),
+                list(zip(scenarios, solutions)),
                 ep_inst,
                 to_dispatch,
                 to_postpone,
@@ -122,113 +132,11 @@ class IterativeConditionalDispatch:
             if ep_size - 1 == to_dispatch.sum() + to_postpone.sum():
                 break
 
-        return to_dispatch | ep_inst["is_depot"]
+        return to_dispatch | ep_inst.is_depot
 
-    def _solve_scenario(self, instance: dict) -> list[list[int]]:
+    def _solve_scenario(self, instance: VrpInstance) -> list[list[int]]:
         """
         Solves a single scenario instance, returning the solution.
         """
         result = scenario_solver(instance, self.seed, self.scenario_time_limit)
         return [route.visits() for route in result.best.get_routes()]
-
-    def _sample_scenario(
-        self,
-        info: dict,
-        obs: dict,
-        to_dispatch: np.ndarray,
-        to_postpone: np.ndarray,
-    ) -> dict:
-        """
-        Samples a VRPTW scenario instance. The scenario instance is created by
-        appending the sampled requests to the current epoch instance.
-
-        Parameters
-        ----------
-        info
-            The static problem information.
-        obs
-            The current epoch observation.
-        to_dispatch
-            A boolean array where True means that the corresponding request must be
-            dispatched.
-        to_postpone
-            A boolean array where True mean that the corresponding request must be
-            postponed.
-        """
-        # Parameters
-        current_epoch = obs["current_epoch"]
-        next_epoch = current_epoch + 1
-        epochs_left = info["end_epoch"] - current_epoch
-        max_lookahead = min(self.num_lookahead, epochs_left)
-        num_requests_per_epoch = info["num_requests_per_epoch"]
-
-        static_inst = info["dynamic_context"]
-        epoch_duration = info["epoch_duration"]
-        dispatch_margin = info["dispatch_margin"]
-        ep_inst = obs["epoch_instance"]
-        departure_time = obs["departure_time"]
-
-        # Scenario instance fields
-        req_cust_idx = ep_inst["customer_idx"]
-        req_idx = ep_inst["request_idx"]
-        req_demand = ep_inst["demands"]
-        req_service = ep_inst["service_times"]
-        req_tw = ep_inst["time_windows"]
-        req_release = ep_inst["release_times"]
-
-        # Modify the release time of postponed requests: they should start
-        # at the next departure time.
-        next_departure_time = departure_time + epoch_duration
-        req_release[to_postpone] = next_departure_time
-
-        # Modify the dispatch time of dispatched requests: they should start
-        # at the current departure time (and at time horizon otherwise).
-        horizon = req_tw[0][1]
-        req_dispatch = np.where(to_dispatch, departure_time, horizon)
-
-        for epoch in range(next_epoch, next_epoch + max_lookahead):
-            epoch_start = epoch * epoch_duration
-            epoch_depart = epoch_start + dispatch_margin
-            num_requests = num_requests_per_epoch[epoch]
-
-            new = self.sampling_method(
-                self.rng,
-                static_inst,
-                epoch_start,
-                epoch_depart,
-                epoch_duration,
-                num_requests,
-            )
-            num_new_reqs = new["customer_idx"].size
-
-            # Sampled request indices are negative so we can distinguish them.
-            new_req_idx = -(np.arange(num_new_reqs) + 1) - len(req_idx)
-
-            # Concatenate the new requests to the current instance requests.
-            req_idx = np.concatenate((req_idx, new_req_idx))
-            req_cust_idx = np.concatenate((req_cust_idx, new["customer_idx"]))
-            req_demand = np.concatenate((req_demand, new["demands"]))
-            req_service = np.concatenate((req_service, new["service_times"]))
-            req_tw = np.concatenate((req_tw, new["time_windows"]))
-            req_release = np.concatenate((req_release, new["release_times"]))
-
-            # Default earliest dispatch time is the time horizon.
-            req_dispatch = np.concatenate(
-                (req_dispatch, np.full(num_new_reqs, horizon))
-            )
-
-        dist = static_inst["duration_matrix"]
-
-        return {
-            "is_depot": static_inst["is_depot"][req_cust_idx],
-            "customer_idx": req_cust_idx,
-            "request_idx": req_idx,
-            "coords": static_inst["coords"][req_cust_idx],
-            "demands": req_demand,
-            "capacity": static_inst["capacity"],
-            "time_windows": req_tw,
-            "service_times": req_service,
-            "duration_matrix": dist[req_cust_idx][:, req_cust_idx],
-            "release_times": req_release,
-            "dispatch_times": req_dispatch,
-        }

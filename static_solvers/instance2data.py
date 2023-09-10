@@ -1,80 +1,39 @@
 import numpy as np
 from pyvrp import Client, ProblemData, VehicleType
 
-_INT_MAX = np.iinfo(np.int32).max
+from VrpInstance import VrpInstance
 
 
-def instance2data(instance: dict) -> ProblemData:
+def instance2data(instance: VrpInstance) -> ProblemData:
     """
     Converts an instance to a ``pyvrp.ProblemData`` instance.
     """
-    dimension = instance["demands"].size
-    depots: np.ndarray = instance.get("depot", np.array([0]))
-    num_vehicles: int = instance.get("vehicles", dimension - 1)
-    capacity: int = instance.get("capacity", _INT_MAX)
-    distances: np.ndarray = instance["duration_matrix"]
-    demands: np.ndarray = instance["demands"]
-    coords: np.ndarray = instance["coords"]
-    service_times: np.ndarray = instance["service_times"]
-    durations = distances
-    time_windows: np.ndarray = instance["time_windows"]
-
-    # Default release time is zero
-    release_times = instance.get(
-        "release_times", np.zeros(dimension, dtype=int)
-    )
-
-    # Default dispatch time is planning horizon
-    horizon = instance["time_windows"][0][1]  # depot latest tw
-    dispatch_times = instance.get(
-        "dispatch_times", np.ones(dimension, dtype=int) * horizon
-    )
-
-    # Default prize is zero
-    prizes = instance.get("prizes", np.zeros(dimension, dtype=int))
-
-    # Checks
-    if len(depots) != 1 or depots[0] != 0:
-        raise ValueError(
-            "Source file should contain single depot with index 1 "
-            + "(depot index should be 0 after subtracting offset 1)"
-        )
-
-    if demands[0] != 0:
-        raise ValueError("Demand of depot must be 0")
-
-    if service_times[0] != 0:
-        raise ValueError("Depot service duration must be 0")
-
-    if release_times[0] != 0:
-        raise ValueError("Depot release time must be 0")
-
-    if dispatch_times[0] != time_windows[0, 1]:
+    # TODO Add this to PyVRP's ``Client`` constructor.
+    if instance.dispatch_times[0] != instance.time_windows[0, 1]:
         raise ValueError("Depot end of time window must be dispatch time")
-
-    if (time_windows[:, 0] > time_windows[:, 1]).any():
-        raise ValueError("Time window cannot start after end")
 
     clients = [
         Client(
-            coords[idx][0],  # x
-            coords[idx][1],  # y
-            demands[idx],
-            service_times[idx],
-            time_windows[idx][0],  # TW early
-            time_windows[idx][1],  # TW late
-            release_times[idx],
-            dispatch_times[idx],
-            prizes[idx],
-            np.isclose(prizes[idx], 0),  # required only when prize is zero
+            instance.coords[idx][0],  # x
+            instance.coords[idx][1],  # y
+            instance.demands[idx],
+            instance.service_times[idx],
+            instance.time_windows[idx][0],  # TW early
+            instance.time_windows[idx][1],  # TW late
+            instance.release_times[idx],
+            instance.dispatch_times[idx],
+            instance.prizes[idx],
+            np.isclose(instance.prizes[idx], 0),  # required when prize is zero
         )
-        for idx in range(dimension)
+        for idx in range(instance.dimension)
     ]
-    vehicle_types = [VehicleType(capacity, num_vehicles)]
+
+    # TODO make heterogeneous
+    vehicle_types = [VehicleType(instance.capacity, instance.dimension - 1)]
 
     return ProblemData(
         clients,
         vehicle_types,
-        distances,
-        durations,
+        instance.duration_matrix,
+        instance.duration_matrix,
     )

@@ -20,19 +20,65 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from copy import deepcopy
+from dataclasses import dataclass
 from time import perf_counter
-from typing import Any
 from warnings import warn
 
 import numpy as np
 
 from sampling import SamplingMethod
 from utils.validation import validate_static_solution
+from VrpInstance import VrpInstance
 
-State = dict[str, Any]
+Instance = dict
 Action = list[list[int]]
-Info = dict[str, Any]
+Info = dict
+
+
+@dataclass(frozen=True)
+class StaticInfo:
+    """
+    Static global information about the DDWP episode.
+
+    Parameters
+    ----------
+    static_instance
+        The static VRP instance from which requests are sampled.
+    start_epoch
+        The start epoch index.
+    end_epoch
+        The end epoch index.
+    epoch_tlim
+        The epoch time limit.
+    epoch_duration
+        The time between two consecutive epochs.
+    dispatch_margin
+        The preparation time needed to dispatch a set of routes. That is, when
+        a set of routes are to be dispatched at epoch t, then the start time of
+        the routes is `t * epoch_duration + dispatch_margin`.
+    num_requests_per_epoch
+        The expected number of revealed requests per epoch.
+    """
+
+    static_instance: VrpInstance
+    start_epoch: int
+    end_epoch: int
+    epoch_tlim: float
+    epoch_duration: int
+    dispatch_margin: int
+    num_requests_per_epoch: list[int]
+
+
+@dataclass(frozen=True)
+class State:
+    """
+    State of an epoch.
+    """
+
+    current_epoch: int
+    current_time: int
+    departure_time: float
+    epoch_instance: VrpInstance
 
 
 class Environment:
@@ -50,7 +96,7 @@ class Environment:
     sampling_method
         The sampling method to use.
     num_requests_per_epoch
-        The maximum number of revealed requests per epoch.
+        The expected number of revealed requests per epoch.
     start_epoch
         The start epoch.
     end_epoch
@@ -66,7 +112,7 @@ class Environment:
     def __init__(
         self,
         seed: int,
-        instance: dict,
+        instance: VrpInstance,
         epoch_tlim: float,
         sampling_method: SamplingMethod,
         start_epoch: int,
@@ -85,13 +131,23 @@ class Environment:
         self.epoch_duration = epoch_duration
         self.dispatch_margin = dispatch_margin
 
+        self.static_info = StaticInfo(
+            static_instance=instance,
+            start_epoch=start_epoch,
+            end_epoch=end_epoch,
+            epoch_tlim=epoch_tlim,
+            epoch_duration=epoch_duration,
+            dispatch_margin=dispatch_margin,
+            num_requests_per_epoch=num_requests_per_epoch,
+        )
+
         self.is_done = True  # Requires reset to be called first
 
     @classmethod
     def euro_neurips(
         cls,
         seed: int,
-        instance: dict,
+        instance: VrpInstance,
         epoch_tlim: float,
         sampling_method: SamplingMethod,
         num_requests: int = 100,
@@ -112,7 +168,7 @@ class Environment:
         sampling_method
             The sampling method to use.
         num_requests
-            The maximum number of revealed requests per epoch.
+            The expected number of revealed requests per epoch.
         epoch_duration
             The time between two consecutive epochs.
         dispatch_margin
@@ -125,7 +181,7 @@ class Environment:
         [1] EURO meets NeurIPS 2022 vehicle routing competition.
             https://euro-neurips-vrp-2022.challenges.ortec.com/
         """
-        tw = instance["time_windows"]
+        tw = instance.time_windows
         earliest = tw[1:, 0].min() - dispatch_margin
         latest = tw[1:, 0].max() - dispatch_margin
 
@@ -152,7 +208,7 @@ class Environment:
     def paper(
         cls,
         seed: int,
-        instance: dict,
+        instance: VrpInstance,
         epoch_tlim: float,
         sampling_method: SamplingMethod,
         num_requests_per_epoch: list[int] = [75] * 8,
@@ -173,7 +229,7 @@ class Environment:
         sampling_method
             The sampling method to use.
         num_requests_per_epoch
-            The maximum number of revealed requests per epoch.
+            The expected number of revealed requests per epoch.
         num_epochs
             The number of epochs to consider.
 
@@ -191,22 +247,24 @@ class Environment:
         end_epoch = num_epochs - 1
 
         # Custom depot time windows. Instance time windows are not used!
-        instance = deepcopy(instance)
-        instance["time_windows"][0, :] = [0, horizon]
+        time_windows = instance.time_windows.copy()
+        time_windows[0, :] = [0, horizon]
 
         # Normalize the distances so that the furthest customer can be reached
         # in one hour. Service times are also scaled accordingly.
-        scale = instance["duration_matrix"].max() / epoch_duration
+        scale = instance.duration_matrix.max() / epoch_duration
+        dur_mat = np.ceil(instance.duration_matrix / scale).astype(int)
+        service_times = np.ceil(instance.service_times / scale).astype(int)
 
-        dur_mat = np.ceil(instance["duration_matrix"] / scale).astype(int)
-        instance["duration_matrix"] = dur_mat
-
-        service_times = np.ceil(instance["service_times"] / scale).astype(int)
-        instance["service_times"] = service_times
+        new_instance = instance.replace(
+            time_windows=time_windows,
+            duration_matrix=dur_mat,
+            service_times=service_times,
+        )
 
         return cls(
             seed=seed,
-            instance=instance,
+            instance=new_instance,
             epoch_tlim=epoch_tlim,
             sampling_method=sampling_method,
             start_epoch=start_epoch,
@@ -216,13 +274,13 @@ class Environment:
             dispatch_margin=0,
         )
 
-    def reset(self) -> tuple[State, Info]:
+    def reset(self) -> tuple[State, StaticInfo]:
         """
         Resets the environment.
 
         Returns
         -------
-        tuple[State, Info]
+        tuple[State, StaticInfo]
             The first epoch observation and the environment static information.
         """
         self.rng = np.random.default_rng(self.seed)
@@ -236,19 +294,9 @@ class Environment:
 
         self._sample_complete_dynamic_instance()
 
-        observation = self._next_observation()
-        static_info = {
-            "dynamic_context": self.instance,
-            "start_epoch": self.start_epoch,
-            "end_epoch": self.end_epoch,
-            "epoch_tlim": self.epoch_tlim,
-            "epoch_duration": self.epoch_duration,
-            "dispatch_margin": self.dispatch_margin,
-            "num_requests_per_epoch": self.num_requests_per_epoch,
-        }
-
         self.start_time_epoch = perf_counter()
-        return observation, static_info
+
+        return self._next_observation(), self.static_info
 
     def _sample_complete_dynamic_instance(self):
         """
@@ -257,9 +305,9 @@ class Environment:
         # Initialize request array with dummy request for depot.
         self.req_idx = np.array([0])
         self.req_customer_idx = np.array([0])
-        self.req_tw = self.instance["time_windows"][0:1]
-        self.req_service = self.instance["service_times"][0:1]
-        self.req_demand = self.instance["demands"][0:1]
+        self.req_tw = self.instance.time_windows[0:1]
+        self.req_service = self.instance.service_times[0:1]
+        self.req_demand = self.instance.demands[0:1]
         self.req_release_time = np.array([0])
         self.req_epoch = np.array([0])  # epoch in which request is revealed
         self.req_is_dispatched = np.array([False])
@@ -304,8 +352,8 @@ class Environment:
 
         # Compute the latest epoch in which a request can be dispatched on time
         # as a round-trip. These requests become "must-dispatch" in that epoch.
-        dist = self.instance["duration_matrix"]
-        horizon = self.instance["time_windows"][0, 1]
+        dist = self.instance.duration_matrix
+        horizon = self.instance.horizon
 
         self.req_must_dispatch_epoch = self.req_epoch.copy()
 
@@ -331,7 +379,7 @@ class Environment:
         # Do not mark depot as must-dispatch.
         self.req_must_dispatch_epoch[0] = self.end_epoch + 1
 
-    def step(self, action: Action) -> tuple[State, float, bool, Info]:
+    def step(self, action: Action) -> tuple[State, float, bool]:
         """
         Steps to the next state for the given action.
 
@@ -343,15 +391,16 @@ class Environment:
         Returns
         -------
         State
-            The next state. If the action is invalid, or when the episode is
-            done, this should return an empty dictionary.
+            The next state.
         float
-            The reward for the transition. If the action is invalid, this
-            should return ``float("inf")``.
+            The epoch reward for the transition.
         bool
             Whether the episode is done.
-        Info
-            Success information about the step.
+
+        Raises
+        ------
+        RuntimeError
+            If the submitted action is invalid.
         """
         elapsed = perf_counter() - self.start_time_epoch
         if elapsed > self.epoch_tlim + 3:  # grace period of 3 seconds
@@ -362,23 +411,22 @@ class Environment:
             assert not self.is_done, "Environment is finished."
 
             # Convert requests to epoch instance indices.
-            req2idx = {r: i for i, r in enumerate(self.ep_inst["request_idx"])}
+            req2idx = {r: i for i, r in enumerate(self.ep_inst.request_idx)}
             idx_sol = [[req2idx[req] for req in route] for route in action]
 
             # Check that all must-dispatch requests are dispatched.
-            must = np.flatnonzero(self.ep_inst["must_dispatch"])
+            must = np.flatnonzero(self.ep_inst.must_dispatch)
             dispatched = {req for route in idx_sol for req in route}
 
             msg = "Not all must-dispatch requests are dispatched."
             assert set(must).issubset(dispatched), msg
 
             # Check that the (static) solution is feasible.
-            cost = validate_static_solution(
-                self.ep_inst, idx_sol, allow_skipped_customers=True
-            )
+            cost = validate_static_solution(self.ep_inst, idx_sol)
+
         except AssertionError as error:
             self.is_done = True
-            return ({}, float("inf"), self.is_done, {"error": str(error)})
+            raise RuntimeError("Invalid action.") from error
 
         # Mark dispatched requests as dispatched.
         for route in action:
@@ -391,17 +439,24 @@ class Environment:
         self.current_time = self.current_epoch * self.epoch_duration
         self.is_done = self.current_epoch > self.end_epoch
 
-        observation = self._next_observation() if not self.is_done else {}
-        reward = -cost
-
         self.start_time_epoch = perf_counter()
-        return (observation, reward, self.is_done, {"error": None})
+
+        return self._next_observation(), -cost, self.is_done
 
     def _next_observation(self) -> State:
         """
         Returns the next observation. This consists of all revealed requests
         that were not dispatched in the previous epoch, and new requests.
+
+        Returns
+        -------
+        State
+            The next observation. If the episode is done, returns a dummy
+            observation.
         """
+        if self.is_done:
+            return State(-1, -1, -1, None)  # type: ignore
+
         revealed = self.req_epoch <= self.current_epoch
         not_dispatched = ~self.req_is_dispatched
         current_reqs = self.req_idx[revealed & not_dispatched]
@@ -416,56 +471,52 @@ class Environment:
         must_dispatch_epoch = self.req_must_dispatch_epoch[current_reqs]
         must_dispatch = must_dispatch_epoch == self.current_epoch
 
-        self.ep_inst = {
-            "is_depot": self.instance["is_depot"][customer_idx],
-            "customer_idx": customer_idx,
-            "request_idx": current_reqs,
-            "coords": self.instance["coords"][customer_idx],
-            "demands": self.req_demand[current_reqs],
-            "capacity": self.instance["capacity"],
-            "time_windows": time_windows,
-            "service_times": self.req_service[current_reqs],
-            "duration_matrix": self.instance["duration_matrix"][
+        self.ep_inst = VrpInstance(
+            is_depot=self.instance.is_depot[customer_idx],
+            customer_idx=customer_idx,
+            request_idx=current_reqs,
+            coords=self.instance.coords[customer_idx],
+            demands=self.req_demand[current_reqs],
+            capacity=self.instance.capacity,
+            time_windows=time_windows,
+            service_times=self.req_service[current_reqs],
+            duration_matrix=self.instance.duration_matrix[
                 np.ix_(customer_idx, customer_idx)
             ],
-            "must_dispatch": must_dispatch,
-            "epoch": self.req_epoch[current_reqs],
-            "release_times": self.req_release_time[current_reqs],
-        }
+            must_dispatch=must_dispatch,
+            release_times=self.req_release_time[current_reqs],
+        )
 
-        return {
-            "current_epoch": self.current_epoch,
-            "current_time": self.current_time,
-            "departure_time": departure_time,
-            "epoch_instance": self.ep_inst,
-        }
+        return State(
+            self.current_epoch, self.current_time, departure_time, self.ep_inst
+        )
 
-    def get_hindsight_problem(self) -> State:
+    def get_hindsight_problem(self) -> VrpInstance:
         """
         Returns the hindsight problem, which is a static VRP instance that
         represents the dynamic instance assuming perfect information.
 
         Returns
         -------
-        State
+        VrpInstance
             The hindsight problem instance.
         """
         customer_idx = self.req_customer_idx
 
-        return {
-            "is_depot": self.instance["is_depot"][customer_idx],
-            "customer_idx": customer_idx,
-            "request_idx": self.req_idx,
-            "coords": self.instance["coords"][customer_idx],
-            "demands": self.req_demand,
-            "capacity": self.instance["capacity"],
-            "time_windows": self.req_tw,
-            "service_times": self.req_service,
-            "duration_matrix": self.instance["duration_matrix"][
+        return VrpInstance(
+            is_depot=self.instance.is_depot[customer_idx],
+            coords=self.instance.coords[customer_idx],
+            customer_idx=customer_idx,
+            request_idx=self.req_idx,
+            demands=self.req_demand,
+            capacity=self.instance.capacity,
+            time_windows=self.req_tw,
+            service_times=self.req_service,
+            duration_matrix=self.instance.duration_matrix[
                 np.ix_(customer_idx, customer_idx)
             ],
-            "release_times": self.req_release_time,
-        }
+            release_times=self.req_release_time,
+        )
 
 
 class TimeLimitWarning(UserWarning):

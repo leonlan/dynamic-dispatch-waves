@@ -1,7 +1,7 @@
 import numpy as np
 
+from Environment import State, StaticInfo
 from static_solvers import default_solver
-from utils import filter_instance
 
 
 class _RandomDispatch:
@@ -13,24 +13,25 @@ class _RandomDispatch:
         self.rng = np.random.default_rng(seed)
         self.prob = prob
 
-    def act(self, info, obs) -> list[list[int]]:
+    def act(self, info: StaticInfo, obs: State) -> list[list[int]]:
         """
         Randomly dispatches requests (that are not must-dispatch) with
         probability ``prob``.
         """
-        epoch_instance = obs["epoch_instance"]
-        sample_shape = epoch_instance["must_dispatch"].shape
+        epoch_instance = obs.epoch_instance
+        sample_shape = epoch_instance.must_dispatch.shape
+
         to_dispatch = (
             (self.rng.random(sample_shape) < self.prob)
-            | epoch_instance["is_depot"]
-            | epoch_instance["must_dispatch"]
+            | epoch_instance.is_depot
+            | epoch_instance.must_dispatch
         )
-        dispatch_instance = filter_instance(epoch_instance, to_dispatch)
+        dispatch_instance = epoch_instance.filter(to_dispatch)
 
-        res = default_solver(dispatch_instance, self.seed, info["epoch_tlim"])
+        res = default_solver(dispatch_instance, self.seed, info.epoch_tlim)
         routes = [route.visits() for route in res.best.get_routes()]
 
-        return [dispatch_instance["request_idx"][r].tolist() for r in routes]
+        return [dispatch_instance.request_idx[r].tolist() for r in routes]
 
 
 class GreedyDispatch(_RandomDispatch):

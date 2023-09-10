@@ -1,12 +1,16 @@
 from typing import Protocol
 
+from Environment import State, StaticInfo
+
 
 class Agent(Protocol):
     """
     Protocol describing an agent.
     """
 
-    def act(self, static_info: dict, observation: dict) -> list[list[int]]:
+    def act(
+        self, static_info: StaticInfo, observation: State
+    ) -> list[list[int]]:
         """
         Returns a routing solution for the current epoch.
 

@@ -101,14 +101,14 @@ def can_postpone_route(instance, route):
     See https://github.com/PyVRP/PyVRP/pull/241.
     """
     tour = [0] + route + [0]
-    tws = instance["time_windows"]
-    dist = instance["duration_matrix"]
-    service = instance["service_times"]
+    tws = instance.time_windows
+    dist = instance.duration_matrix
+    service = instance.service_times
 
     # HACK The next epoch time is inferred from the smallest non-zero release
     # times. If all release times are zero, then this scenario contains no
     # sampled requests, and we assume that the route must be dispatched.
-    release_times = instance["release_times"]
+    release_times = instance.release_times
     non_zero_release = np.flatnonzero(release_times)
 
     if non_zero_release.size == 0:

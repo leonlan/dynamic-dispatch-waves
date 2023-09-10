@@ -3,6 +3,8 @@ from pathlib import Path
 import numpy as np
 import vrplib
 
+from VrpInstance import VrpInstance
+
 
 def read(path: Path, instance_format: str = "vrplib"):
     """
@@ -37,14 +39,14 @@ def read(path: Path, instance_format: str = "vrplib"):
         "dispatch_time", np.ones(dimension, dtype=int) * horizon
     )
 
-    return {
-        "is_depot": np.array([1] + [0] * (dimension - 1), dtype=bool),
-        "coords": instance["node_coord"],
-        "demands": instance["demand"],
-        "capacity": instance["capacity"],
-        "time_windows": instance["time_window"],
-        "service_times": instance["service_time"],
-        "duration_matrix": instance["edge_weight"].astype(int),
-        "release_times": release_times,
-        "dispatch_times": dispatch_times,
-    }
+    return VrpInstance(
+        is_depot=np.array([1] + [0] * (dimension - 1), dtype=bool),
+        coords=instance["node_coord"],
+        demands=instance["demand"],
+        capacity=instance["capacity"],
+        time_windows=instance["time_window"],
+        service_times=instance["service_time"],
+        duration_matrix=instance["edge_weight"].astype(int),
+        release_times=release_times,
+        dispatch_times=dispatch_times,
+    )

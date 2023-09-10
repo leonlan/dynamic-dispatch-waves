@@ -8,27 +8,9 @@ def instance2data(instance: VrpInstance) -> ProblemData:
     """
     Converts an instance to a ``pyvrp.ProblemData`` instance.
     """
-    # Check if the data is valid.
-    if not instance.is_depot[0] and instance.is_depot.sum() == 1:
-        raise ValueError(
-            "First request in the instance should be the depot,",
-            "only a single depot is allowed.",
-        )
-
-    if instance.demands[0] != 0:
-        raise ValueError("Demand of depot must be 0")
-
-    if instance.service_times[0] != 0:
-        raise ValueError("Depot service duration must be 0")
-
-    if instance.release_times[0] != 0:
-        raise ValueError("Depot release time must be 0")
-
+    # TODO Add this to PyVRP's ``Client`` constructor.
     if instance.dispatch_times[0] != instance.time_windows[0, 1]:
         raise ValueError("Depot end of time window must be dispatch time")
-
-    if (instance.time_windows[:, 0] > instance.time_windows[:, 1]).any():
-        raise ValueError("Time window cannot start after end")
 
     clients = [
         Client(

@@ -426,7 +426,7 @@ class Environment:
 
         except AssertionError as error:
             self.is_done = True
-            raise RuntimeError(f"Invalid action. Error: {error}.")
+            raise RuntimeError("Invalid action.") from error
 
         # Mark dispatched requests as dispatched.
         for route in action:

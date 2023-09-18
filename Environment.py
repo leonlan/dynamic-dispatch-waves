@@ -223,7 +223,7 @@ class Environment:
         epoch_tlim: float,
         sampling_method: SamplingMethod,
         num_vehicles_per_epoch: Optional[list[int]] = None,
-        num_requests_per_epoch: list[int] = [65] * 8,
+        num_requests_per_epoch: list[int] = [75] * 8,
         num_epochs: int = 8,
     ):
         """
@@ -495,12 +495,11 @@ class Environment:
 
         # Determine the number of primary vehicles available.
         if self.num_vehicles_per_epoch is None:
-            num_vehicles = customer_idx.size
+            num_available_vehicles = customer_idx.size
         else:
-            num_vehicles = sum(
-                self.num_vehicles_per_epoch[: self.current_epoch]
-            )
-            num_vehicles -= len(self.num_vehicles_used)
+            num_available_vehicles = sum(
+                self.num_vehicles_per_epoch[: self.current_epoch + 1]
+            ) - sum(self.num_vehicles_used)
 
         self.ep_inst = VrpInstance(
             is_depot=self.instance.is_depot[customer_idx],
@@ -516,8 +515,8 @@ class Environment:
             ],
             must_dispatch=must_dispatch,
             release_times=self.req_release_time[current_reqs],
-            num_vehicles=num_vehicles,
-            shift_tw_early=num_vehicles * [departure_time],
+            num_vehicles=num_available_vehicles,
+            shift_tw_early=num_available_vehicles * [departure_time],
         )
 
         return State(

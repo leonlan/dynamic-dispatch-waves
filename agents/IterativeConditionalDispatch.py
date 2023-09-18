@@ -1,3 +1,4 @@
+import warnings
 from functools import partial
 from multiprocessing import Pool
 
@@ -142,6 +143,6 @@ class IterativeConditionalDispatch:
         result = scenario_solver(instance, self.seed, self.scenario_time_limit)
 
         if not result.best.is_feasible():
-            print("Infeasible scenario instance!")
+            warnings.warn("Infeasible scenario instance!")
 
         return [route.visits() for route in result.best.get_routes()]

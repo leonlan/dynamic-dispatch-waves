@@ -60,7 +60,7 @@ class StaticInfo:
     num_requests_per_epoch
         The expected number of revealed requests per epoch.
     num_vehicles_per_epoch
-        The available number of primary vehicles per epoch. If none, then
+        The available number of primary vehicles per epoch. If None, then
         there is no limit on the number of primary vehicles.
     """
 
@@ -163,6 +163,7 @@ class Environment:
         num_requests: int = 100,
         epoch_duration: int = 3600,
         dispatch_margin: int = 3600,
+        num_vehicles_per_epoch: Optional[list[int]] = None,
     ):
         """
         Creates a DDWP environment identical to the one used in [1].
@@ -185,6 +186,9 @@ class Environment:
             The preparation time needed to dispatch a set of routes. That is, when
             a set of routes are to be dispatched at epoch t, then the start time of
             the routes is `t * epoch_duration + dispatch_margin`.
+        num_vehicles_per_epoch
+            The available number of primary vehicles per epoch. If None, then
+            there is no limit on the number of primary vehicles.
 
         References
         ----------
@@ -210,7 +214,7 @@ class Environment:
             start_epoch=start_epoch,
             end_epoch=end_epoch,
             num_requests_per_epoch=num_requests_per_epoch,
-            num_vehicles_per_epoch=None,
+            num_vehicles_per_epoch=num_vehicles_per_epoch,
             epoch_duration=epoch_duration,
             dispatch_margin=dispatch_margin,
         )

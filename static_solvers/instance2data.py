@@ -28,8 +28,12 @@ def instance2data(instance: VrpInstance) -> ProblemData:
         for idx in range(instance.dimension)
     ]
 
-    # TODO make heterogeneous
-    vehicle_types = [VehicleType(instance.capacity, instance.dimension - 1)]
+    vehicle_types = [
+        VehicleType(
+            instance.capacity, 1, tw_early=tw_early, tw_late=instance.horizon
+        )
+        for tw_early in instance.shift_tw_early
+    ]
 
     return ProblemData(
         clients,

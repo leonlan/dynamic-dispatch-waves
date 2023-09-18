@@ -62,6 +62,8 @@ def sample_scenario(
     horizon = req_tw[0][1]
     req_dispatch = np.where(to_dispatch, departure_time, horizon)
 
+    shift_tw_early = ep_inst.num_vehicles * [departure_time]
+
     for epoch in range(next_epoch, next_epoch + max_lookahead):
         epoch_start = epoch * epoch_duration
         epoch_depart = epoch_start + dispatch_margin
@@ -93,9 +95,12 @@ def sample_scenario(
             (req_dispatch, np.full(num_new_reqs, horizon))
         )
 
+        # Update the number of vehicles.
+        num_vehicles = info.num_vehicles_per_epoch[epoch]
+        shift_tw_early.extend([epoch_depart] * num_vehicles)
+
     dist = static_inst.duration_matrix
 
-    # TODO extend with future heterogeneous fleet
     return VrpInstance(
         is_depot=static_inst.is_depot[req_cust_idx],
         customer_idx=req_cust_idx,
@@ -108,4 +113,6 @@ def sample_scenario(
         duration_matrix=dist[req_cust_idx][:, req_cust_idx],
         release_times=req_release,
         dispatch_times=req_dispatch,
+        num_vehicles=len(shift_tw_early),
+        shift_tw_early=shift_tw_early,
     )

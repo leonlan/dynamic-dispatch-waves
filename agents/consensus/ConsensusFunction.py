@@ -2,6 +2,7 @@ from typing import Protocol
 
 import numpy as np
 
+from Environment import StaticInfo
 from VrpInstance import VrpInstance
 
 
@@ -12,6 +13,7 @@ class ConsensusFunction(Protocol):
 
     def __call__(
         self,
+        info: StaticInfo,
         scenarios: list[tuple[VrpInstance, list[list[int]]]],
         instance: VrpInstance,
         to_dispatch: np.ndarray,
@@ -22,6 +24,8 @@ class ConsensusFunction(Protocol):
 
         Parameters
         ----------
+        info
+            The static information about the problem.
         scenarios
             The set of scenarios and their solutions.
         instance

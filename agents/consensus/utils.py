@@ -71,24 +71,30 @@ def is_dispatched_route(instance, route, to_dispatch, to_postpone):
     Determines whether or not the passed route was dispatched in the scenario
     instance. A route is considered dispatched if:
     * at least one the requests on the route is already marked dispatched, or
-    * the route does not contain postponed or sampled requests and the route
+    * the route does not contain postponed or sampled requests AND the route
       cannot be postponed to the next epoch without violating feasibility.
       In other words, the "route latest start" is less than the next epoch
       start time.
     """
-    n_reqs = to_dispatch.size
+    num_reqs = to_dispatch.size  # Sampled request indices are >= `num_reqs`.
 
-    if any(to_dispatch[idx] for idx in route if idx < n_reqs):
-        # At least one request on the route was already dispatched
+    if any(to_dispatch[idx] for idx in route if idx < num_reqs):
+        # At least one request on the route was already dispatched.
         return True
 
     # Sampled request indices are larger than the number of requests
-    has_sampled_reqs = any(idx >= n_reqs for idx in route)
-    has_postponed_reqs = any(to_postpone[idx] for idx in route if idx < n_reqs)
+    has_sampled_reqs = any(idx >= num_reqs for idx in route)
+    has_postponed_reqs = any(
+        to_postpone[idx] for idx in route if idx < num_reqs
+    )
 
+    # Postpone routes that contain sampled or postponed requests.
     if has_sampled_reqs or has_postponed_reqs:
         return False
 
+    # Dispatch routes if they cannot be postponed to the next epoch.
+    # This is the case when the route has no must-dispatch, sampled
+    # or postponed requests.
     return not can_postpone_route(instance, route)
 
 

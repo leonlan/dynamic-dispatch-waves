@@ -96,8 +96,12 @@ def sample_scenario(
         )
 
         # Update the number of vehicles.
-        num_vehicles = info.num_vehicles_per_epoch[epoch]
-        shift_tw_early.extend([epoch_depart] * num_vehicles)
+        if info.num_vehicles_per_epoch is None:
+            num_vehicles = ep_inst.num_vehicles
+            shift_tw_early.extend([0] * num_vehicles)
+        else:
+            num_vehicles = info.num_vehicles_per_epoch[epoch]
+            shift_tw_early.extend([epoch_depart] * num_vehicles)
 
     dist = static_inst.duration_matrix
 

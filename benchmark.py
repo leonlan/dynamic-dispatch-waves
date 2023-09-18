@@ -173,6 +173,7 @@ def solve_hindsight(env: Environment, seed: int, time_limit: float):
 
     res = default_solver(hindsight_inst, seed, time_limit)
     hindsight_sol = [route.visits() for route in res.best.get_routes()]
+    assert res.best.is_feasible(), "Infeasible hindsight solution."
 
     done = False
     observation, _ = env.reset()

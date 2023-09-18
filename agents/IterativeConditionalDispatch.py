@@ -140,8 +140,8 @@ class IterativeConditionalDispatch:
         Solves a single scenario instance, returning the solution.
         """
         result = scenario_solver(instance, self.seed, self.scenario_time_limit)
-        try:
-            assert result.best.is_feasible()
-        except:
-            breakpoint()
+
+        if not result.best.is_feasible():
+            print("Infeasible scenario instance!")
+
         return [route.visits() for route in result.best.get_routes()]

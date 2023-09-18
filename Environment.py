@@ -22,6 +22,7 @@
 
 from dataclasses import dataclass
 from time import perf_counter
+from typing import Optional
 from warnings import warn
 
 import numpy as np
@@ -58,6 +59,9 @@ class StaticInfo:
         the routes is `t * epoch_duration + dispatch_margin`.
     num_requests_per_epoch
         The expected number of revealed requests per epoch.
+    num_vehicles_per_epoch
+        The available number of primary vehicles per epoch. If none, then
+        there is no limit on the number of primary vehicles.
     """
 
     static_instance: VrpInstance
@@ -67,7 +71,7 @@ class StaticInfo:
     epoch_duration: int
     dispatch_margin: int
     num_requests_per_epoch: list[int]
-    num_vehicles_per_epoch: list[int]
+    num_vehicles_per_epoch: Optional[list[int]]
 
 
 @dataclass(frozen=True)
@@ -121,7 +125,7 @@ class Environment:
         start_epoch: int,
         end_epoch: int,
         num_requests_per_epoch: list[int],
-        num_vehicles_per_epoch: list[int],
+        num_vehicles_per_epoch: Optional[list[int]],
         epoch_duration: int,
         dispatch_margin: int,
     ):
@@ -198,10 +202,6 @@ class Environment:
 
         num_requests_per_epoch = [num_requests] * (end_epoch + 1)
 
-        # No restriction on the number of vehicles, so a valid upper bound
-        # is the cumulative number of requests.
-        num_vehicles_per_epoch = np.cumsum(num_requests_per_epoch).tolist()
-
         return cls(
             seed=seed,
             instance=instance,
@@ -210,7 +210,7 @@ class Environment:
             start_epoch=start_epoch,
             end_epoch=end_epoch,
             num_requests_per_epoch=num_requests_per_epoch,
-            num_vehicles_per_epoch=num_vehicles_per_epoch,
+            num_vehicles_per_epoch=None,
             epoch_duration=epoch_duration,
             dispatch_margin=dispatch_margin,
         )
@@ -222,8 +222,8 @@ class Environment:
         instance: VrpInstance,
         epoch_tlim: float,
         sampling_method: SamplingMethod,
-        num_vehicles_per_epoch: list[int],
-        num_requests_per_epoch: list[int] = [75] * 8,
+        num_vehicles_per_epoch: Optional[list[int]] = None,
+        num_requests_per_epoch: list[int] = [65] * 8,
         num_epochs: int = 8,
     ):
         """
@@ -241,7 +241,8 @@ class Environment:
         sampling_method
             The sampling method to use.
         num_vehicles_per_epoch
-            The available number of primary vehicles per epoch.
+            The available number of primary vehicles per epoch. If ``None``,
+            then the number of vehicles is unrestricted.
         num_requests_per_epoch
             The expected number of revealed requests per epoch.
         num_epochs
@@ -493,8 +494,13 @@ class Environment:
         must_dispatch = must_dispatch_epoch == self.current_epoch
 
         # Determine the number of primary vehicles available.
-        num_vehicles = sum(self.num_vehicles_per_epoch[: self.current_epoch])
-        num_vehicles -= len(self.num_vehicles_used)
+        if self.num_vehicles_per_epoch is None:
+            num_vehicles = customer_idx.size
+        else:
+            num_vehicles = sum(
+                self.num_vehicles_per_epoch[: self.current_epoch]
+            )
+            num_vehicles -= len(self.num_vehicles_used)
 
         self.ep_inst = VrpInstance(
             is_depot=self.instance.is_depot[customer_idx],
@@ -530,9 +536,16 @@ class Environment:
         """
         customer_idx = self.req_customer_idx
 
-        shift_tw_early = []
-        for epoch, num_vehicles in enumerate(self.num_vehicles_per_epoch):
-            shift_tw_early.extend(num_vehicles * [epoch * self.epoch_duration])
+        if self.num_vehicles_per_epoch is None:
+            num_vehicles = customer_idx.size
+            shift_tw_early = num_vehicles * [0]
+        else:
+            shift_tw_early = []
+            for epoch, num_vehicles in enumerate(self.num_vehicles_per_epoch):
+                departure = epoch * self.epoch_duration + self.dispatch_margin
+                shift_tw_early.extend(num_vehicles * [departure])
+
+            num_vehicles = sum(self.num_vehicles_per_epoch)
 
         return VrpInstance(
             is_depot=self.instance.is_depot[customer_idx],
@@ -547,7 +560,7 @@ class Environment:
                 np.ix_(customer_idx, customer_idx)
             ],
             release_times=self.req_release_time,
-            num_vehicles=len(shift_tw_early),
+            num_vehicles=num_vehicles,
             shift_tw_early=shift_tw_early,
         )
 

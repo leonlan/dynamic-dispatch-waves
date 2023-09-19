@@ -44,7 +44,7 @@ def parse_args():
     parser.add_argument(
         "--agent_config_loc",
         type=str,
-        default="configs/icd-test.toml",
+        default="configs/icd-double-threshold.toml",
     )
     parser.add_argument("--agent_seed", type=int, default=1)
     parser.add_argument("--num_procs", type=int, default=4)

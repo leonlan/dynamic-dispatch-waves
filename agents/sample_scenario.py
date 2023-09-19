@@ -97,12 +97,14 @@ def sample_scenario(
         )
 
         if info.num_vehicles_per_epoch is None:
-            # No restriction means that we don't have to care about the TWs.
-            num_vehicles += ep_inst.num_vehicles
-            shift_tw_early.extend([departure_time] * num_vehicles)
+            # No restriction means that we don't have to care about the TWs,
+            # so we use one vehicle per request.
+            num_vehicles += num_new_reqs
+            shift_tw_early.extend([departure_time] * num_new_reqs)
         else:
-            num_vehicles += info.num_vehicles_per_epoch[epoch]
-            shift_tw_early.extend([epoch_depart] * num_vehicles)
+            new_num_vehicles = info.num_vehicles_per_epoch[epoch]
+            num_vehicles += new_num_vehicles
+            shift_tw_early.extend([epoch_depart] * new_num_vehicles)
 
     dist = static_inst.duration_matrix
 

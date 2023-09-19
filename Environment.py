@@ -498,7 +498,9 @@ class Environment:
 
         # Determine the number of primary vehicles available.
         if self.num_vehicles_per_epoch is None:
-            num_available_vehicles = customer_idx.size
+            # Assume that the number of vehicles is equal to the number of
+            # requests in the instance (minus depot).
+            num_available_vehicles = max(customer_idx.size - 1, 1)
         else:
             total = sum(self.num_vehicles_per_epoch[: self.current_epoch + 1])
             num_available_vehicles = total - sum(self.num_vehicles_used)

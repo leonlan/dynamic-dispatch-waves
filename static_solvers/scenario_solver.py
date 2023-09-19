@@ -51,7 +51,12 @@ def scenario_solver(
     Returns
     -------
     Result
-        An `pyvrp.Result` instance.
+        A `pyvrp.Result` instance.
+
+    Raises
+    ------
+    AssertionError
+        If no feasible solution is found.
     """
     gen_params = GeneticAlgorithmParams(repair_probability=0)
     pen_params = PenaltyParams(
@@ -89,4 +94,8 @@ def scenario_solver(
     algo = GeneticAlgorithm(
         data, pen_manager, rng, pop, ls, srex, init, gen_params
     )
-    return algo.run(MaxRuntime(time_limit))
+    res = algo.run(MaxRuntime(time_limit))
+
+    assert res.best.is_feasible(), "No feasible solution found."
+
+    return res

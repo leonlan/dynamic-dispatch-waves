@@ -50,6 +50,7 @@ def parse_args():
     parser.add_argument("--num_procs", type=int, default=4)
     parser.add_argument("--num_procs_scenarios", type=int, default=1)
     parser.add_argument("--hindsight", action="store_true")
+    parser.add_argument("--limited_vehicles", action="store_true")
     parser.add_argument("--epoch_tlim", type=float, default=60)
     parser.add_argument("--strategy_tlim_factor", type=float, default=0.8)
     parser.add_argument("--sol_dir", type=str)
@@ -67,6 +68,7 @@ def solve(
     agent_seed: int,
     num_procs_scenarios: int,
     hindsight: bool,
+    limited_vehicles: bool,
     epoch_tlim: float,
     strategy_tlim_factor: float,
     sol_dir: str,
@@ -114,6 +116,21 @@ def solve(
 
     if hindsight:
         costs, routes = solve_hindsight(env, agent_seed, epoch_tlim)
+    elif limited_vehicles:
+        # First use greedy to determine the number of available vehicles.
+        greedy = AGENTS["greedy"](agent_seed)
+        _, greedy_sol = solve_dynamic(env, greedy)
+        num_vehicles_per_epoch = [len(route) for route in greedy_sol.values()]
+
+        # Re-run environment with greedy number of available vehicles.
+        env = env_constructor(
+            env_seed,
+            static_instance,
+            epoch_tlim,
+            SAMPLING_METHODS[sampling_method],
+            num_vehicles_per_epoch=num_vehicles_per_epoch,
+        )
+        costs, routes = solve_dynamic(env, agent)
     else:
         costs, routes = solve_dynamic(env, agent)
 
@@ -173,6 +190,7 @@ def solve_hindsight(env: Environment, seed: int, time_limit: float):
 
     res = default_solver(hindsight_inst, seed, time_limit)
     hindsight_sol = [route.visits() for route in res.best.get_routes()]
+    assert res.best.is_feasible(), "Infeasible hindsight solution."
 
     done = False
     observation, _ = env.reset()

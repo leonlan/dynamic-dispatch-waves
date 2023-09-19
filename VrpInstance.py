@@ -38,6 +38,10 @@ class VrpInstance:
         Boolean array indicating whether a request must be dispatched.
     prizes
         Request prizes.
+    num_vehicles
+        Number of available primary vehicles.
+    shift_tw_early
+        Shift time window early of primary vehicles.
     """
 
     def __init__(
@@ -55,6 +59,8 @@ class VrpInstance:
         dispatch_times: Optional[npt.NDArray[np.int_]] = None,
         must_dispatch: Optional[npt.NDArray[np.bool_]] = None,
         prizes: Optional[npt.NDArray[np.int_]] = None,
+        num_vehicles: Optional[int] = None,
+        shift_tw_early: Optional[list[int]] = None,
     ):
         self._is_depot = is_depot
         self._coords = coords
@@ -78,6 +84,10 @@ class VrpInstance:
         )
         self._prizes = _set_if_none(
             prizes, np.zeros(self.dimension, dtype=int)
+        )
+        self._num_vehicles = _set_if_none(num_vehicles, self.dimension)
+        self._shift_tw_early = _set_if_none(
+            shift_tw_early, [0] * self.num_vehicles
         )
 
     @property
@@ -133,6 +143,14 @@ class VrpInstance:
         return self._prizes
 
     @property
+    def num_vehicles(self) -> int:
+        return self._num_vehicles
+
+    @property
+    def shift_tw_early(self) -> list[int]:
+        return self._shift_tw_early
+
+    @property
     def horizon(self) -> int:
         return self._time_windows[0, 1]
 
@@ -155,6 +173,8 @@ class VrpInstance:
         dispatch_times: Optional[npt.NDArray[np.int_]] = None,
         must_dispatch: Optional[npt.NDArray[np.bool_]] = None,
         prizes: Optional[npt.NDArray[np.int_]] = None,
+        num_vehicles: Optional[int] = None,
+        shift_tw_early: Optional[list[int]] = None,
     ) -> "VrpInstance":
         return VrpInstance(
             is_depot=_copy_if_none(is_depot, self.is_depot),
@@ -172,6 +192,8 @@ class VrpInstance:
             dispatch_times=_copy_if_none(dispatch_times, self.dispatch_times),
             must_dispatch=_copy_if_none(must_dispatch, self.must_dispatch),
             prizes=_copy_if_none(prizes, self.prizes),
+            num_vehicles=_copy_if_none(num_vehicles, self.num_vehicles),
+            shift_tw_early=_copy_if_none(shift_tw_early, self.shift_tw_early),
         )
 
     def filter(self, mask: npt.NDArray[np.bool_]) -> "VrpInstance":

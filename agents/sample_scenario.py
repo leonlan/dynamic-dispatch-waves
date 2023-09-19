@@ -62,6 +62,9 @@ def sample_scenario(
     horizon = req_tw[0][1]
     req_dispatch = np.where(to_dispatch, departure_time, horizon)
 
+    num_vehicles = ep_inst.num_vehicles
+    shift_tw_early = [departure_time] * ep_inst.num_vehicles
+
     for epoch in range(next_epoch, next_epoch + max_lookahead):
         epoch_start = epoch * epoch_duration
         epoch_depart = epoch_start + dispatch_margin
@@ -93,6 +96,14 @@ def sample_scenario(
             (req_dispatch, np.full(num_new_reqs, horizon))
         )
 
+        if info.num_vehicles_per_epoch is None:
+            # No restriction means that we don't have to care about the TWs.
+            num_vehicles += ep_inst.num_vehicles
+            shift_tw_early.extend([departure_time] * num_vehicles)
+        else:
+            num_vehicles += info.num_vehicles_per_epoch[epoch]
+            shift_tw_early.extend([epoch_depart] * num_vehicles)
+
     dist = static_inst.duration_matrix
 
     return VrpInstance(
@@ -107,4 +118,6 @@ def sample_scenario(
         duration_matrix=dist[req_cust_idx][:, req_cust_idx],
         release_times=req_release,
         dispatch_times=req_dispatch,
+        num_vehicles=num_vehicles,
+        shift_tw_early=shift_tw_early,
     )

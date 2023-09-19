@@ -1,11 +1,13 @@
 import numpy as np
 
+from Environment import StaticInfo
 from static_solvers import default_solver
 
 from .utils import get_dispatch_count, verify_action
 
 
 def prize_collecting(
+    info: StaticInfo,
     scenarios: list[tuple[dict, list[list[int]]]],
     instance,
     old_dispatch: np.ndarray,

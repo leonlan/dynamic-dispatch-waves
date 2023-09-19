@@ -1,3 +1,5 @@
+from collections import Counter
+
 import numpy as np
 from pyvrp import Client, ProblemData, VehicleType
 
@@ -28,8 +30,15 @@ def instance2data(instance: VrpInstance) -> ProblemData:
         for idx in range(instance.dimension)
     ]
 
-    # TODO make heterogeneous
-    vehicle_types = [VehicleType(instance.capacity, instance.dimension - 1)]
+    vehicle_types = [
+        VehicleType(
+            instance.capacity,
+            num_available,
+            tw_early=tw_early,
+            tw_late=instance.horizon,
+        )
+        for tw_early, num_available in Counter(instance.shift_tw_early).items()
+    ]
 
     return ProblemData(
         clients,

@@ -1,5 +1,7 @@
 import numpy as np
 
+from Environment import StaticInfo
+
 from .utils import (
     get_dispatch_matrix,
     select_postpone_on_threshold,
@@ -8,6 +10,7 @@ from .utils import (
 
 
 def hamming_distance(
+    info: StaticInfo,
     scenarios: list[tuple[dict, list[list[int]]]],
     instance: dict,
     old_dispatch: np.ndarray,

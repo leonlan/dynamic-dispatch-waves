@@ -1,5 +1,7 @@
 import numpy as np
 
+from Environment import StaticInfo
+
 from .utils import (
     select_dispatch_on_threshold,
     select_postpone_on_threshold,
@@ -8,6 +10,7 @@ from .utils import (
 
 
 def fixed_threshold(
+    info: StaticInfo,
     scenarios: list[tuple[dict, list[list[int]]]],
     instance: dict,
     old_dispatch: np.ndarray,
@@ -21,6 +24,8 @@ def fixed_threshold(
 
     Parameters
     ----------
+    info
+        Static information about the problem.
     scenarios
         The list of instances and solutions, one for each scenario.
     old_dispatch

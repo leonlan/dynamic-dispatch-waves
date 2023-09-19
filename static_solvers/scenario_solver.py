@@ -20,6 +20,7 @@ from pyvrp.search import (
     LocalSearch,
     NeighbourhoodParams,
     SwapRoutes,
+    SwapStar,
     TwoOpt,
     compute_neighbours,
 )
@@ -58,18 +59,18 @@ def scenario_solver(
     AssertionError
         If no feasible solution is found.
     """
-    gen_params = GeneticAlgorithmParams(repair_probability=0)
+    gen_params = GeneticAlgorithmParams(repair_probability=0.5)
     pen_params = PenaltyParams(
         init_time_warp_penalty=14,
         repair_booster=12,
-        num_registrations_between_penalty_updates=1,
+        num_registrations_between_penalty_updates=20,
         penalty_increase=2,
         penalty_decrease=0.34,
         target_feasible=0.19,
     )
-    pop_params = PopulationParams(min_pop_size=3, generation_size=8)
+    pop_params = PopulationParams(min_pop_size=5, generation_size=15)
     nb_params = NeighbourhoodParams(
-        weight_wait_time=5, weight_time_warp=18, nb_granular=16
+        weight_wait_time=5, weight_time_warp=18, nb_granular=25
     )
 
     data = instance2data(instance)
@@ -84,7 +85,7 @@ def scenario_solver(
     for node_op in node_ops:
         ls.add_node_operator(node_op(data))
 
-    route_ops = [SwapRoutes]
+    route_ops = [SwapStar, SwapRoutes]
     for route_op in route_ops:
         ls.add_route_operator(route_op(data))
 

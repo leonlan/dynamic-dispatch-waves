@@ -5,11 +5,8 @@ from .euro_neurips import euro_neurips
 from .SamplingMethod import SamplingMethod
 
 SAMPLING_METHODS: dict[str, SamplingMethod] = {
-    "DL2": partial(custom_time_windows, tw_type="deadlines", tw_width=2),
-    "DL4": partial(custom_time_windows, tw_type="deadlines", tw_width=4),
-    "DL8": partial(custom_time_windows, tw_type="deadlines", tw_width=8),
-    "TW2": partial(custom_time_windows, tw_type="time_windows", tw_width=2),
-    "TW4": partial(custom_time_windows, tw_type="time_windows", tw_width=4),
-    "TW8": partial(custom_time_windows, tw_type="time_windows", tw_width=8),
-    "euro_neurips": euro_neurips,
+    f"{name}{tw_width}": partial(custom_time_windows, tw_type, tw_width)
+    for name, tw_type in [("DL", "deadlines"), ("TW", "time_windows")]
+    for tw_width in range(1, 9)
 }
+SAMPLING_METHODS["euro_neurips"] = euro_neurips

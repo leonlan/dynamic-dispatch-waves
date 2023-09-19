@@ -3,7 +3,7 @@ agent = "icd"
 [agent_params]
 num_iterations = 2
 num_lookahead = 1
-num_scenarios = 3
+num_scenarios = 2
 consensus = "fixed_threshold"
 
 [agent_params.consensus_params]

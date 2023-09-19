@@ -62,6 +62,7 @@ def sample_scenario(
     horizon = req_tw[0][1]
     req_dispatch = np.where(to_dispatch, departure_time, horizon)
 
+    num_vehicles = ep_inst.num_vehicles
     shift_tw_early = ep_inst.num_vehicles * [departure_time]
 
     for epoch in range(next_epoch, next_epoch + max_lookahead):
@@ -95,12 +96,12 @@ def sample_scenario(
             (req_dispatch, np.full(num_new_reqs, horizon))
         )
 
-        # Update the number of vehicles.
         if info.num_vehicles_per_epoch is None:
-            num_vehicles = ep_inst.num_vehicles
+            # No restriction means that we don't have to care about the TWs.
+            num_vehicles += ep_inst.num_vehicles
             shift_tw_early.extend([0] * num_vehicles)
         else:
-            num_vehicles = info.num_vehicles_per_epoch[epoch]
+            num_vehicles += info.num_vehicles_per_epoch[epoch]
             shift_tw_early.extend([epoch_depart] * num_vehicles)
 
     dist = static_inst.duration_matrix
@@ -117,6 +118,6 @@ def sample_scenario(
         duration_matrix=dist[req_cust_idx][:, req_cust_idx],
         release_times=req_release,
         dispatch_times=req_dispatch,
-        num_vehicles=len(shift_tw_early),
+        num_vehicles=num_vehicles,
         shift_tw_early=shift_tw_early,
     )

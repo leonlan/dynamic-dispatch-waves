@@ -103,7 +103,8 @@ class Environment:
     num_requests_per_epoch
         The expected number of revealed requests per epoch.
     num_vehicles_per_epoch
-        The available number of primary vehicles per epoch.
+        The available number of primary vehicles per epoch. If None, then
+        there is no limit on the number of primary vehicles.
     start_epoch
         The start epoch.
     end_epoch
@@ -245,8 +246,8 @@ class Environment:
         sampling_method
             The sampling method to use.
         num_vehicles_per_epoch
-            The available number of primary vehicles per epoch. If ``None``,
-            then the number of vehicles is unrestricted.
+            The available number of primary vehicles per epoch. If None, then
+            there is no limit on the number of primary vehicles.
         num_requests_per_epoch
             The expected number of revealed requests per epoch.
         num_epochs
@@ -307,7 +308,7 @@ class Environment:
 
         self.current_epoch = self.start_epoch
         self.current_time = self.current_epoch * self.epoch_duration
-        self.num_vehicles_used: list[int] = []  # primary vehicles
+        self.num_vehicles_used: list[int] = []
 
         self.is_done = False
         self.final_solutions: dict[int, list] = {}
@@ -445,8 +446,6 @@ class Environment:
             # Check that the (static) solution is feasible.
             cost = validate_static_solution(self.ep_inst, idx_sol)
 
-            # TODO add penalty for using more than primary vehicles
-
         except AssertionError as error:
             self.is_done = True
             raise RuntimeError("Invalid action.") from error
@@ -501,9 +500,8 @@ class Environment:
         if self.num_vehicles_per_epoch is None:
             num_available_vehicles = customer_idx.size
         else:
-            num_available_vehicles = sum(
-                self.num_vehicles_per_epoch[: self.current_epoch + 1]
-            ) - sum(self.num_vehicles_used)
+            total = sum(self.num_vehicles_per_epoch[: self.current_epoch + 1])
+            num_available_vehicles = total - sum(self.num_vehicles_used)
 
         self.ep_inst = VrpInstance(
             is_depot=self.instance.is_depot[customer_idx],

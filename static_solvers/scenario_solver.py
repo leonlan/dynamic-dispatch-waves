@@ -17,10 +17,6 @@ from pyvrp.exceptions import EmptySolutionWarning
 from pyvrp.search import (
     Exchange10,
     Exchange11,
-    Exchange20,
-    Exchange21,
-    Exchange30,
-    Exchange31,
     LocalSearch,
     NeighbourhoodParams,
     SwapRoutes,
@@ -59,7 +55,7 @@ def scenario_solver(
     """
     gen_params = GeneticAlgorithmParams(repair_probability=0)
     pen_params = PenaltyParams(
-        init_time_warp_penalty=140,
+        init_time_warp_penalty=14,
         repair_booster=12,
         num_registrations_between_penalty_updates=1,
         penalty_increase=2,
@@ -79,15 +75,7 @@ def scenario_solver(
     neighbours = compute_neighbours(data, nb_params)
     ls = LocalSearch(data, rng, neighbours)
 
-    node_ops = [
-        Exchange10,
-        Exchange11,
-        Exchange20,
-        Exchange21,
-        Exchange30,
-        Exchange31,
-        TwoOpt,
-    ]
+    node_ops = [Exchange10, Exchange11, TwoOpt]
     for node_op in node_ops:
         ls.add_node_operator(node_op(data))
 

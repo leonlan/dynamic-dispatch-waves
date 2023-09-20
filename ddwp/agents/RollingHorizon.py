@@ -1,8 +1,8 @@
 import numpy as np
 
-from Environment import State, StaticInfo
-from sampling import SamplingMethod
-from static_solvers import default_solver
+from ddwp.Environment import State, StaticInfo
+from ddwp.sampling import SamplingMethod
+from ddwp.static_solvers import default_solver
 
 from .sample_scenario import sample_scenario
 

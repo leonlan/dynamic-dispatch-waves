@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import vrplib
 
-from VrpInstance import VrpInstance
+from ddwp.VrpInstance import VrpInstance
 
 
 def read(path: Path, instance_format: str = "vrplib"):

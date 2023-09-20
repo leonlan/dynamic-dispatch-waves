@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.random import Generator
 
-from VrpInstance import VrpInstance
+from ddwp.VrpInstance import VrpInstance
 
 
 def custom_time_windows(

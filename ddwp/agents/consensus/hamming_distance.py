@@ -1,6 +1,6 @@
 import numpy as np
 
-from Environment import StaticInfo
+from ddwp.Environment import StaticInfo
 
 from .utils import (
     get_dispatch_matrix,

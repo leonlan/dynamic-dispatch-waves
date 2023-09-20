@@ -9,11 +9,11 @@ from pyvrp import CostEvaluator
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 
-import utils
-from agents import AGENTS, Agent
-from Environment import Environment
-from sampling import SAMPLING_METHODS
-from static_solvers import default_solver
+from ddwp.agents import AGENTS, Agent
+from ddwp.Environment import Environment
+from ddwp.read import read
+from ddwp.sampling import SAMPLING_METHODS
+from ddwp.static_solvers import default_solver
 
 
 def parse_args():
@@ -78,7 +78,7 @@ def solve(
         raise ValueError("Strategy time limit >= epoch time limit.")
 
     path = Path(loc)
-    static_instance = utils.read(path, instance_format)
+    static_instance = read(path, instance_format)
 
     if environment == "euro_neurips":
         env_constructor = Environment.euro_neurips  # type: ignore

@@ -1,8 +1,8 @@
 import numpy as np
 
-from Environment import State, StaticInfo
-from sampling import SamplingMethod
-from VrpInstance import VrpInstance
+from ddwp.Environment import State, StaticInfo
+from ddwp.sampling import SamplingMethod
+from ddwp.VrpInstance import VrpInstance
 
 
 def sample_scenario(

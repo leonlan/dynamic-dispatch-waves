@@ -27,9 +27,9 @@ from warnings import warn
 
 import numpy as np
 
-from sampling import SamplingMethod
-from utils.validation import validate_static_solution
-from VrpInstance import VrpInstance
+from ddwp.sampling import SamplingMethod
+from ddwp.validation import validate_static_solution
+from ddwp.VrpInstance import VrpInstance
 
 Instance = dict
 Action = list[list[int]]

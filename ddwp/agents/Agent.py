@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from Environment import State, StaticInfo
+from ddwp.Environment import State, StaticInfo
 
 
 class Agent(Protocol):

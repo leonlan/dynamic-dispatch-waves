@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "dynamic-dispatch-waves"
+name = "ddwp"
 version = "0.1.0"
 description = "Code for dynamic dispatch waves problem"
 authors = [
@@ -8,7 +8,8 @@ authors = [
     "Niels Wouda <n.a.wouda@rug.nl>",
 ]
 license = "MIT"
-packages = [{include = "benchmark.py"}]
+readme = "README.md"
+packages = [{include ="ddwp"}, {include = "benchmark.py"}]
 
 
 [tool.poetry.dependencies]

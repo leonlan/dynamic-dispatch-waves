@@ -2,8 +2,8 @@ from typing import Protocol
 
 import numpy as np
 
-from Environment import StaticInfo
-from VrpInstance import VrpInstance
+from ddwp.Environment import StaticInfo
+from ddwp.VrpInstance import VrpInstance
 
 
 class ConsensusFunction(Protocol):

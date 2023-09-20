@@ -1,7 +1,7 @@
 import numpy as np
 
-from Environment import StaticInfo
-from static_solvers import default_solver
+from ddwp.Environment import StaticInfo
+from ddwp.static_solvers import default_solver
 
 from .utils import get_dispatch_count, verify_action
 

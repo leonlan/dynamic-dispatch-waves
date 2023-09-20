@@ -1,7 +1,7 @@
 import numpy as np
 
-from Environment import State, StaticInfo
-from static_solvers import default_solver
+from ddwp.Environment import State, StaticInfo
+from ddwp.static_solvers import default_solver
 
 
 class _RandomDispatch:

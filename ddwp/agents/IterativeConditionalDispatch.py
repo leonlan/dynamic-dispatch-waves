@@ -4,10 +4,10 @@ from multiprocessing import Pool
 
 import numpy as np
 
-from Environment import State, StaticInfo
-from sampling import SamplingMethod
-from static_solvers import default_solver, scenario_solver
-from VrpInstance import VrpInstance
+from ddwp.Environment import State, StaticInfo
+from ddwp.sampling import SamplingMethod
+from ddwp.static_solvers import default_solver, scenario_solver
+from ddwp.VrpInstance import VrpInstance
 
 from .consensus import CONSENSUS, ConsensusFunction
 from .sample_scenario import sample_scenario

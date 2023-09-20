@@ -2,7 +2,7 @@ from typing import Protocol
 
 from numpy.random import Generator
 
-from VrpInstance import VrpInstance
+from ddwp.VrpInstance import VrpInstance
 
 
 class SamplingMethod(Protocol):

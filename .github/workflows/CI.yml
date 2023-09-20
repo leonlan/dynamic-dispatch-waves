@@ -2,21 +2,53 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
+    name: >
+      Build and test pyvrp using ${{ matrix.compiler }} 
+      ${{ matrix.compiler-version }} and Python ${{ matrix.python-version }}
+      in ${{ matrix.precision }} precision mode
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
+      matrix:
+        compiler: [gcc, clang]
+        compiler-version: ['10', '12', 'latest']
+        python-version: ['3.8', '3.11']
+        precision: [integer, double]
+        exclude:
+          - compiler: clang
+            compiler-version: '10'  # minimum gcc version
+          - compiler: gcc
+            compiler-version: '12'  # minimum clang version
+  
+          # No need to test 'old' compilers with 'new' Python versions. This
+          # saves a bit in the CI process.
+          - compiler: gcc
+            compiler-version: '10'
+            python-version: '3.11'
+          - compiler: clang
+            compiler-version: '12'
+            python-version: '3.11'
+
+          # No need to test 'new' compilers with 'old' Python versions. This
+          # saves a bit in the CI process.
+          - compiler-version: latest
+            python-version: '3.8'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python-version }}
       - name: Update pip and poetry
         run: |
           python -m pip install --upgrade pip
@@ -26,22 +58,59 @@ jobs:
         id: cache-python
         with:
           path: ~/.cache/pypoetry
-          key: ${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          key: ${{ runner.os }}-python-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
       - name: Install Python dependencies
         if: steps.cache-python.outputs.cache-hit != 'true'
-        run: poetry install
+        run: poetry install --no-root --with examples
       - name: Cache pre-commit
         uses: actions/cache@v3
         id: cache-pre-commit
         with:
           path: ~/.cache/pre-commit/
-          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+          key: pre-commit-${{ env.pythonLocation }}-${{ hashFiles('.pre-commit-config.yaml') }}
       - name: Install pre-commit
         if: steps.cache-pre-commit.outputs.cache-hit != 'true'
         run: poetry run pre-commit install --install-hooks
       - name: Run pre-commit
         run: poetry run pre-commit run --all-files
-      - name: Test run dynamic instance
-        run: poetry run benchmark instances/ortec/ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt --epoch_tlim 2 --strategy_tlim 1 --agent_config_loc configs/icd-test.toml
-      - name: Test run hindsight instance
-        run: poetry run benchmark instances/ortec/ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt --epoch_tlim 10 --strategy_tlim 0 --hindsight --agent_config_loc configs/icd-test.toml
+      - if: matrix.compiler == 'clang'
+        name: Set up clang
+        uses: egor-tensin/setup-clang@v1
+        with:
+          version: ${{ matrix.compiler-version }}
+      - if: matrix.compiler == 'gcc'
+        name: Set up GCC
+        uses: egor-tensin/setup-gcc@v1
+        with:
+          version: ${{ matrix.compiler-version }}
+      - name: Build pyvrp
+        # This step consists of two commands. First, we install the project into
+        # the poetry environment. This ensures imports like "from pyvrp import X"
+        # work. But poetry builds in release mode by default, which is undesirable
+        # for testing. So we also compile a debug build directly afterwards.
+        run: |
+          poetry install --only-root
+          poetry run python build_extensions.py --build_type debug --clean --precision ${{ matrix.precision }}
+      - name: Run tests
+        run: poetry run pytest
+      - if: matrix.compiler == 'gcc'
+        # Clang does not generate accurate coverage reports, so there is no
+        # point in uploading those.
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          gcov: true
+      - if: matrix.compiler == 'gcc'
+        name: Install Valgrind
+        run: sudo apt install valgrind
+      - if: matrix.compiler == 'gcc'
+        # Run this only when using GCC, because for some reason Valgrind has issues with
+        # some of the outputs Clang produces.
+        name: Briefly run an instance under Valgrind
+        # Force Python to use the regular malloc() for the duration of this valgrind run.
+        # That ensures we do not catch all sorts of false positives from Python's custom
+        # malloc.
+        # TODO also run with --leak-check=full?
+        run: |
+          VALGRIND_CMD="pyvrp pyvrp/tests/data/RC208.txt --instance_format solomon --round_func dimacs --max_runtime 0.5 --seed 1"
+          poetry run env PYTHONMALLOC=malloc valgrind --tool=memcheck --quiet $VALGRIND_CMD

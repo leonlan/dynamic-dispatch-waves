@@ -29,7 +29,7 @@ class ConsensusFunction(Protocol):
         scenarios
             The set of scenarios and their solutions.
         instance
-            The static base instance.
+            The epoch instance.
         to_dispatch
             The requests that are marked dispatched so far.
         to_postpone

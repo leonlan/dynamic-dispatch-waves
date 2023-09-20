@@ -1,7 +1,5 @@
-from collections import Counter
-
 import numpy as np
-from pyvrp import Client, ProblemData, VehicleType
+from pyvrp import Client, ProblemData
 
 from ddwp.VrpInstance import VrpInstance
 
@@ -30,19 +28,9 @@ def instance2data(instance: VrpInstance) -> ProblemData:
         for idx in range(instance.dimension)
     ]
 
-    vehicle_types = [
-        VehicleType(
-            instance.capacity,
-            num_available,
-            tw_early=tw_early,
-            tw_late=instance.horizon,
-        )
-        for tw_early, num_available in Counter(instance.shift_tw_early).items()
-    ]
-
     return ProblemData(
         clients,
-        vehicle_types,
+        instance.vehicle_types,
         instance.duration_matrix,
         instance.duration_matrix,
     )

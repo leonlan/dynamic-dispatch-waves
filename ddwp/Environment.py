@@ -26,6 +26,7 @@ from typing import Optional
 from warnings import warn
 
 import numpy as np
+from pyvrp import VehicleType
 
 from ddwp.sampling import SamplingMethod
 from ddwp.validation import validate_static_solution
@@ -519,8 +520,9 @@ class Environment:
             ],
             must_dispatch=must_dispatch,
             release_times=self.req_release_time[current_reqs],
-            num_vehicles=num_available_vehicles,
-            shift_tw_early=num_available_vehicles * [departure_time],
+            vehicle_types=[
+                VehicleType(self.instance.capacity, num_available_vehicles)
+            ],
         )
 
         return State(
@@ -538,17 +540,22 @@ class Environment:
             The hindsight problem instance.
         """
         customer_idx = self.req_customer_idx
+        capacity = self.instance.capacity
+        vehicle_types = []
 
         if self.num_vehicles_per_epoch is None:
-            num_vehicles = customer_idx.size
-            shift_tw_early = num_vehicles * [0]
+            vehicle_types.append(VehicleType(capacity, customer_idx.size))
         else:
-            shift_tw_early = []
             for epoch, num_vehicles in enumerate(self.num_vehicles_per_epoch):
                 departure = epoch * self.epoch_duration + self.dispatch_margin
-                shift_tw_early.extend(num_vehicles * [departure])
-
-            num_vehicles = sum(self.num_vehicles_per_epoch)
+                vehicle_types.append(
+                    VehicleType(
+                        capacity,
+                        num_vehicles,
+                        tw_early=departure,
+                        tw_late=self.instance.horizon,
+                    )
+                )
 
         return VrpInstance(
             is_depot=self.instance.is_depot[customer_idx],
@@ -563,8 +570,7 @@ class Environment:
                 np.ix_(customer_idx, customer_idx)
             ],
             release_times=self.req_release_time,
-            num_vehicles=num_vehicles,
-            shift_tw_early=shift_tw_early,
+            vehicle_types=vehicle_types,
         )
 
 

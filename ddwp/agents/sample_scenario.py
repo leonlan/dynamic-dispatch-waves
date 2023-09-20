@@ -1,4 +1,5 @@
 import numpy as np
+from pyvrp import VehicleType
 
 from ddwp.Environment import State, StaticInfo
 from ddwp.sampling import SamplingMethod
@@ -62,8 +63,14 @@ def sample_scenario(
     horizon = req_tw[0][1]
     req_dispatch = np.where(to_dispatch, departure_time, horizon)
 
-    num_vehicles = ep_inst.num_vehicles
-    shift_tw_early = [departure_time] * ep_inst.num_vehicles
+    vehicle_types = [
+        VehicleType(
+            ep_inst.capacity,
+            ep_inst.num_vehicles,
+            tw_early=departure_time,
+            tw_late=horizon,
+        )
+    ]
 
     for epoch in range(next_epoch, next_epoch + max_lookahead):
         epoch_start = epoch * epoch_duration
@@ -99,12 +106,23 @@ def sample_scenario(
         if info.num_vehicles_per_epoch is None:
             # No restriction means that we don't have to care about the TWs,
             # so we use one vehicle per request.
-            num_vehicles += num_new_reqs
-            shift_tw_early.extend([departure_time] * num_new_reqs)
+            vehicle_types = [
+                VehicleType(
+                    ep_inst.capacity,
+                    req_cust_idx.size - 1,
+                    tw_early=departure_time,
+                    tw_late=horizon,
+                )
+            ]
         else:
             new_num_vehicles = info.num_vehicles_per_epoch[epoch]
-            num_vehicles += new_num_vehicles
-            shift_tw_early.extend([epoch_depart] * new_num_vehicles)
+            new = VehicleType(
+                ep_inst.capacity,
+                new_num_vehicles,
+                tw_early=epoch_depart,
+                tw_late=horizon,
+            )
+            vehicle_types.append(new)
 
     dist = static_inst.duration_matrix
 
@@ -120,6 +138,5 @@ def sample_scenario(
         duration_matrix=dist[req_cust_idx][:, req_cust_idx],
         release_times=req_release,
         dispatch_times=req_dispatch,
-        num_vehicles=num_vehicles,
-        shift_tw_early=shift_tw_early,
+        vehicle_types=vehicle_types,
     )

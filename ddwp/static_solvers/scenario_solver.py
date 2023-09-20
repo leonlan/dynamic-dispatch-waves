@@ -85,9 +85,10 @@ def scenario_solver(
     for node_op in node_ops:
         ls.add_node_operator(node_op(data))
 
-    route_ops = [SwapStar, SwapRoutes]
-    for route_op in route_ops:
-        ls.add_route_operator(route_op(data))
+    ls.add_route_operator(SwapStar(data))
+
+    if data.num_vehicle_types > 1:  # only if heterogeneous fleet
+        ls.add_route_operator(SwapRoutes(data))
 
     init = [
         Solution.make_random(data, rng) for _ in range(pop_params.min_pop_size)

@@ -52,7 +52,7 @@ def parse_args():
     parser.add_argument("--hindsight", action="store_true")
     parser.add_argument("--limited_vehicles", action="store_true")
     parser.add_argument("--epoch_tlim", type=float, default=60)
-    parser.add_argument("--strategy_tlim_factor", type=float, default=0.8)
+    parser.add_argument("--strategy_tlim", type=float, default=30)
     parser.add_argument("--sol_dir", type=str)
 
     return parser.parse_args()
@@ -70,10 +70,13 @@ def solve(
     hindsight: bool,
     limited_vehicles: bool,
     epoch_tlim: float,
-    strategy_tlim_factor: float,
+    strategy_tlim: float,
     sol_dir: str,
     **kwargs,
 ):
+    if strategy_tlim > epoch_tlim:
+        raise ValueError("Strategy time limit >= epoch time limit.")
+
     path = Path(loc)
     static_instance = utils.read(path, instance_format)
 
@@ -99,11 +102,10 @@ def solve(
             # Set the scenario solving time limit based on the time budget for
             # scenarios divided by the total number of scenarios to solve.
             total = params["num_iterations"] * params["num_scenarios"]
-            scenario_time = epoch_tlim * strategy_tlim_factor
-            params["scenario_time_limit"] = scenario_time / total
+            params["scenario_time_limit"] = strategy_tlim / total
 
             params["num_parallel_solve"] = num_procs_scenarios
-            params["dispatch_time_limit"] = epoch_tlim - scenario_time
+            params["dispatch_time_limit"] = epoch_tlim - strategy_tlim
             params["sampling_method"] = SAMPLING_METHODS[sampling_method]
 
         if config["agent"] == "rolling_horizon":

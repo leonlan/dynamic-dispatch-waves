@@ -42,6 +42,6 @@ jobs:
       - name: Run pre-commit
         run: poetry run pre-commit run --all-files
       - name: Test run dynamic instance
-        run: poetry run benchmark instances/ortec/ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt --epoch_tlim 2 --strategy_tlim_factor 0.8 --agent_config_loc configs/icd-test.toml
+        run: poetry run benchmark instances/ortec/ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt --epoch_tlim 2 --strategy_tlim 1 --agent_config_loc configs/icd-test.toml
       - name: Test run hindsight instance
-        run: poetry run benchmark instances/ortec/ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt --epoch_tlim 10 --strategy_tlim_factor 0.8 --hindsight --agent_config_loc configs/icd-test.toml
+        run: poetry run benchmark instances/ortec/ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt --epoch_tlim 10 --hindsight --agent_config_loc configs/icd-test.toml

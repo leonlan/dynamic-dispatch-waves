@@ -37,9 +37,13 @@ def fixed_threshold(
     postpone_threshold
         Threshold for postponing requests.
     """
-    new_dispatch = select_dispatch_on_threshold(
-        scenarios, old_dispatch, old_postpone, dispatch_threshold
-    )
+    if dispatch_threshold > 1:
+        new_dispatch = old_dispatch.copy()  # preserve must-dispatch action
+    else:
+        new_dispatch = select_dispatch_on_threshold(
+            scenarios, old_dispatch, old_postpone, dispatch_threshold
+        )
+
     new_postpone = select_postpone_on_threshold(
         scenarios, old_dispatch, old_postpone, postpone_threshold
     )

@@ -35,6 +35,11 @@ class IterativeConditionalDispatch:
         The time limit for solving the dispatch instance.
     sampling_method
         The method to use for sampling scenarios.
+    dispatch_choice
+        Choice which requests to dispatch. Either "not_postpone" or "dispatch".
+        "not_postpone" means that all requests that are not postponed are
+        dispatched. "dispatch" means that all requests that are marked for
+        dispatch are dispatched.
     consensus
         The name of the consensus function to use.
     consensus_params
@@ -52,6 +57,7 @@ class IterativeConditionalDispatch:
         scenario_time_limit: float,
         dispatch_time_limit: float,
         sampling_method: SamplingMethod,
+        dispatch_choice: str,
         consensus: str,
         consensus_params: dict,
         num_parallel_solve: int = 1,
@@ -63,6 +69,7 @@ class IterativeConditionalDispatch:
         self.num_scenarios = num_scenarios
         self.scenario_time_limit = scenario_time_limit
         self.dispatch_time_limit = dispatch_time_limit
+        self.dispatch_choice = dispatch_choice
         self.sampling_method = sampling_method
         self.consensus_func: ConsensusFunction = partial(
             CONSENSUS[consensus], **consensus_params
@@ -134,7 +141,10 @@ class IterativeConditionalDispatch:
             if ep_size - 1 == to_dispatch.sum() + to_postpone.sum():
                 break
 
-        return to_dispatch | ep_inst.is_depot
+        if self.dispatch_choice == "not_postpone":
+            return ~to_postpone | ep_inst.is_depot
+        else:
+            return to_dispatch | ep_inst.is_depot
 
     def _solve_scenario(self, instance: VrpInstance) -> list[list[int]]:
         """

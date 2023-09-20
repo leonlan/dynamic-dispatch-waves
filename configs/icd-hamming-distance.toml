@@ -5,6 +5,7 @@ num_iterations = 3
 num_lookahead = 1
 num_scenarios = 30
 consensus = "hamming_distance"
+dispatch_choice = "dispatch"
 
 [agent_params.consensus_params]
 postpone_threshold = 1.00

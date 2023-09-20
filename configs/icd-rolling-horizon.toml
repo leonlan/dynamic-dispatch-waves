@@ -5,6 +5,7 @@ num_iterations = 1
 num_lookahead = 100 # maximum
 num_scenarios = 1
 consensus = "fixed_threshold"
+dispatch_choice = "dispatch"
 
 [agent_params.consensus_params]
 postpone_threshold = 1.01 # don't postpone

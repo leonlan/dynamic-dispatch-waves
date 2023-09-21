@@ -1,0 +1,49 @@
+[node_ops]
+Exchange10 = true
+Exchange20 = true
+Exchange30 = true
+Exchange11 = true
+Exchange21 = true
+Exchange31 = true
+Exchange22 = true
+Exchange32 = true
+Exchange33 = true
+MoveTwoClientsReversed = true
+TwoOpt = true
+
+
+[route_ops]
+RelocateStar = false
+SwapStar = false
+
+
+[genetic]
+repair_probability = 0.80
+nb_iter_no_improvement = 20_000
+
+
+[population]
+min_pop_size = 25
+generation_size = 40
+nb_elite = 4
+nb_close = 5
+lb_diversity = 0.1
+ub_diversity = 0.5
+
+
+[neighbourhood]
+weight_wait_time = 0.2
+weight_time_warp = 1.0
+nb_granular = 40
+symmetric_proximity = true
+symmetric_neighbours = false
+
+
+[penalty]
+init_capacity_penalty = 20
+init_time_warp_penalty = 6
+repair_booster = 12
+num_registrations_between_penalty_updates = 50
+penalty_increase = 1.34
+penalty_decrease = 0.32
+target_feasible = 0.43

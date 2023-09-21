@@ -123,6 +123,14 @@ def sample_scenario(
                 tw_late=horizon,
             )
             vehicle_types.append(new)
+            second = VehicleType(
+                ep_inst.capacity,
+                num_new_reqs - new_num_vehicles,
+                tw_early=epoch_depart,
+                tw_late=horizon,
+                fixed_cost=10000,
+            )
+            vehicle_types.append(second)
 
     dist = static_inst.duration_matrix
 

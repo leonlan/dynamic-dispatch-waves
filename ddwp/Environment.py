@@ -457,6 +457,8 @@ class Environment:
 
         # Register how many primary vehicles were used.
         self.num_vehicles_used.append(len(action))
+        print(len(action))
+        print(self.num_vehicles_used)
 
         self.final_solutions[self.current_epoch] = action
         self.final_costs[self.current_epoch] = cost
@@ -498,14 +500,26 @@ class Environment:
         must_dispatch = must_dispatch_epoch == self.current_epoch
 
         # Determine the number of primary vehicles available.
+        capacity = self.instance.capacity
+
         if self.num_vehicles_per_epoch is None:
             # Assume that the number of vehicles is equal to the number of
             # requests in the instance (minus depot).
             num_available_vehicles = max(customer_idx.size - 1, 1)
+            vehicle_types = [VehicleType(capacity, num_available_vehicles)]
         else:
             total = sum(self.num_vehicles_per_epoch[: self.current_epoch + 1])
             num_available_vehicles = total - sum(self.num_vehicles_used)
+            vehicle_types = [VehicleType(capacity, num_available_vehicles)]
 
+            if num_available_vehicles <= customer_idx.size - 1:
+                # If there are not enough vehicles, use secondary fleet.
+                num_vehicles = customer_idx.size - 1 - num_available_vehicles
+                vehicle_types.append(
+                    VehicleType(capacity, num_vehicles, fixed_cost=10000)
+                )
+
+        print("Num available vehicles:", num_available_vehicles)
         self.ep_inst = VrpInstance(
             is_depot=self.instance.is_depot[customer_idx],
             customer_idx=customer_idx,
@@ -520,9 +534,7 @@ class Environment:
             ],
             must_dispatch=must_dispatch,
             release_times=self.req_release_time[current_reqs],
-            vehicle_types=[
-                VehicleType(self.instance.capacity, num_available_vehicles)
-            ],
+            vehicle_types=vehicle_types,
         )
 
         return State(

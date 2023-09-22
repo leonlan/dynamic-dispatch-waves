@@ -70,7 +70,7 @@ PARAM_SPACE = {
     "neighbourhood": {
         "weight_wait_time": Float((0, 100), 0.2),
         "weight_time_warp": Float((0, 100), 1),
-        "nb_granular": Integer((10, 100), 40),
+        "nb_granular": Integer((10, 100), 20),
         "symmetric_proximity": Bool(True),
         "symmetric_neighbours": Bool(False),
     },

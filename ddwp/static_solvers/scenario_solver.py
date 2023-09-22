@@ -1,7 +1,7 @@
 import warnings
 
 from ddwp.VrpInstance import VrpInstance
-from pyvrp import (
+from pyvrp._pyvrp import (
     GeneticAlgorithm,
     PenaltyManager,
     Population,

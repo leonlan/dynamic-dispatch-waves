@@ -13,7 +13,7 @@ from ddwp.Environment import Environment
 from ddwp.read import read
 from ddwp.sampling import SAMPLING_METHODS
 from ddwp.static_solvers import default_solver
-from pyvrp import CostEvaluator
+from pyvrp._pyvrp import CostEvaluator
 
 
 def parse_args():

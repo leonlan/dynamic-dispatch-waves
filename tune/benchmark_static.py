@@ -13,7 +13,7 @@ except ModuleNotFoundError as exc:
     raise ModuleNotFoundError(msg) from exc
 
 import pyvrp.search
-from pyvrp._pyvrp import (
+from pyvrp import (
     GeneticAlgorithm,
     GeneticAlgorithmParams,
     PenaltyManager,

@@ -3,7 +3,7 @@ from collections import Counter
 import numpy as np
 
 from ddwp.VrpInstance import VrpInstance
-from pyvrp._pyvrp import Client, ProblemData, VehicleType
+from pyvrp import Client, ProblemData, VehicleType
 
 
 def instance2data(instance: VrpInstance) -> ProblemData:

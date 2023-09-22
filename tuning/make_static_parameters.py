@@ -60,8 +60,8 @@ PARAM_SPACE = {
         "nb_iter_no_improvement": Integer((20_000, 20_000), 20_000),
     },
     "population": {
-        "min_pop_size": Integer((1, 100), 25),
-        "generation_size": Integer((1, 100), 40),
+        "min_pop_size": Integer((1, 20), 25),
+        "generation_size": Integer((1, 40), 40),
         "nb_elite": Integer((0, 2), 4),
         "nb_close": Integer((1, 2), 5),
         "lb_diversity": Float((0, 0.25), 0.1),

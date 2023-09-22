@@ -1,6 +1,5 @@
 import warnings
 
-from ddwp.VrpInstance import VrpInstance
 from pyvrp import (
     GeneticAlgorithm,
     PenaltyManager,
@@ -24,6 +23,8 @@ from pyvrp.search import (
     compute_neighbours,
 )
 from pyvrp.stop import MaxRuntime
+
+from ddwp.VrpInstance import VrpInstance
 
 from .instance2data import instance2data
 

@@ -5,7 +5,6 @@ from time import perf_counter
 
 import numpy as np
 import tomli
-from pyvrp import CostEvaluator
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 
@@ -14,6 +13,7 @@ from ddwp.Environment import Environment
 from ddwp.read import read
 from ddwp.sampling import SAMPLING_METHODS
 from ddwp.static_solvers import default_solver
+from pyvrp import CostEvaluator
 
 
 def parse_args():

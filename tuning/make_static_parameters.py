@@ -116,7 +116,7 @@ def main():
 
     # Create the test configurations.
     groups = {group: PARAM_SPACE[group] for group in args.param_space}
-    num_params = sum(len(group) for group in groups)
+    num_params = sum(len(params) for params in groups.values())
 
     sampler = qmc.LatinHypercube(d=num_params, centered=True, seed=args.seed)
     samples = sampler.random(args.num_samples - 1)

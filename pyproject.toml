@@ -27,6 +27,14 @@ black = "^22.6.0"
 pre-commit = "^3.3.3"
 
 
+[tool.poetry.group.tune]
+optional = true
+
+[tool.poetry.group.tune.dependencies]
+tomli-w = "^1.0.0"
+scipy = "^1.9.2"
+
+
 [tool.poetry.scripts]
 benchmark = "benchmark:main"
 

@@ -1,7 +1,6 @@
-from pyvrp import Model, Result
-from pyvrp.stop import MaxRuntime
-
 from ddwp.VrpInstance import VrpInstance
+from pyvrp._pyvrp import Model, Result
+from pyvrp.stop import MaxRuntime
 
 from .instance2data import instance2data
 

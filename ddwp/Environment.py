@@ -515,18 +515,19 @@ class Environment:
 
         # Determine the number of primary vehicles available.
         capacity = self.instance.capacity
+        num_requests = customer_idx.size - 1
 
         if self.num_vehicles_per_epoch is None:
             # Assume that the number of vehicles is equal to the number of
-            # requests in the instance (minus depot).
-            num_available_vehicles = max(customer_idx.size - 1, 1)
+            # requests in the instance.
+            num_available_vehicles = max(num_requests, 1)
             vehicle_types = [VehicleType(capacity, num_available_vehicles)]
         else:
             total = sum(self.num_vehicles_per_epoch[: self.current_epoch + 1])
             num_available_vehicles = total - sum(self.num_vehicles_used)
             vehicle_types = [VehicleType(capacity, num_available_vehicles)]
 
-            if num_available_vehicles <= customer_idx.size - 1:
+            if num_available_vehicles <= num_requests:
                 # If there are not enough vehicles, use secondary fleet.
                 assert self.secondary_fleet_fixed_cost is not None
                 num_vehicles = customer_idx.size - 1 - num_available_vehicles

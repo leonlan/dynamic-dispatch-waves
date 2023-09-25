@@ -1,3 +1,5 @@
+from copy import copy
+
 import numpy as np
 from pyvrp import VehicleType
 
@@ -63,14 +65,7 @@ def sample_scenario(
     horizon = req_tw[0][1]
     req_dispatch = np.where(to_dispatch, departure_time, horizon)
 
-    vehicle_types = [
-        VehicleType(
-            ep_inst.capacity,
-            ep_inst.num_vehicles,
-            tw_early=departure_time,
-            tw_late=horizon,
-        )
-    ]
+    vehicle_types = copy(ep_inst.vehicle_types)
 
     for epoch in range(next_epoch, next_epoch + max_lookahead):
         epoch_start = epoch * epoch_duration

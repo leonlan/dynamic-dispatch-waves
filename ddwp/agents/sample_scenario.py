@@ -104,8 +104,8 @@ def sample_scenario(
         )
 
         if info.num_vehicles_per_epoch is None:
-            # No restriction means that we don't have to care about the TWs,
-            # so we use one vehicle per request.
+            # No restriction means that we don't have to distinguish between,
+            # vehicle types, so we use one vehicle per request.
             vehicle_types = [
                 VehicleType(
                     ep_inst.capacity,

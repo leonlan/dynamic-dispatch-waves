@@ -84,7 +84,7 @@ class VrpInstance:
             prizes, np.zeros(self.dimension, dtype=int)
         )
         self._vehicle_types = _set_if_none(
-            vehicle_types, [VehicleType(self.capacity, self.dimension)]
+            vehicle_types, [VehicleType(self.capacity, self.num_requests)]
         )
 
     @property
@@ -154,6 +154,10 @@ class VrpInstance:
     @property
     def dimension(self) -> int:
         return self._coords.shape[0]
+
+    @property
+    def num_requests(self) -> int:
+        return self.dimension - 1
 
     def replace(
         self,

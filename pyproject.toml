@@ -37,6 +37,7 @@ scipy = "^1.9.2"
 
 [tool.poetry.scripts]
 euro_neurips = "benchmark.euro_neurips:main"
+benchmark = "benchmark.paper:main"
 
 
 [tool.black]

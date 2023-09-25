@@ -2,19 +2,19 @@ from pathlib import Path
 from time import perf_counter
 from typing import Optional
 
-from base import (
+from ddwp.Environment import Environment
+from ddwp.read import read
+from ddwp.sampling import SamplingMethod
+from ddwp.sampling import euro_neurips as euro_neurips_sampling_method
+from ddwp.VrpInstance import VrpInstance
+
+from .base import (
     benchmark,
     configure_agent,
     make_parser,
     solve_dynamic,
     solve_hindsight,
 )
-
-from ddwp.Environment import Environment
-from ddwp.read import read
-from ddwp.sampling import SamplingMethod
-from ddwp.sampling import euro_neurips as euro_neurips_sampling_method
-from ddwp.VrpInstance import VrpInstance
 
 
 def make_euro_neurips_environment(
@@ -135,7 +135,7 @@ def solve(
 
 
 def main():
-    benchmark(solve=solve, **vars(make_parser().parse_args()))
+    benchmark(solve, **vars(make_parser().parse_args()))
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ authors = [
 ]
 license = "MIT"
 readme = "README.md"
-packages = [{include ="ddwp"}, {include = "benchmark.py"}]
+packages = [{include ="ddwp"}, {include = "benchmark"}]
 
 
 [tool.poetry.dependencies]
@@ -36,7 +36,7 @@ scipy = "^1.9.2"
 
 
 [tool.poetry.scripts]
-benchmark = "benchmark:main"
+euro_neurips = "benchmark.euro_neurips:main"
 
 
 [tool.black]

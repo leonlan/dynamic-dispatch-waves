@@ -25,16 +25,7 @@ def default_solver(
     -------
     Result
         Object storing the solver outcome.
-
-    Raises
-    ------
-    AssertionError
-        If no feasible solution is found.
     """
     data = instance2data(instance)
     model = Model.from_data(data)
-    res = model.solve(MaxRuntime(time_limit), seed=seed)
-
-    assert res.best.is_feasible(), "No feasible solution found."
-
-    return res
+    return model.solve(MaxRuntime(time_limit), seed=seed)

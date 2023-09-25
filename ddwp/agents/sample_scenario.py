@@ -115,22 +115,27 @@ def sample_scenario(
                 )
             ]
         else:
-            new_num_vehicles = info.num_vehicles_per_epoch[epoch]
-            new = VehicleType(
-                ep_inst.capacity,
-                new_num_vehicles,
-                tw_early=epoch_depart,
-                tw_late=horizon,
+            num_primary = info.num_vehicles_per_epoch[epoch]
+            vehicle_types.append(
+                VehicleType(
+                    ep_inst.capacity,
+                    num_primary,
+                    tw_early=epoch_depart,
+                    tw_late=horizon,
+                )
             )
-            vehicle_types.append(new)
-            second = VehicleType(
-                ep_inst.capacity,
-                num_new_reqs - new_num_vehicles,
-                tw_early=epoch_depart,
-                tw_late=horizon,
-                fixed_cost=10000,
-            )
-            vehicle_types.append(second)
+
+            if (num_secondary := num_new_reqs - num_primary) > 0:
+                assert info.secondary_fleet_fixed_cost is not None
+                vehicle_types.append(
+                    VehicleType(
+                        ep_inst.capacity,
+                        num_secondary,
+                        tw_early=epoch_depart,
+                        tw_late=horizon,
+                        fixed_cost=info.secondary_fleet_fixed_cost,
+                    )
+                )
 
     dist = static_inst.duration_matrix
 

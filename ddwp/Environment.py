@@ -63,6 +63,9 @@ class StaticInfo:
     num_vehicles_per_epoch
         The available number of primary vehicles per epoch. If None, then
         there is no limit on the number of primary vehicles.
+    secondary_fleet_fixed_cost
+        The fixed cost of the secondary fleet. If None, then there is no
+        secondary fleet.
     """
 
     static_instance: VrpInstance
@@ -73,6 +76,7 @@ class StaticInfo:
     dispatch_margin: int
     num_requests_per_epoch: list[int]
     num_vehicles_per_epoch: Optional[list[int]]
+    secondary_fleet_fixed_cost: Optional[int]
 
 
 @dataclass(frozen=True)
@@ -106,6 +110,9 @@ class Environment:
     num_vehicles_per_epoch
         The available number of primary vehicles per epoch. If None, then
         there is no limit on the number of primary vehicles.
+    secondary_fleet_fixed_cost
+        The fixed cost of the secondary fleet. If None, then there is no
+        secondary fleet.
     start_epoch
         The start epoch.
     end_epoch
@@ -128,6 +135,7 @@ class Environment:
         end_epoch: int,
         num_requests_per_epoch: list[int],
         num_vehicles_per_epoch: Optional[list[int]],
+        secondary_fleet_fixed_cost: Optional[int],
         epoch_duration: int,
         dispatch_margin: int,
     ):
@@ -139,6 +147,7 @@ class Environment:
         self.end_epoch = end_epoch
         self.num_requests_per_epoch = num_requests_per_epoch
         self.num_vehicles_per_epoch = num_vehicles_per_epoch
+        self.secondary_fleet_fixed_cost = secondary_fleet_fixed_cost
         self.epoch_duration = epoch_duration
         self.dispatch_margin = dispatch_margin
 
@@ -151,6 +160,7 @@ class Environment:
             dispatch_margin=dispatch_margin,
             num_requests_per_epoch=num_requests_per_epoch,
             num_vehicles_per_epoch=num_vehicles_per_epoch,
+            secondary_fleet_fixed_cost=secondary_fleet_fixed_cost,
         )
 
         self.is_done = True  # Requires reset to be called first
@@ -217,6 +227,7 @@ class Environment:
             end_epoch=end_epoch,
             num_requests_per_epoch=num_requests_per_epoch,
             num_vehicles_per_epoch=num_vehicles_per_epoch,
+            secondary_fleet_fixed_cost=None,
             epoch_duration=epoch_duration,
             dispatch_margin=dispatch_margin,
         )
@@ -229,6 +240,7 @@ class Environment:
         epoch_tlim: float,
         sampling_method: SamplingMethod,
         num_vehicles_per_epoch: Optional[list[int]] = None,
+        secondary_fleet_fixed_cost: Optional[int] = None,
         num_requests_per_epoch: list[int] = [75] * 8,
         num_epochs: int = 8,
     ):
@@ -249,6 +261,9 @@ class Environment:
         num_vehicles_per_epoch
             The available number of primary vehicles per epoch. If None, then
             there is no limit on the number of primary vehicles.
+        secondary_fleet_fixed_cost
+            The fixed cost of the secondary fleet. If None, then there is no
+            secondary fleet.
         num_requests_per_epoch
             The expected number of revealed requests per epoch.
         num_epochs
@@ -292,6 +307,7 @@ class Environment:
             end_epoch=end_epoch,
             num_requests_per_epoch=num_requests_per_epoch,
             num_vehicles_per_epoch=num_vehicles_per_epoch,
+            secondary_fleet_fixed_cost=secondary_fleet_fixed_cost,
             epoch_duration=epoch_duration,
             dispatch_margin=0,
         )
@@ -457,8 +473,6 @@ class Environment:
 
         # Register how many primary vehicles were used.
         self.num_vehicles_used.append(len(action))
-        print(len(action))
-        print(self.num_vehicles_used)
 
         self.final_solutions[self.current_epoch] = action
         self.final_costs[self.current_epoch] = cost
@@ -514,12 +528,16 @@ class Environment:
 
             if num_available_vehicles <= customer_idx.size - 1:
                 # If there are not enough vehicles, use secondary fleet.
+                assert self.secondary_fleet_fixed_cost is not None
                 num_vehicles = customer_idx.size - 1 - num_available_vehicles
                 vehicle_types.append(
-                    VehicleType(capacity, num_vehicles, fixed_cost=10000)
+                    VehicleType(
+                        capacity,
+                        num_vehicles,
+                        fixed_cost=self.secondary_fleet_fixed_cost,
+                    )
                 )
 
-        print("Num available vehicles:", num_available_vehicles)
         self.ep_inst = VrpInstance(
             is_depot=self.instance.is_depot[customer_idx],
             customer_idx=customer_idx,

@@ -83,9 +83,13 @@ class VrpInstance:
         self._prizes = _set_if_none(
             prizes, np.zeros(self.dimension, dtype=int)
         )
-        self._vehicle_types = _set_if_none(
-            vehicle_types, [VehicleType(self.capacity, self.num_requests)]
-        )
+
+        if self.num_requests > 0:
+            default_veh_types = [VehicleType(self.capacity, self.num_requests)]
+        else:
+            default_veh_types = []
+
+        self._vehicle_types = _set_if_none(vehicle_types, default_veh_types)
 
     @property
     def is_depot(self) -> npt.NDArray[np.bool_]:

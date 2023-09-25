@@ -64,8 +64,7 @@ class StaticInfo:
         The available number of primary vehicles per epoch. If None, then
         there is no limit on the number of primary vehicles.
     secondary_fleet_fixed_cost
-        The fixed cost of the secondary fleet. If None, then there is no
-        secondary fleet.
+        The fixed cost of using a vehicle from the secondary fleet.
     """
 
     static_instance: VrpInstance
@@ -76,7 +75,7 @@ class StaticInfo:
     dispatch_margin: int
     num_requests_per_epoch: list[int]
     num_vehicles_per_epoch: Optional[list[int]]
-    secondary_fleet_fixed_cost: Optional[int]
+    secondary_fleet_fixed_cost: int
 
 
 @dataclass(frozen=True)
@@ -111,8 +110,7 @@ class Environment:
         The available number of primary vehicles per epoch. If None, then
         there is no limit on the number of primary vehicles.
     secondary_fleet_fixed_cost
-        The fixed cost of the secondary fleet. If None, then there is no
-        secondary fleet.
+        The fixed cost of the secondary fleet vehicles.
     start_epoch
         The start epoch.
     end_epoch
@@ -135,7 +133,7 @@ class Environment:
         end_epoch: int,
         num_requests_per_epoch: list[int],
         num_vehicles_per_epoch: Optional[list[int]],
-        secondary_fleet_fixed_cost: Optional[int],
+        secondary_fleet_fixed_cost: int,
         epoch_duration: int,
         dispatch_margin: int,
     ):
@@ -165,153 +163,6 @@ class Environment:
 
         self.is_done = True  # Requires reset to be called first
 
-    @classmethod
-    def euro_neurips(
-        cls,
-        seed: int,
-        instance: VrpInstance,
-        epoch_tlim: float,
-        sampling_method: SamplingMethod,
-        num_requests: int = 100,
-        epoch_duration: int = 3600,
-        dispatch_margin: int = 3600,
-        num_vehicles_per_epoch: Optional[list[int]] = None,
-    ):
-        """
-        Creates a DDWP environment identical to the one used in [1].
-
-        Parameters
-        ----------
-        seed
-            Random seed.
-        instance
-            The static VRP instance from which requests are sampled.
-        epoch_tlim
-            The epoch time limit.
-        sampling_method
-            The sampling method to use.
-        num_requests
-            The expected number of revealed requests per epoch.
-        epoch_duration
-            The time between two consecutive epochs.
-        dispatch_margin
-            The preparation time needed to dispatch a set of routes. That is, when
-            a set of routes are to be dispatched at epoch t, then the start time of
-            the routes is `t * epoch_duration + dispatch_margin`.
-        num_vehicles_per_epoch
-            The available number of primary vehicles per epoch. If None, then
-            there is no limit on the number of primary vehicles.
-
-        References
-        ----------
-        [1] EURO meets NeurIPS 2022 vehicle routing competition.
-            https://euro-neurips-vrp-2022.challenges.ortec.com/
-        """
-        tw = instance.time_windows
-        earliest = tw[1:, 0].min() - dispatch_margin
-        latest = tw[1:, 0].max() - dispatch_margin
-
-        # The start and end epochs are determined by the earliest and latest
-        # opening client time windows, corrected by the dispatch margin.
-        start_epoch = int(max(earliest // epoch_duration, 0))
-        end_epoch = int(max(latest // epoch_duration, 0))
-
-        num_requests_per_epoch = [num_requests] * (end_epoch + 1)
-
-        return cls(
-            seed=seed,
-            instance=instance,
-            epoch_tlim=epoch_tlim,
-            sampling_method=sampling_method,
-            start_epoch=start_epoch,
-            end_epoch=end_epoch,
-            num_requests_per_epoch=num_requests_per_epoch,
-            num_vehicles_per_epoch=num_vehicles_per_epoch,
-            secondary_fleet_fixed_cost=None,
-            epoch_duration=epoch_duration,
-            dispatch_margin=dispatch_margin,
-        )
-
-    @classmethod
-    def paper(
-        cls,
-        seed: int,
-        instance: VrpInstance,
-        epoch_tlim: float,
-        sampling_method: SamplingMethod,
-        num_vehicles_per_epoch: Optional[list[int]] = None,
-        secondary_fleet_fixed_cost: Optional[int] = None,
-        num_requests_per_epoch: list[int] = [75] * 8,
-        num_epochs: int = 8,
-    ):
-        """
-        Creates a DDWP environment identical to the one used in [1].
-
-        Parameters
-        ----------
-        seed
-            Random seed.
-        instance
-            The static VRP instance from which requests are sampled. Note that
-            the time windows are ignored in this environment.
-        epoch_tlim
-            The epoch time limit.
-        sampling_method
-            The sampling method to use.
-        num_vehicles_per_epoch
-            The available number of primary vehicles per epoch. If None, then
-            there is no limit on the number of primary vehicles.
-        secondary_fleet_fixed_cost
-            The fixed cost of the secondary fleet. If None, then there is no
-            secondary fleet.
-        num_requests_per_epoch
-            The expected number of revealed requests per epoch.
-        num_epochs
-            The number of epochs to consider.
-
-        References
-        ----------
-        [1] Lan, L., van Doorn, J., Wouda, N. A., Rijal, A., & Bhulai, S. (2023).
-            An iterative conditional dispatch algorithm for the dynamic dispatch
-            waves problem.
-        """
-        # Assume an epoch duration of one hour (in seconds) and a horizon of
-        # ``num_epochs`` hours.
-        epoch_duration = 3600
-        horizon = num_epochs * epoch_duration
-        start_epoch = 0
-        end_epoch = num_epochs - 1
-
-        # Custom depot time windows. Instance time windows are not used!
-        time_windows = instance.time_windows.copy()
-        time_windows[0, :] = [0, horizon]
-
-        # Normalize the distances so that the furthest customer can be reached
-        # in one hour. Service times are also scaled accordingly.
-        scale = instance.duration_matrix.max() / epoch_duration
-        dur_mat = np.ceil(instance.duration_matrix / scale).astype(int)
-        service_times = np.ceil(instance.service_times / scale).astype(int)
-
-        new_instance = instance.replace(
-            time_windows=time_windows,
-            duration_matrix=dur_mat,
-            service_times=service_times,
-        )
-
-        return cls(
-            seed=seed,
-            instance=new_instance,
-            epoch_tlim=epoch_tlim,
-            sampling_method=sampling_method,
-            start_epoch=start_epoch,
-            end_epoch=end_epoch,
-            num_requests_per_epoch=num_requests_per_epoch,
-            num_vehicles_per_epoch=num_vehicles_per_epoch,
-            secondary_fleet_fixed_cost=secondary_fleet_fixed_cost,
-            epoch_duration=epoch_duration,
-            dispatch_margin=0,
-        )
-
     def reset(self) -> tuple[State, StaticInfo]:
         """
         Resets the environment.
@@ -325,7 +176,8 @@ class Environment:
 
         self.current_epoch = self.start_epoch
         self.current_time = self.current_epoch * self.epoch_duration
-        self.num_vehicles_used: list[int] = []
+
+        self.num_vehicles_slack = 0
 
         self.is_done = False
         self.final_solutions: dict[int, list] = {}
@@ -471,8 +323,24 @@ class Environment:
         for route in action:
             self.req_is_dispatched[route] = True
 
-        # Register how many primary vehicles were used.
-        self.num_vehicles_used.append(len(action))
+        if self.num_vehicles_per_epoch is not None:
+            # HACK Submitted actions don't register the usage of vehicle types
+            # so we assume that all primary vehicles are used first, because
+            # the fixed cost of secondary vehicles is high. We keep track of the
+            # slack (unused primary vehicles) in each epoch, resetting it when
+            # the slack falls below zero.
+            num_vehicles = (
+                self.num_vehicles_per_epoch[self.current_epoch]
+                + self.num_vehicles_slack
+            )
+            self.num_vehicles_slack = max(num_vehicles - len(action), 0)
+
+            # Add the fixed costs of using secondary vehicles.
+            num_secondary_used = max(len(action) - num_vehicles, 0)
+            cost += (
+                num_secondary_used
+                * self.static_info.secondary_fleet_fixed_cost
+            )
 
         self.final_solutions[self.current_epoch] = action
         self.final_costs[self.current_epoch] = cost
@@ -520,21 +388,24 @@ class Environment:
         if self.num_vehicles_per_epoch is None:
             # Assume that the number of vehicles is equal to the number of
             # requests in the instance.
-            num_available_vehicles = max(num_requests, 1)
-            vehicle_types = [VehicleType(capacity, num_available_vehicles)]
+            num_vehicles = max(num_requests, 1)
+            vehicle_types = [VehicleType(capacity, num_vehicles)]
         else:
-            total = sum(self.num_vehicles_per_epoch[: self.current_epoch + 1])
-            num_available_vehicles = total - sum(self.num_vehicles_used)
-            vehicle_types = [VehicleType(capacity, num_available_vehicles)]
+            num_new = self.num_vehicles_per_epoch[self.current_epoch]
+            num_primary = num_new + self.num_vehicles_slack
 
-            if num_available_vehicles <= num_requests:
+            if num_primary > 0:
+                vehicle_types = [VehicleType(capacity, num_primary)]
+            else:
+                vehicle_types = []
+
+            if num_primary <= num_requests:
                 # If there are not enough vehicles, use secondary fleet.
-                assert self.secondary_fleet_fixed_cost is not None
-                num_vehicles = customer_idx.size - 1 - num_available_vehicles
+                num_secondary = customer_idx.size - 1 - num_primary
                 vehicle_types.append(
                     VehicleType(
                         capacity,
-                        num_vehicles,
+                        num_secondary,
                         fixed_cost=self.secondary_fleet_fixed_cost,
                     )
                 )
@@ -577,14 +448,29 @@ class Environment:
         if self.num_vehicles_per_epoch is None:
             vehicle_types.append(VehicleType(capacity, customer_idx.size))
         else:
-            for epoch, num_vehicles in enumerate(self.num_vehicles_per_epoch):
+            for epoch, num_primary in enumerate(self.num_vehicles_per_epoch):
                 departure = epoch * self.epoch_duration + self.dispatch_margin
+
+                if num_primary > 0:
+                    vehicle_types.append(
+                        VehicleType(
+                            capacity,
+                            num_primary,
+                            tw_early=departure,
+                            tw_late=self.instance.horizon,
+                        )
+                    )
+
+            # Fill up remaining vehicles with secondary fleet.
+            num_secondary = max(
+                customer_idx.size - sum(self.num_vehicles_per_epoch), 0
+            )
+            if num_secondary > 0:
                 vehicle_types.append(
                     VehicleType(
                         capacity,
-                        num_vehicles,
-                        tw_early=departure,
-                        tw_late=self.instance.horizon,
+                        num_secondary,
+                        fixed_cost=self.static_info.secondary_fleet_fixed_cost,
                     )
                 )
 

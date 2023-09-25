@@ -2,6 +2,7 @@ import argparse
 from functools import partial
 from pathlib import Path
 from time import perf_counter
+from typing import Callable
 
 import numpy as np
 import tomli
@@ -12,50 +13,26 @@ from tqdm.contrib.concurrent import process_map
 from ddwp.agents import AGENTS, Agent
 from ddwp.Environment import Environment
 from ddwp.read import read
-from ddwp.sampling import SAMPLING_METHODS
+from ddwp.sampling import SAMPLING_METHODS, SamplingMethod
 from ddwp.static_solvers import default_solver
 
 
-def parse_args():
+def base_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
         "instances", nargs="+", type=Path, help="Instance paths."
     )
-    parser.add_argument(
-        "--instance_format",
-        type=str,
-        choices=["vrplib", "solomon"],
-        default="vrplib",
-    )
-    parser.add_argument(
-        "--environment",
-        type=str,
-        choices=["euro_neurips", "paper"],
-        default="euro_neurips",
-    )
-    parser.add_argument("--env_seed", type=int, default=1)
-    parser.add_argument(
-        "--sampling_method",
-        type=str,
-        choices=SAMPLING_METHODS.keys(),
-        default="euro_neurips",
-    )
-    parser.add_argument(
-        "--agent_config_loc",
-        type=str,
-        default="configs/icd-double-threshold.toml",
-    )
+    parser.add_argument("--env_seed", type=int, required=True)
+    parser.add_argument("--agent_config_loc", type=str, required=True)
     parser.add_argument("--agent_seed", type=int, default=1)
     parser.add_argument("--num_procs", type=int, default=4)
-    parser.add_argument("--num_procs_scenarios", type=int, default=1)
     parser.add_argument("--hindsight", action="store_true")
-    parser.add_argument("--limited_vehicles", action="store_true")
-    parser.add_argument("--epoch_tlim", type=float, default=60)
-    parser.add_argument("--strategy_tlim", type=float, default=30)
-    parser.add_argument("--sol_dir", type=str)
+    parser.add_argument("--epoch_tlim", type=float, required=True)
+    parser.add_argument("--strategy_tlim", type=float, default=0)
+    parser.add_argument("--sol_dir", type=Path)
 
-    return parser.parse_args()
+    return parser
 
 
 def solve(
@@ -66,12 +43,11 @@ def solve(
     sampling_method: str,
     agent_config_loc: str,
     agent_seed: int,
-    num_procs_scenarios: int,
     hindsight: bool,
     limited_vehicles: bool,
     epoch_tlim: float,
     strategy_tlim: float,
-    sol_dir: str,
+    sol_dir: Path,
     **kwargs,
 ):
     if strategy_tlim > epoch_tlim:
@@ -87,32 +63,11 @@ def solve(
     else:
         raise ValueError(f"Unknown environment: {environment}")
 
-    env = env_constructor(
-        env_seed,
-        static_instance,
-        epoch_tlim,
-        SAMPLING_METHODS[sampling_method],
+    sampler = SAMPLING_METHODS[sampling_method]
+    env = env_constructor(env_seed, static_instance, epoch_tlim, sampler)
+    agent = configure_agent(
+        agent_config_loc, agent_seed, sampler, epoch_tlim, strategy_tlim
     )
-
-    with open(agent_config_loc, "rb") as fh:
-        config = tomli.load(fh)
-        params = config.get("agent_params", {})
-
-        if config["agent"] == "icd":
-            # Set the scenario solving time limit based on the time budget for
-            # scenarios divided by the total number of scenarios to solve.
-            total = params["num_iterations"] * params["num_scenarios"]
-            params["scenario_time_limit"] = strategy_tlim / total
-
-            params["num_parallel_solve"] = num_procs_scenarios
-            params["dispatch_time_limit"] = epoch_tlim - strategy_tlim
-            params["sampling_method"] = SAMPLING_METHODS[sampling_method]
-
-        if config["agent"] == "rolling_horizon":
-            params["time_limit"] = epoch_tlim
-            params["sampling_method"] = SAMPLING_METHODS[sampling_method]
-
-        agent = AGENTS[config["agent"]](agent_seed, **params)
 
     start = perf_counter()
 
@@ -150,6 +105,32 @@ def solve(
         sum(costs.values()),
         round(perf_counter() - start, 2),
     )
+
+
+def configure_agent(
+    config_loc: str,
+    agent_seed: int,
+    sampling_method: SamplingMethod,
+    epoch_tlim: float,
+    strategy_tlim: float,
+):
+    with open(config_loc, "rb") as fh:
+        config = tomli.load(fh)
+        params = config.get("agent_params", {})
+
+        if config["agent"] == "icd":
+            # Set the scenario solving time limit based on the time budget for
+            # scenarios divided by the total number of scenarios to solve.
+            total = params["num_iterations"] * params["num_scenarios"]
+            params["scenario_time_limit"] = strategy_tlim / total
+            params["dispatch_time_limit"] = epoch_tlim - strategy_tlim
+            params["sampling_method"] = sampling_method
+
+        if config["agent"] == "rolling_horizon":
+            params["time_limit"] = epoch_tlim
+            params["sampling_method"] = sampling_method
+
+    return AGENTS[config["agent"]](agent_seed, **params)
 
 
 def solve_dynamic(env: Environment, agent: Agent):
@@ -221,12 +202,6 @@ def solve_hindsight(env: Environment, seed: int, time_limit: float):
     return costs, solutions
 
 
-def maybe_mkdir(where: str):
-    if where:
-        stats_dir = Path(where)
-        stats_dir.mkdir(parents=True, exist_ok=True)
-
-
 def tabulate(headers, rows) -> str:
     # These lengths are used to space each column properly.
     lengths = [len(header) for header in headers]
@@ -248,8 +223,11 @@ def tabulate(headers, rows) -> str:
     return "\n".join(header + content)
 
 
-def benchmark(instances: list[str], num_procs: int = 1, **kwargs):
-    maybe_mkdir(kwargs.get("sol_dir", ""))
+def benchmark(
+    solve: Callable, instances: list[str], num_procs: int = 1, **kwargs
+):
+    if sol_dir := kwargs.get("sol_dir", ""):
+        Path(sol_dir).mkdir(parents=True, exist_ok=True)
 
     func = partial(solve, **kwargs)
     args = sorted(instances)
@@ -281,11 +259,3 @@ def benchmark(instances: list[str], num_procs: int = 1, **kwargs):
     print("\n", table, "\n", sep="")
     print(f"      Avg. objective: {data['cost'].mean():.0f}")
     print(f"   Avg. run-time (s): {data['time'].mean():.2f}")
-
-
-def main():
-    benchmark(**vars(parse_args()))
-
-
-if __name__ == "__main__":
-    main()

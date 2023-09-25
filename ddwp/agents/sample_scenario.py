@@ -111,17 +111,17 @@ def sample_scenario(
             ]
         else:
             num_primary = info.num_vehicles_per_epoch[epoch]
-            vehicle_types.append(
-                VehicleType(
-                    ep_inst.capacity,
-                    num_primary,
-                    tw_early=epoch_depart,
-                    tw_late=horizon,
+            if num_primary > 0:
+                vehicle_types.append(
+                    VehicleType(
+                        ep_inst.capacity,
+                        num_primary,
+                        tw_early=epoch_depart,
+                        tw_late=horizon,
+                    )
                 )
-            )
 
             if (num_secondary := num_new_reqs - num_primary) > 0:
-                assert info.secondary_fleet_fixed_cost is not None
                 vehicle_types.append(
                     VehicleType(
                         ep_inst.capacity,

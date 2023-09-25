@@ -51,7 +51,8 @@ class RollingHorizon:
         )
         res = default_solver(scenario, self.seed, self.time_limit)
 
-        assert res.best.is_feasible(), "Solution is not feasible."
+        if not res.best.is_feasible():
+            raise ValueError("Scenario solution is not feasible.")
 
         solution = []
         for route in res.best.get_routes():

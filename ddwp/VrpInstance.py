@@ -3,6 +3,7 @@ from typing import Optional
 
 import numpy as np
 import numpy.typing as npt
+from pyvrp import VehicleType
 
 
 class VrpInstance:
@@ -38,10 +39,8 @@ class VrpInstance:
         Boolean array indicating whether a request must be dispatched.
     prizes
         Request prizes.
-    num_vehicles
-        Number of available primary vehicles.
-    shift_tw_early
-        Shift time window early of primary vehicles.
+    vehicle_types
+        Vehicle types.
     """
 
     def __init__(
@@ -59,8 +58,7 @@ class VrpInstance:
         dispatch_times: Optional[npt.NDArray[np.int_]] = None,
         must_dispatch: Optional[npt.NDArray[np.bool_]] = None,
         prizes: Optional[npt.NDArray[np.int_]] = None,
-        num_vehicles: Optional[int] = None,
-        shift_tw_early: Optional[list[int]] = None,
+        vehicle_types: Optional[list[VehicleType]] = None,
     ):
         self._is_depot = is_depot
         self._coords = coords
@@ -85,9 +83,8 @@ class VrpInstance:
         self._prizes = _set_if_none(
             prizes, np.zeros(self.dimension, dtype=int)
         )
-        self._num_vehicles = _set_if_none(num_vehicles, self.dimension)
-        self._shift_tw_early = _set_if_none(
-            shift_tw_early, [0] * self.num_vehicles
+        self._vehicle_types = _set_if_none(
+            vehicle_types, [VehicleType(self.capacity, self.num_requests)]
         )
 
     @property
@@ -143,12 +140,12 @@ class VrpInstance:
         return self._prizes
 
     @property
-    def num_vehicles(self) -> int:
-        return self._num_vehicles
+    def vehicle_types(self) -> list[VehicleType]:
+        return self._vehicle_types
 
     @property
-    def shift_tw_early(self) -> list[int]:
-        return self._shift_tw_early
+    def num_vehicles(self) -> int:
+        return sum(v_type.num_available for v_type in self.vehicle_types)
 
     @property
     def horizon(self) -> int:
@@ -157,6 +154,10 @@ class VrpInstance:
     @property
     def dimension(self) -> int:
         return self._coords.shape[0]
+
+    @property
+    def num_requests(self) -> int:
+        return self.dimension - 1
 
     def replace(
         self,
@@ -173,8 +174,7 @@ class VrpInstance:
         dispatch_times: Optional[npt.NDArray[np.int_]] = None,
         must_dispatch: Optional[npt.NDArray[np.bool_]] = None,
         prizes: Optional[npt.NDArray[np.int_]] = None,
-        num_vehicles: Optional[int] = None,
-        shift_tw_early: Optional[list[int]] = None,
+        vehicle_types: Optional[list[VehicleType]] = None,
     ) -> "VrpInstance":
         return VrpInstance(
             is_depot=_copy_if_none(is_depot, self.is_depot),
@@ -192,8 +192,7 @@ class VrpInstance:
             dispatch_times=_copy_if_none(dispatch_times, self.dispatch_times),
             must_dispatch=_copy_if_none(must_dispatch, self.must_dispatch),
             prizes=_copy_if_none(prizes, self.prizes),
-            num_vehicles=_copy_if_none(num_vehicles, self.num_vehicles),
-            shift_tw_early=_copy_if_none(shift_tw_early, self.shift_tw_early),
+            vehicle_types=_copy_if_none(vehicle_types, self.vehicle_types),
         )
 
     def filter(self, mask: npt.NDArray[np.bool_]) -> "VrpInstance":

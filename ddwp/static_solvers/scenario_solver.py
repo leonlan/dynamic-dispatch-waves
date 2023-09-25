@@ -51,11 +51,6 @@ def scenario_solver(
     -------
     Result
         A `pyvrp.Result` instance.
-
-    Raises
-    ------
-    AssertionError
-        If no feasible solution is found.
     """
     pop_params = PopulationParams(
         min_pop_size=5, generation_size=3, nb_elite=2, nb_close=2
@@ -82,8 +77,5 @@ def scenario_solver(
         Solution.make_random(data, rng) for _ in range(pop_params.min_pop_size)
     ]
     algo = GeneticAlgorithm(data, pen_manager, rng, pop, ls, srex, init)
-    res = algo.run(MaxRuntime(time_limit))
 
-    assert res.best.is_feasible(), "No feasible solution found."
-
-    return res
+    return algo.run(MaxRuntime(time_limit))

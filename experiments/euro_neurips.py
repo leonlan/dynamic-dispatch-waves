@@ -77,7 +77,7 @@ def configure_environment(
         end_epoch=end_epoch,
         num_requests_per_epoch=num_requests_per_epoch,
         num_vehicles_per_epoch=num_vehicles_per_epoch,
-        secondary_fleet_fixed_cost=None,
+        secondary_fleet_fixed_cost=0,
         epoch_duration=epoch_duration,
         dispatch_margin=dispatch_margin,
     )

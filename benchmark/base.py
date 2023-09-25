@@ -23,25 +23,7 @@ def make_parser():
     parser.add_argument(
         "instances", nargs="+", type=Path, help="Instance paths."
     )
-    parser.add_argument(
-        "--instance_format",
-        type=str,
-        choices=["vrplib", "solomon"],
-        default="vrplib",
-    )
-    parser.add_argument(
-        "--environment",
-        type=str,
-        choices=["euro_neurips", "paper"],
-        default="euro_neurips",
-    )
     parser.add_argument("--env_seed", type=int, default=1)
-    parser.add_argument(
-        "--sampling_method",
-        type=str,
-        choices=SAMPLING_METHODS.keys(),
-        default="euro_neurips",
-    )
     parser.add_argument(
         "--agent_config_loc",
         type=str,
@@ -50,7 +32,6 @@ def make_parser():
     parser.add_argument("--agent_seed", type=int, default=1)
     parser.add_argument("--num_procs", type=int, default=4)
     parser.add_argument("--hindsight", action="store_true")
-    parser.add_argument("--limited_vehicles", action="store_true")
     parser.add_argument("--epoch_tlim", type=float, default=60)
     parser.add_argument("--strategy_tlim", type=float, default=30)
     parser.add_argument("--sol_dir", type=str)
@@ -287,11 +268,3 @@ def benchmark(
     print("\n", table, "\n", sep="")
     print(f"      Avg. objective: {data['cost'].mean():.0f}")
     print(f"   Avg. run-time (s): {data['time'].mean():.2f}")
-
-
-def main():
-    benchmark(solve=solve, **vars(make_parser().parse_args()))
-
-
-if __name__ == "__main__":
-    main()

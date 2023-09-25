@@ -12,7 +12,8 @@ from base import (
 
 from ddwp.Environment import Environment
 from ddwp.read import read
-from ddwp.sampling import SAMPLING_METHODS, SamplingMethod
+from ddwp.sampling import SamplingMethod
+from ddwp.sampling import euro_neurips as euro_neurips_sampling_method
 from ddwp.VrpInstance import VrpInstance
 
 
@@ -84,9 +85,7 @@ def make_euro_neurips_environment(
 
 def solve(
     loc: str,
-    instance_format: str,
     env_seed: int,
-    sampling_method: str,
     agent_config_loc: str,
     agent_seed: int,
     hindsight: bool,
@@ -99,14 +98,17 @@ def solve(
         raise ValueError("Strategy time limit >= epoch time limit.")
 
     path = Path(loc)
-    static_instance = read(path, instance_format)
+    static_instance = read(path, "vrplib")
 
-    sampler = SAMPLING_METHODS[sampling_method]
     env = make_euro_neurips_environment(
-        env_seed, static_instance, epoch_tlim, sampler
+        env_seed, static_instance, epoch_tlim, euro_neurips_sampling_method
     )
     agent = configure_agent(
-        agent_config_loc, agent_seed, sampler, epoch_tlim, strategy_tlim
+        agent_config_loc,
+        agent_seed,
+        euro_neurips_sampling_method,
+        epoch_tlim,
+        strategy_tlim,
     )
 
     start = perf_counter()

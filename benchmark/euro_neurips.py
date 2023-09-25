@@ -9,15 +9,15 @@ from ddwp.sampling import euro_neurips as euro_neurips_sampling_method
 from ddwp.VrpInstance import VrpInstance
 
 from .base import (
+    base_parser,
     benchmark,
     configure_agent,
-    make_parser,
     solve_dynamic,
     solve_hindsight,
 )
 
 
-def make_euro_neurips_environment(
+def configure_environment(
     seed: int,
     instance: VrpInstance,
     epoch_tlim: float,
@@ -100,7 +100,7 @@ def solve(
     path = Path(loc)
     static_instance = read(path, "vrplib")
 
-    env = make_euro_neurips_environment(
+    env = configure_environment(
         env_seed, static_instance, epoch_tlim, euro_neurips_sampling_method
     )
     agent = configure_agent(
@@ -135,7 +135,7 @@ def solve(
 
 
 def main():
-    benchmark(solve, **vars(make_parser().parse_args()))
+    benchmark(solve, **vars(base_parser().parse_args()))
 
 
 if __name__ == "__main__":

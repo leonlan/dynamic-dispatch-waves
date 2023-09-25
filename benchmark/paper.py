@@ -10,16 +10,16 @@ from ddwp.sampling import SAMPLING_METHODS, SamplingMethod
 from ddwp.VrpInstance import VrpInstance
 
 from .base import (
+    base_parser,
     benchmark,
     configure_agent,
-    make_parser,
     solve_dynamic,
     solve_hindsight,
 )
 
 
-def make_parser_():
-    parser = make_parser()
+def make_parser():
+    parser = base_parser()
 
     parser.add_argument(
         "--instance_format",
@@ -40,7 +40,7 @@ def make_parser_():
     return parser
 
 
-def make_paper_environment(
+def configure_environment(
     seed: int,
     instance: VrpInstance,
     epoch_tlim: float,
@@ -139,7 +139,7 @@ def solve(
     static_instance = read(path, instance_format)
 
     sampler = SAMPLING_METHODS[sampling_method]
-    env = make_paper_environment(
+    env = configure_environment(
         env_seed, static_instance, epoch_tlim, sampler, num_requests_per_epoch
     )
     agent = configure_agent(
@@ -170,7 +170,7 @@ def solve(
 
 
 def main():
-    benchmark(solve, **vars(make_parser_().parse_args()))
+    benchmark(solve, **vars(make_parser().parse_args()))
 
 
 if __name__ == "__main__":

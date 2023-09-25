@@ -17,7 +17,7 @@ from ddwp.sampling import SAMPLING_METHODS, SamplingMethod
 from ddwp.static_solvers import default_solver
 
 
-def make_parser():
+def base_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -47,7 +47,7 @@ def solve(
     limited_vehicles: bool,
     epoch_tlim: float,
     strategy_tlim: float,
-    sol_dir: str,
+    sol_dir: Path,
     **kwargs,
 ):
     if strategy_tlim > epoch_tlim:
@@ -227,7 +227,7 @@ def benchmark(
     solve: Callable, instances: list[str], num_procs: int = 1, **kwargs
 ):
     if sol_dir := kwargs.get("sol_dir", ""):
-        sol_dir.mkdir(parents=True, exist_ok=True)
+        Path(sol_dir).mkdir(parents=True, exist_ok=True)
 
     func = partial(solve, **kwargs)
     args = sorted(instances)

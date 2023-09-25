@@ -1,4 +1,3 @@
-import warnings
 from functools import partial
 from multiprocessing import Pool
 

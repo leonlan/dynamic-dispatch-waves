@@ -12,11 +12,11 @@ from tqdm.contrib.concurrent import process_map
 from ddwp.agents import AGENTS, Agent
 from ddwp.Environment import Environment
 from ddwp.read import read
-from ddwp.sampling import SAMPLING_METHODS
+from ddwp.sampling import SAMPLING_METHODS, SamplingMethod
 from ddwp.static_solvers import default_solver
 
 
-def parse_args():
+def make_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -48,14 +48,13 @@ def parse_args():
     )
     parser.add_argument("--agent_seed", type=int, default=1)
     parser.add_argument("--num_procs", type=int, default=4)
-    parser.add_argument("--num_procs_scenarios", type=int, default=1)
     parser.add_argument("--hindsight", action="store_true")
     parser.add_argument("--limited_vehicles", action="store_true")
     parser.add_argument("--epoch_tlim", type=float, default=60)
     parser.add_argument("--strategy_tlim", type=float, default=30)
     parser.add_argument("--sol_dir", type=str)
 
-    return parser.parse_args()
+    return parser
 
 
 def solve(
@@ -66,7 +65,6 @@ def solve(
     sampling_method: str,
     agent_config_loc: str,
     agent_seed: int,
-    num_procs_scenarios: int,
     hindsight: bool,
     limited_vehicles: bool,
     epoch_tlim: float,
@@ -87,32 +85,11 @@ def solve(
     else:
         raise ValueError(f"Unknown environment: {environment}")
 
-    env = env_constructor(
-        env_seed,
-        static_instance,
-        epoch_tlim,
-        SAMPLING_METHODS[sampling_method],
+    sampler = SAMPLING_METHODS[sampling_method]
+    env = env_constructor(env_seed, static_instance, epoch_tlim, sampler)
+    agent = configure_agent(
+        agent_config_loc, agent_seed, sampler, epoch_tlim, strategy_tlim
     )
-
-    with open(agent_config_loc, "rb") as fh:
-        config = tomli.load(fh)
-        params = config.get("agent_params", {})
-
-        if config["agent"] == "icd":
-            # Set the scenario solving time limit based on the time budget for
-            # scenarios divided by the total number of scenarios to solve.
-            total = params["num_iterations"] * params["num_scenarios"]
-            params["scenario_time_limit"] = strategy_tlim / total
-
-            params["num_parallel_solve"] = num_procs_scenarios
-            params["dispatch_time_limit"] = epoch_tlim - strategy_tlim
-            params["sampling_method"] = SAMPLING_METHODS[sampling_method]
-
-        if config["agent"] == "rolling_horizon":
-            params["time_limit"] = epoch_tlim
-            params["sampling_method"] = SAMPLING_METHODS[sampling_method]
-
-        agent = AGENTS[config["agent"]](agent_seed, **params)
 
     start = perf_counter()
 
@@ -150,6 +127,32 @@ def solve(
         sum(costs.values()),
         round(perf_counter() - start, 2),
     )
+
+
+def configure_agent(
+    config_loc: str,
+    agent_seed: int,
+    sampling_method: SamplingMethod,
+    epoch_tlim: float,
+    strategy_tlim: float,
+):
+    with open(config_loc, "rb") as fh:
+        config = tomli.load(fh)
+        params = config.get("agent_params", {})
+
+        if config["agent"] == "icd":
+            # Set the scenario solving time limit based on the time budget for
+            # scenarios divided by the total number of scenarios to solve.
+            total = params["num_iterations"] * params["num_scenarios"]
+            params["scenario_time_limit"] = strategy_tlim / total
+            params["dispatch_time_limit"] = epoch_tlim - strategy_tlim
+            params["sampling_method"] = sampling_method
+
+        if config["agent"] == "rolling_horizon":
+            params["time_limit"] = epoch_tlim
+            params["sampling_method"] = sampling_method
+
+    return AGENTS[config["agent"]](agent_seed, **params)
 
 
 def solve_dynamic(env: Environment, agent: Agent):
@@ -284,7 +287,7 @@ def benchmark(instances: list[str], num_procs: int = 1, **kwargs):
 
 
 def main():
-    benchmark(**vars(parse_args()))
+    benchmark(**vars(make_parser().parse_args()))
 
 
 if __name__ == "__main__":

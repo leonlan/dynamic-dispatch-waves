@@ -10,8 +10,8 @@ authors = [
 license = "MIT"
 readme = "README.md"
 packages = [
-    {include ="ddwp"},
-    {include = "experiments"}
+    { include = "ddwp" },
+    { include = "experiments" }
 ]
 
 

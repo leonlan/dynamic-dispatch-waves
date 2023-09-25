@@ -74,7 +74,7 @@ def solve(
     _, greedy_sol = solve_dynamic(env_unlimited, greedy)
     num_routes_per_epoch = [len(route) for route in greedy_sol.values()]
     num_vehicles_per_epoch = [
-        max(1, int(pct_vehicles * num)) for num in num_routes_per_epoch
+        int(pct_vehicles * num) for num in num_routes_per_epoch
     ]
 
     # Run environment again with restricted number of available vehicles.

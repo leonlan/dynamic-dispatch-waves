@@ -64,8 +64,7 @@ class StaticInfo:
         The available number of primary vehicles per epoch. If None, then
         there is no limit on the number of primary vehicles.
     secondary_fleet_fixed_cost
-        The fixed cost of the secondary fleet. If None, then there is no
-        secondary fleet.
+        The fixed cost of using a vehicle from the secondary fleet.
     """
 
     static_instance: VrpInstance
@@ -76,7 +75,7 @@ class StaticInfo:
     dispatch_margin: int
     num_requests_per_epoch: list[int]
     num_vehicles_per_epoch: Optional[list[int]]
-    secondary_fleet_fixed_cost: Optional[int]
+    secondary_fleet_fixed_cost: int
 
 
 @dataclass(frozen=True)
@@ -111,8 +110,7 @@ class Environment:
         The available number of primary vehicles per epoch. If None, then
         there is no limit on the number of primary vehicles.
     secondary_fleet_fixed_cost
-        The fixed cost of the secondary fleet. If None, then there is no
-        secondary fleet.
+        The fixed cost of the secondary fleet vehicles.
     start_epoch
         The start epoch.
     end_epoch
@@ -135,7 +133,7 @@ class Environment:
         end_epoch: int,
         num_requests_per_epoch: list[int],
         num_vehicles_per_epoch: Optional[list[int]],
-        secondary_fleet_fixed_cost: Optional[int],
+        secondary_fleet_fixed_cost: int,
         epoch_duration: int,
         dispatch_margin: int,
     ):
@@ -337,6 +335,13 @@ class Environment:
             )
             self.num_vehicles_slack = max(num_vehicles - len(action), 0)
 
+            # Add the fixed costs of using secondary vehicles.
+            num_secondary_used = max(len(action) - num_vehicles, 0)
+            cost += (
+                num_secondary_used
+                * self.static_info.secondary_fleet_fixed_cost
+            )
+
         self.final_solutions[self.current_epoch] = action
         self.final_costs[self.current_epoch] = cost
 
@@ -396,7 +401,6 @@ class Environment:
 
             if num_primary <= num_requests:
                 # If there are not enough vehicles, use secondary fleet.
-                assert self.secondary_fleet_fixed_cost is not None
                 num_secondary = customer_idx.size - 1 - num_primary
                 vehicle_types.append(
                     VehicleType(
@@ -444,14 +448,29 @@ class Environment:
         if self.num_vehicles_per_epoch is None:
             vehicle_types.append(VehicleType(capacity, customer_idx.size))
         else:
-            for epoch, num_vehicles in enumerate(self.num_vehicles_per_epoch):
+            for epoch, num_primary in enumerate(self.num_vehicles_per_epoch):
                 departure = epoch * self.epoch_duration + self.dispatch_margin
+
+                if num_primary > 0:
+                    vehicle_types.append(
+                        VehicleType(
+                            capacity,
+                            num_primary,
+                            tw_early=departure,
+                            tw_late=self.instance.horizon,
+                        )
+                    )
+
+            # Fill up remaining vehicles with secondary fleet.
+            num_secondary = max(
+                customer_idx.size - sum(self.num_vehicles_per_epoch), 0
+            )
+            if num_secondary > 0:
                 vehicle_types.append(
                     VehicleType(
                         capacity,
-                        num_vehicles,
-                        tw_early=departure,
-                        tw_late=self.instance.horizon,
+                        num_secondary,
+                        fixed_cost=self.static_info.secondary_fleet_fixed_cost,
                     )
                 )
 

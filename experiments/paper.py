@@ -47,7 +47,7 @@ def configure_environment(
     sampling_method: SamplingMethod,
     num_requests_per_epoch: list[int],
     num_vehicles_per_epoch: Optional[list[int]] = None,
-    secondary_fleet_fixed_cost: Optional[int] = None,
+    secondary_fleet_fixed_cost: int = 0,
 ):
     """
     Creates a DDWP environment identical to the one used in paper [1].
@@ -69,8 +69,7 @@ def configure_environment(
         The available number of primary vehicles per epoch. If None, then
         there is no limit on the number of primary vehicles.
     secondary_fleet_fixed_cost
-        The fixed cost of the secondary fleet. If None, then there is no
-        secondary fleet.
+        The fixed cost of the secondary fleet.
 
     References
     ----------

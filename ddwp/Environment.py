@@ -178,7 +178,8 @@ class Environment:
 
         self.current_epoch = self.start_epoch
         self.current_time = self.current_epoch * self.epoch_duration
-        self.num_vehicles_used: list[int] = []
+
+        self.num_vehicles_slack = 0
 
         self.is_done = False
         self.final_solutions: dict[int, list] = {}
@@ -324,8 +325,17 @@ class Environment:
         for route in action:
             self.req_is_dispatched[route] = True
 
-        # Register how many primary vehicles were used.
-        self.num_vehicles_used.append(len(action))
+        if self.num_vehicles_per_epoch is not None:
+            # HACK Submitted actions don't register the usage of vehicle types
+            # so we assume that all primary vehicles are used first, because
+            # the fixed cost of secondary vehicles is high. We keep track of the
+            # slack (unused primary vehicles) in each epoch, resetting it when
+            # the slack falls below zero.
+            num_vehicles = (
+                self.num_vehicles_per_epoch[self.current_epoch]
+                + self.num_vehicles_slack
+            )
+            self.num_vehicles_slack = max(num_vehicles - len(action), 0)
 
         self.final_solutions[self.current_epoch] = action
         self.final_costs[self.current_epoch] = cost
@@ -376,8 +386,8 @@ class Environment:
             num_vehicles = max(num_requests, 1)
             vehicle_types = [VehicleType(capacity, num_vehicles)]
         else:
-            total = sum(self.num_vehicles_per_epoch[: self.current_epoch + 1])
-            num_primary = total - sum(self.num_vehicles_used)
+            num_new = self.num_vehicles_per_epoch[self.current_epoch]
+            num_primary = num_new + self.num_vehicles_slack
 
             if num_primary > 0:
                 vehicle_types = [VehicleType(capacity, num_primary)]

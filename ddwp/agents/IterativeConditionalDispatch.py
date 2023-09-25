@@ -1,5 +1,4 @@
 from functools import partial
-from multiprocessing import Pool
 
 import numpy as np
 
@@ -43,8 +42,6 @@ class IterativeConditionalDispatch:
         The name of the consensus function to use.
     consensus_params
         The parameters to pass to the consensus function.
-    num_parallel_solve
-        The number of scenarios to solve in parallel.
     """
 
     def __init__(
@@ -59,7 +56,6 @@ class IterativeConditionalDispatch:
         dispatch_choice: str,
         consensus: str,
         consensus_params: dict,
-        num_parallel_solve: int = 1,
     ):
         self.seed = seed
         self.rng = np.random.default_rng(seed)
@@ -73,7 +69,6 @@ class IterativeConditionalDispatch:
         self.consensus_func: ConsensusFunction = partial(
             CONSENSUS[consensus], **consensus_params
         )
-        self.num_parallel_solve = num_parallel_solve
 
     def act(self, info: StaticInfo, obs: State) -> list[list[int]]:
         """
@@ -121,13 +116,7 @@ class IterativeConditionalDispatch:
                 )
                 for _ in range(self.num_scenarios)
             ]
-
-            if self.num_parallel_solve == 1:
-                solutions = list(map(self._solve_scenario, scenarios))
-            else:
-                with Pool(self.num_parallel_solve) as pool:
-                    solutions = pool.map(self._solve_scenario, scenarios)
-
+            solutions = list(map(self._solve_scenario, scenarios))
             to_dispatch, to_postpone = self.consensus_func(
                 info,
                 list(zip(scenarios, solutions)),

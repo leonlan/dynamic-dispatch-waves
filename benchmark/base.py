@@ -23,18 +23,14 @@ def make_parser():
     parser.add_argument(
         "instances", nargs="+", type=Path, help="Instance paths."
     )
-    parser.add_argument("--env_seed", type=int, default=1)
-    parser.add_argument(
-        "--agent_config_loc",
-        type=str,
-        default="configs/icd-double-threshold.toml",
-    )
+    parser.add_argument("--env_seed", type=int, required=True)
+    parser.add_argument("--agent_config_loc", type=str, required=True)
     parser.add_argument("--agent_seed", type=int, default=1)
     parser.add_argument("--num_procs", type=int, default=4)
     parser.add_argument("--hindsight", action="store_true")
-    parser.add_argument("--epoch_tlim", type=float, default=60)
-    parser.add_argument("--strategy_tlim", type=float, default=30)
-    parser.add_argument("--sol_dir", type=str)
+    parser.add_argument("--epoch_tlim", type=float, required=True)
+    parser.add_argument("--strategy_tlim", type=float, default=0)
+    parser.add_argument("--sol_dir", type=Path)
 
     return parser
 
@@ -206,12 +202,6 @@ def solve_hindsight(env: Environment, seed: int, time_limit: float):
     return costs, solutions
 
 
-def maybe_mkdir(where: str):
-    if where:
-        stats_dir = Path(where)
-        stats_dir.mkdir(parents=True, exist_ok=True)
-
-
 def tabulate(headers, rows) -> str:
     # These lengths are used to space each column properly.
     lengths = [len(header) for header in headers]
@@ -234,9 +224,10 @@ def tabulate(headers, rows) -> str:
 
 
 def benchmark(
-    instances: list[str], solve: Callable, num_procs: int = 1, **kwargs
+    solve: Callable, instances: list[str], num_procs: int = 1, **kwargs
 ):
-    maybe_mkdir(kwargs.get("sol_dir", ""))
+    if sol_dir := kwargs.get("sol_dir", ""):
+        sol_dir.mkdir(parents=True, exist_ok=True)
 
     func = partial(solve, **kwargs)
     args = sorted(instances)

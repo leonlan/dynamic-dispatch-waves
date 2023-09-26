@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from time import perf_counter
 from typing import Optional
@@ -15,6 +16,23 @@ from .base import (
     solve_dynamic,
     solve_hindsight,
 )
+
+
+def make_parser():
+    parser = base_parser()
+
+    msg = "Use the instances from the final phase of the competition."
+    parser.add_argument("--final", action="store_true", help=msg)
+
+    msg = "Path to the final instances configuration file."
+    parser.add_argument(
+        "--final_config",
+        default="instances/final/configs.json",
+        type=Path,
+        help=msg,
+    )
+
+    return parser
 
 
 def configure_environment(
@@ -92,6 +110,8 @@ def solve(
     epoch_tlim: float,
     strategy_tlim: float,
     sol_dir: str,
+    final: Optional[bool],
+    final_config: Path,
     **kwargs,
 ):
     if strategy_tlim > epoch_tlim:
@@ -99,6 +119,20 @@ def solve(
 
     path = Path(loc)
     static_instance = read(path, "vrplib")
+
+    # When the final flag is set, then we assume that the instances from the
+    # ``instances/final/`` directory are used. The environment seed is then
+    # determined by the configs.json file in the same directory.
+    if final:
+        with open(final_config, "r") as fh:
+            config = json.load(fh)
+
+        for item in config:
+            if item["instance"] == path.name and not item["static"]:
+                env_seed = item["instance_seed"]
+                break
+        else:
+            raise RuntimeError(f"{path.stem} is not a finals instance.")
 
     env = configure_environment(
         env_seed, static_instance, epoch_tlim, euro_neurips_sampling_method
@@ -135,7 +169,7 @@ def solve(
 
 
 def main():
-    benchmark(solve, **vars(base_parser().parse_args()))
+    benchmark(solve, **vars(make_parser().parse_args()))
 
 
 if __name__ == "__main__":

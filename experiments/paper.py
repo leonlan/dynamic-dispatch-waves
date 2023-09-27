@@ -92,7 +92,7 @@ def configure_environment(
 
     # Normalize the distances so that the furthest customer can be reached
     # in two hour from the depot. Service times are also scaled accordingly.
-    scale = instance.duration_matrix[0, :].max() / (2 * epoch_duration)
+    scale = instance.duration_matrix[0, :].max() / epoch_duration
     dur_mat = np.ceil(instance.duration_matrix / scale).astype(int)
     service_times = np.ceil(instance.service_times / scale).astype(int)
 

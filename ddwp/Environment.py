@@ -446,7 +446,8 @@ class Environment:
         vehicle_types = []
 
         if self.num_vehicles_per_epoch is None:
-            vehicle_types.append(VehicleType(capacity, customer_idx.size))
+            max_vehicles = VehicleType(capacity, self.instance.num_requests)
+            vehicle_types.append(max_vehicles)
         else:
             for epoch, num_primary in enumerate(self.num_vehicles_per_epoch):
                 departure = epoch * self.epoch_duration + self.dispatch_margin

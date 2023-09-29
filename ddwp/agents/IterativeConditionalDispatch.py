@@ -77,27 +77,30 @@ class IterativeConditionalDispatch:
         solves the instance of dispatched requests.
         """
         to_dispatch = self._determine_dispatch(info, obs)
-        dispatch_inst = obs.epoch_instance.filter(to_dispatch)
+        dispatch_instance = obs.epoch_instance.filter(to_dispatch)
+
+        if dispatch_instance.num_requests == 0:
+            return []
 
         # BUG: If the number of vehicles per epoch is not fixed, we need to
         # correct the number of vehicles in the dispatch instance to match
         # the number of requests. This is a "bug" in how random solutions
         # are generated in PyVRP.
         if info.num_vehicles_per_epoch is None:
-            capacity = dispatch_inst.capacity
-            num_vehicles = dispatch_inst.num_requests
+            capacity = dispatch_instance.capacity
+            num_vehicles = dispatch_instance.num_requests
             vehicle_types = [VehicleType(capacity, num_vehicles)]
-            dispatch_inst.replace(vehicle_types=vehicle_types)
+            dispatch_instance.replace(vehicle_types=vehicle_types)
 
         res = default_solver(
-            dispatch_inst, self.seed, self.dispatch_time_limit
+            dispatch_instance, self.seed, self.dispatch_time_limit
         )
 
         assert res.best.is_feasible(), "Infeasible dispatch solution!"
 
         # Convert the solution to request indices.
         routes = [route.visits() for route in res.best.get_routes()]
-        return [dispatch_inst.request_idx[r].tolist() for r in routes]
+        return [dispatch_instance.request_idx[r].tolist() for r in routes]
 
     def _determine_dispatch(self, info: StaticInfo, obs: State) -> np.ndarray:
         """

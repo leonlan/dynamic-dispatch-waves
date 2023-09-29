@@ -81,7 +81,7 @@ def configure_environment(
 
     # Assume an epoch duration of one hour (in seconds) and a horizon of
     # ``num_epochs`` hours.
-    epoch_duration = 3600
+    epoch_duration = 600
     horizon = num_epochs * epoch_duration
     start_epoch = 0
     end_epoch = num_epochs - 1
@@ -91,8 +91,8 @@ def configure_environment(
     time_windows[0, :] = [0, horizon]
 
     # Normalize the distances so that the furthest customer can be reached
-    # in two hour from the depot. Service times are also scaled accordingly.
-    scale = instance.duration_matrix[0, :].max() / epoch_duration
+    # in half hour from the depot. Service times are also scaled accordingly.
+    scale = instance.duration_matrix.max() / epoch_duration
     dur_mat = np.ceil(instance.duration_matrix / scale).astype(int)
     service_times = np.ceil(instance.service_times / scale).astype(int)
 

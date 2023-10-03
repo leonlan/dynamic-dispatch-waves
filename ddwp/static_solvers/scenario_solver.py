@@ -15,6 +15,7 @@ from ddwp.VrpInstance import VrpInstance
 from pyvrp import (
     GeneticAlgorithm,
     PenaltyManager,
+    PenaltyParams,
     Population,
     PopulationParams,
     RandomNumberGenerator,
@@ -59,14 +60,19 @@ def scenario_solver(
     Result
         A `pyvrp.Result` instance.
     """
+    pen_params = PenaltyParams(
+        num_registrations_between_penalty_updates=10,
+        penalty_increase=1.3,
+        penalty_decrease=0.5,
+    )
     pop_params = PopulationParams(
         min_pop_size=5, generation_size=3, nb_elite=2, nb_close=2
     )
-    nb_params = NeighbourhoodParams(nb_granular=20)
+    nb_params = NeighbourhoodParams()
 
     data = instance2data(instance)
     rng = RandomNumberGenerator(seed=seed)
-    pen_manager = PenaltyManager()
+    pen_manager = PenaltyManager(params=pen_params)
     pop = Population(bpd, params=pop_params)
 
     neighbours = compute_neighbours(data, nb_params)
@@ -220,13 +226,13 @@ def _compute_proximity(
     dispatch = np.asarray([client.dispatch_time for client in clients])
     duration = np.asarray(data.duration_matrix(), dtype=float)
 
-    min_wait_time = early[..., :] - duration - service[:, ...] - late[:, ...]
+    min_wait_time = early[None:] - duration - service[:, None] - late[:, None]
 
     earliest_release = np.maximum.outer(release, release) + duration[0, :]
-    earliest_arrival = np.maximum(earliest_release, early[..., :])
+    earliest_arrival = np.maximum(earliest_release, early[None, :])
 
     min_time_warp = np.maximum(
-        earliest_arrival + service[..., :] + duration - late[..., :], 0
+        earliest_arrival + service[None, :] + duration - late[None, :], 0
     )
 
     # Additional time warp due to dispatch time.
@@ -236,5 +242,5 @@ def _compute_proximity(
         np.asarray(data.distance_matrix(), dtype=float)
         + weight_wait_time * np.maximum(min_wait_time, 0)
         + weight_time_warp * np.maximum(min_time_warp, 0)
-        - prize[..., :]
+        - prize[None, :]
     )

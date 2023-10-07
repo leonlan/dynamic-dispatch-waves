@@ -1,23 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List
-
-import numpy as np
-
-if TYPE_CHECKING:
-    from pyvrp import ProblemData
-
-
+from typing import List
 import warnings
 
-from ddwp.VrpInstance import VrpInstance
+import numpy as np
 from pyvrp import (
+    CostEvaluator,
     GeneticAlgorithm,
     PenaltyManager,
     PenaltyParams,
     Population,
     PopulationParams,
+    ProblemData,
     RandomNumberGenerator,
     Result,
     Solution,
@@ -34,6 +29,7 @@ from pyvrp.search import (
 )
 from pyvrp.stop import MaxRuntime
 
+from ddwp.VrpInstance import VrpInstance
 from .instance2data import instance2data
 
 warnings.filterwarnings("ignore", category=EmptySolutionWarning)
@@ -86,9 +82,21 @@ def scenario_solver(
     for route_op in route_ops:
         ls.add_route_operator(route_op(data))
 
-    init = [
-        Solution.make_random(data, rng) for _ in range(pop_params.min_pop_size)
-    ]
+    if len(instance.vehicle_types) == 1:
+        init = [
+            Solution.make_random(data, rng)
+            for _ in range(pop_params.min_pop_size)
+        ]
+    else:
+        # In case of multiple vehicle types, we can ensure that the initial
+        # solutions are feasible by running a local search with only SwapRoute.
+        ls_feas = LocalSearch(data, rng, neighbours)
+        ls_feas.add_route_operator(SwapRoutes(data))
+        init = [
+            ls_feas(Solution.make_random(data, rng), CostEvaluator(100, 100))
+            for _ in range(pop_params.min_pop_size)
+        ]
+
     algo = GeneticAlgorithm(data, pen_manager, rng, pop, ls, srex, init)
 
     return algo.run(MaxRuntime(time_limit))

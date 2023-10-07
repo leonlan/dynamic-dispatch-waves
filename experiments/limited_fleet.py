@@ -33,10 +33,8 @@ def make_parser():
     parser.add_argument(
         "--num_requests_per_epoch", type=int, nargs="+", default=[75] * 8
     )
-    parser.add_argument("--pct_vehicles", type=float, default=1)
-    parser.add_argument(
-        "--secondary_fleet_fixed_cost", type=int, default=14400
-    )
+    parser.add_argument("--pct_vehicles", type=float)
+    parser.add_argument("--secondary_fleet_fixed_cost", type=int, default=1200)
 
     return parser
 
@@ -73,9 +71,13 @@ def solve(
 
     _, greedy_sol = solve_dynamic(env_unlimited, greedy)
     num_routes_per_epoch = [len(route) for route in greedy_sol.values()]
-    num_vehicles_per_epoch = [
-        int(pct_vehicles * num) for num in num_routes_per_epoch
-    ]
+
+    if pct_vehicles is None:
+        num_vehicles_per_epoch = None
+    else:
+        num_vehicles_per_epoch = [
+            int(pct_vehicles * num) for num in num_routes_per_epoch
+        ]
 
     # Run environment again with restricted number of available vehicles.
     agent = configure_agent(

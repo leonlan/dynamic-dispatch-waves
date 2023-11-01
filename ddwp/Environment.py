@@ -384,24 +384,22 @@ class Environment:
         # Determine the number of primary vehicles available.
         capacity = self.instance.capacity
         num_requests = customer_idx.size - 1
+        vehicle_types = []
 
         if self.num_vehicles_per_epoch is None:
             # Assume that the number of vehicles is equal to the number of
             # requests in the instance.
             num_vehicles = max(num_requests, 1)
-            vehicle_types = [VehicleType(capacity, num_vehicles)]
+            vehicle_types.append(VehicleType(capacity, num_vehicles))
         else:
             num_new = self.num_vehicles_per_epoch[self.current_epoch]
             num_primary = num_new + self.num_vehicles_slack
 
             if num_primary > 0:
-                vehicle_types = [VehicleType(capacity, num_primary)]
-            else:
-                vehicle_types = []
+                vehicle_types.append(VehicleType(capacity, num_primary))
 
-            if num_primary <= num_requests:
-                # If there are not enough vehicles, use secondary fleet.
-                num_secondary = customer_idx.size - 1 - num_primary
+            num_secondary = max(num_requests - num_primary, 0)
+            if num_secondary > 0:
                 vehicle_types.append(
                     VehicleType(
                         capacity,

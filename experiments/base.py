@@ -26,7 +26,7 @@ def base_parser():
     parser.add_argument("--env_seed", type=int, required=True)
     parser.add_argument("--agent_config_loc", type=str, required=True)
     parser.add_argument("--agent_seed", type=int, default=1)
-    parser.add_argument("--num_procs", type=int, default=4)
+    parser.add_argument("--num_procs", type=int, default=6)
     parser.add_argument("--hindsight", action="store_true")
     parser.add_argument("--epoch_tlim", type=float, required=True)
     parser.add_argument("--strategy_tlim", type=float, default=0)

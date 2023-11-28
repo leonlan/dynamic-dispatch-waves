@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from typing import List
-import warnings
 
 import numpy as np
 from pyvrp import (
@@ -30,6 +30,7 @@ from pyvrp.search import (
 from pyvrp.stop import MaxRuntime
 
 from ddwp.VrpInstance import VrpInstance
+
 from .instance2data import instance2data
 
 warnings.filterwarnings("ignore", category=EmptySolutionWarning)

@@ -6,8 +6,7 @@ This repository hosts all code used in the paper:
 
 > Lan, L., van Doorn, J., Wouda, N. A., Rijal, A., & Bhulai, S. (2024). An iterative sample scenario approach for the dynamic dispatch waves problem. Transportation Science, forthcoming. https://doi.org/10.1287/trsc.2023.0111.
 
-## Dynamic dispatch waves problem
-In the dyanmic dispatch waves problem (DDWP), a set of delivery requests arrive at each epoch, which must be served before the end of the planning horizon. 
+In the dynamic dispatch waves problem (DDWP), a set of delivery requests arrive at each epoch, which must be served before the end of the planning horizon. 
 At each decision epoch, it must be decided which requests to dispatch in the current epoch (and how to route them), and which requests to postpone to consolidate with future requests that arrive in later epochs.
 
 Our work proposes _iterative conditional dispatch_ (ICD), an iterative solution construction procedure based on a sample scenario approach. ICD iteratively solves sample scenarios to classify requests to be dispatched, postponed, or undecided. See [our paper](#paper) for more information about the DDWP and the implemented algorithms.
@@ -26,7 +25,7 @@ Then, run the following command:
 poetry install
 ```
 
-This will install all dependencies, including a custom version of PyVRP extended with support for dispatch windows. See the `pyvrp` branch for more details. 
+This will install all dependencies, including a custom version of PyVRP extended with support for dispatch windows. See the [`pyvrp`](https://github.com/leonlan/dynamic-dispatch-waves/tree/pyvrp) branch for more details, as well as Appendix B in the paper. 
 
 ## Usage
 

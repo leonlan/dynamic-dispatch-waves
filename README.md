@@ -71,7 +71,7 @@ Each epoch lasts five seconds. During this, three seconds are used by ICD to sel
 
 ## Paper
 
-For more details see our paper *[An iterative sample scenario algorithm for the dynamic dispatch waves problem](https://pubsonline.informs.org/doi/10.1287/trsc.2023.0111)*. If this code is useful for your work, please consider citing our work:
+For more details see our paper *[An iterative sample scenario approach for the dynamic dispatch waves problem](https://pubsonline.informs.org/doi/10.1287/trsc.2023.0111)*. If this code is useful to you, please consider citing our work:
 
 ``` bibtex
 @article{Lan_et_al_2024,

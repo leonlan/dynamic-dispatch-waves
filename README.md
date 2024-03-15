@@ -17,7 +17,7 @@ Our work proposes _iterative conditional dispatch_ (ICD), an iterative solution 
 To install this repository, you need the following:
 - Python version 3.9 or higher;
 - [Poetry](https://python-poetry.org/) version 1.2 or higher; and
-- A modern C++ compiler that supports C++20.
+- C++ compiler that supports C++20.
 
 Then, run the following command:
 

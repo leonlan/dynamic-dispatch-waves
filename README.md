@@ -4,7 +4,7 @@
 
 This repository hosts all code used in the paper:
 
-> Lan, L., van Doorn, J., Wouda, N. A., Rijal, A., & Bhulai, S. (2024). An iterative sample scenario approach for the dynamic dispatch waves problem. Transportation Science, forthcoming. https://doi.org/10.1287/trsc.2023.0111.
+> Lan, L., van Doorn, J., Wouda, N. A., Rijal, A., & Bhulai, S. (2024). An iterative sample scenario approach for the dynamic dispatch waves problem. Transportation Science, forthcoming. https://doi.org/10.1287/trsc.2023.0111
 
 In the dynamic dispatch waves problem (DDWP), a set of delivery requests arrive at each epoch, which must be served before the end of the planning horizon. 
 At each decision epoch, it must be decided which requests to dispatch in the current epoch (and how to route them), and which requests to postpone to consolidate with future requests that arrive in later epochs.
@@ -78,6 +78,7 @@ For more details see our paper *[An iterative sample scenario approach for the d
   title = {An iterative sample scenario approach for the dynamic dispatch waves problem},
   author = {Lan, Leon and {van Doorn}, Jasper and Wouda, Niels A. and Rijal, Arpan and Bhulai, Sandjai},
   doi = {10.1287/trsc.2023.0111},
+  url = {https://pubsonline.informs.org/doi/10.1287/trsc.2023.0111},
   year = {2024},
   publisher = {INFORMS},
   journal = {Transportation Science},

@@ -1,0 +1,46 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the following metadata."
+authors:
+- family-names: "Lan"
+  given-names: "Leon"
+  orcid: "https://orcid.org/0000-0001-7479-0218"
+- family-names: "van Doorn"
+  given-names: "Jasper"
+  orcid: "https://orcid.org/0009-0002-0233-367X"
+- family-names: "Wouda"
+  given-names: "Niels A."
+  orcid: "https://orcid.org/0000-0003-2463-0309"
+- family-names: "Rijal"
+  given-names: "Arpan"
+  orcid: "https://orcid.org/0000-0001-8701-2757"
+- family-names: "Bhulai"
+  given-names: "Sandjai"
+  orcid: "https://orcid.org/0000-0003-1124-8821"
+title: leonlan/dynamic-dispatch-waves
+date-released: 2024-03-19
+doi: "10.5281/zenodo.7551649"
+url: "https://github.com/leonlan/dynamic-dispatch-waves"
+preferred-citation:
+  type: article
+  id: Lan_et_al_2024
+  authors:
+   - family-names: "Lan"
+     given-names: "Leon"
+     orcid: "https://orcid.org/0000-0001-7479-0218"
+   - family-names: "van Doorn"
+     given-names: "Jasper"
+     orcid: "https://orcid.org/0009-0002-0233-367X"
+   - family-names: "Wouda"
+     given-names: "Niels A."
+     orcid: "https://orcid.org/0000-0003-2463-0309"
+   - family-names: "Rijal"
+     given-names: "Arpan"
+     orcid: "https://orcid.org/0000-0001-8701-2757"
+   - family-names: "Bhulai"
+     given-names: "Sandjai"
+     orcid: "https://orcid.org/0000-0003-1124-8821"
+  title: "An iterative sample scenario approach for the dynamic dispatch waves problem"
+  year: 2024
+  doi: "10.1287/trsc.2023.0111"
+  url: "https://pubsonline.informs.org/doi/10.1287/trsc.2023.0111"
+  journal: "Transportation Science"

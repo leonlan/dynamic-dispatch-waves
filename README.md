@@ -1,25 +1,31 @@
-
 # Dynamic dispatch waves problem
  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/leonlan/dynamic-dispatch-waves/actions/workflows/CI.yml/badge.svg)](https://github.com/leonlan/dynamic-dispatch-waves/actions/workflows/CI.yml)
 
-This repository hosts all code used to solve the *dynamic dispatch waves problem* (DDWP). 
+This repository hosts all code used in the paper:
 
-In the DDWP, a set of delivery requests arrive at each epoch, which must be served before the end of the planning horizon. 
+> Lan, L., van Doorn, J., Wouda, N. A., Rijal, A., & Bhulai, S. (2024). An iterative sample scenario approach for the dynamic dispatch waves problem. Transportation Science, forthcoming. https://doi.org/10.1287/trsc.2023.0111
+
+In the dynamic dispatch waves problem (DDWP), a set of delivery requests arrive at each epoch, which must be served before the end of the planning horizon. 
 At each decision epoch, it must be decided which requests to dispatch in the current epoch (and how to route them), and which requests to postpone to consolidate with future requests that arrive in later epochs.
 
-See [our paper](#paper) for more information about the DDWP and the implemented algorithms.
+Our work proposes _iterative conditional dispatch_ (ICD), an iterative solution construction procedure based on a sample scenario approach. ICD iteratively solves sample scenarios to classify requests to be dispatched, postponed, or undecided. See [our paper](#paper) for more information about the DDWP and the implemented algorithms.
 
 
 ## Installation
-Make sure to have [Poetry](https://python-poetry.org/) installed with version 1.2 or higher. 
-The following command will then install all necessary dependencies:
+
+To install this repository, you need the following:
+- Python version 3.9 or higher;
+- [Poetry](https://python-poetry.org/) version 1.2 or higher; and
+- C++ compiler that supports C++20.
+
+Then, run the following command:
 
 ```bash
 poetry install
 ```
 
-If you don't have Poetry installed, make sure that you have Python 3.9 or higher and install the packages indicated in the `pyproject.toml` file. 
+This will install all dependencies, including a custom version of PyVRP extended with support for dispatch windows. See the [`pyvrp`](https://github.com/leonlan/dynamic-dispatch-waves/tree/pyvrp) branch for more details, as well as Appendix B in the paper. 
 
 ## Usage
 
@@ -28,35 +34,55 @@ There are two specialized constructors for the environment: one variant that was
 The environment requires a sampling method (see `sampling/`), which describes how future, unknown requests are sampled.
 Moreover, a number of solution methods can be found under `agents/`.
 
-To solve an instance of the DDWP, you can use the `benchmark.py` script. Here's an example:
+### Example: solve an instance from the paper
+
+To solve an instance of the DDWP from our paper, you can run the following example command:
 
 ``` bash
-poetry run benchmark instances/ortec/ORTEC-VRPTW-ASYM-01829532-d1-n324-k22.txt \
-    --environment euro_neurips --sampling_method euro_neurips --env_seed 1 \
-    --agent_config_loc configs/icd-double-threshold.toml --agent_seed 2 \
-    --epoch_tlim 5
+poetry run benchmark instances/hg/C1_10_1.txt \
+--env_seed 1 \
+--num_requests_per_epoch 75 75 75 75 75 75 75 75 \
+--sampling_method TW2 \
+--agent_config_loc configs/icd-hamming-distance.toml \
+--epoch_tlim 5 \
+--strategy_tlim 3 
 ```
 
-This solves the an instance of the DDWP problem using the static VRP instance `ORTEC-VRPTW-ASYM-01829532-d1-n324-k22` for sampling future requests.
-It follows the EURO-NeurIPS environment and sampling procedure with seed 1. 
-It uses the iterative conditional dispatch algorithm with double threshold consensus function and seed 2.
-Each epoch has a time limit of five seconds, which is the maximum time that an algorithm spend in a single epoch before it must return a solution to the environment.
+This solves the an instance of the DDWP problem using the static VRP instance `C_10_1`.
+In each epoch, an expected number of 75 requests are sampled with two-hour time windows.
+The ICD with hamming distance consensus function is used to solve this instance.
+Each epoch lasts five seconds. During this, three seconds are used by ICD to select which requests to dispatch, and the remaining two seconds are used for final route planning.
 
+### Example: solve an instance from EURO Meets NeurIPS
 
-## Experiments
+Here's an example command to solve an instance from the EURO Meets NeurIPS competition:
 
-TODO
+``` bash
+poetry run euro_neurips instances/ortec/ORTEC-VRPTW-ASYM-0bdff870-d1-n458-k35.txt \
+--env_seed 0 \
+--agent_config_loc configs/icd-double-threshold.toml \
+--strategy_tlim 3 \
+--epoch_tlim 5 
+```
+
+This solves an DDWP instance that is created using the static VRP instance `ORTEC-VRPTW-ASYM-0bdff870-d1-n458-k35` and environment seed 0.
+The ICD double threshold configuration is used to solve this instance.
+Each epoch lasts five seconds. During this, three seconds are used by ICD to select which requests to dispatch, and the remaining two seconds are used for final route planning.
 
 ## Paper
 
-For more details about the DDWP, see our paper *[An iterative conditional dispatch algorithm for the dynamic dispatch waves problem](https://doi.org/10.48550/arXiv.2308.14476)*. If this code is useful for your work, please consider citing our work:
+For more details see our paper *[An iterative sample scenario approach for the dynamic dispatch waves problem](https://pubsonline.informs.org/doi/10.1287/trsc.2023.0111)*. If this code is useful to you, please consider citing our work:
 
 ``` bibtex
-@misc{Lan2023,
-  title = {An iterative conditional dispatch algorithm for the dynamic dispatch waves problem}, 
-  author = {Leon Lan and Jasper van Doorn and Niels A. Wouda and Arpan Rijal and Sandjai Bhulai},
-  year = {2023},
-  eprint = {arXiv:2308.14476},
-  url = {https://doi.org/10.48550/arXiv.2308.14476}
+@article{Lan_et_al_2024,
+  title = {An iterative sample scenario approach for the dynamic dispatch waves problem},
+  author = {Lan, Leon and {van Doorn}, Jasper and Wouda, Niels A. and Rijal, Arpan and Bhulai, Sandjai},
+  doi = {10.1287/trsc.2023.0111},
+  url = {https://pubsonline.informs.org/doi/10.1287/trsc.2023.0111},
+  year = {2024},
+  publisher = {INFORMS},
+  journal = {Transportation Science},
 }
 ```
+
+A preprint version of our paper is available on [arXiv](https://arxiv.org/abs/2308.14476).
